@@ -1,5 +1,5 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
@@ -87,14 +87,6 @@ function ClassicTabLayout() {
             Platform.OS === "ios"
               ? <SymbolView name="creditcard.fill" tintColor={color} size={size} />
               : <Feather name="shopping-cart" size={size} color={color} />
-          ),
-          headerRight: () => (
-            <TouchableOpacity 
-              style={{ marginRight: 15 }} 
-              onPress={() => router.push("/pos/products")}
-            >
-              <Feather name="plus-circle" size={24} color={C.primary} />
-            </TouchableOpacity>
           ),
         }}
       />

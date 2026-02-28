@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -28,11 +28,11 @@ export default function ProductsScreen() {
   const { products, addToCart, cart } = useApp();
   const [search, setSearch] = useState("");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (cart.length === 0 && products.length > 0) {
       addToCart(products[0], 1);
     }
-  }, []);
+  }, [products, cart, addToCart]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) =>
@@ -70,7 +70,7 @@ export default function ProductsScreen() {
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

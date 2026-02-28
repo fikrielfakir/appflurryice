@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Platform, Alert, Modal, ScrollView, Image,
@@ -85,6 +85,12 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [qtyModalProduct, setQtyModalProduct] = useState<Product | null>(null);
   const [manualQty, setManualQty] = useState("1");
+
+  useEffect(() => {
+    if (products.length > 0 && cart.length === 0) {
+      addToCart(products[0], 1);
+    }
+  }, []);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
