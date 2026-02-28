@@ -3,11 +3,12 @@ import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet } from "react-native";
-import React from "react";
+import { Platform, StyleSheet, View, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Sidebar from "@/components/Sidebar";
 
 const C = Colors.dark;
 
@@ -22,17 +23,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
         <Label>Sales</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="contacts">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>Contacts</Label>
+      <NativeTabs.Trigger name="products">
+        <Icon sf={{ default: "cart", selected: "cart.fill" }} />
+        <Label>Products</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="expenses">
-        <Icon sf={{ default: "banknote", selected: "banknote.fill" }} />
-        <Label>Expenses</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="reports">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>Reports</Label>
+      <NativeTabs.Trigger name="transfers">
+        <Icon sf={{ default: "arrow.left.arrow.right", selected: "arrow.left.arrow.right" }} />
+        <Label>Transfers</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -93,45 +90,70 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="contacts"
+        name="products"
         options={{
-          title: "Contacts",
+          title: "Products",
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
-              ? <SymbolView name="person.2.fill" tintColor={color} size={size} />
-              : <Feather name="users" size={size} color={color} />
+              ? <SymbolView name="cart.fill" tintColor={color} size={size} />
+              : <Feather name="package" size={size} color={color} />
           ),
         }}
+      />
+      <Tabs.Screen
+        name="transfers"
+        options={{
+          title: "Transfers",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios"
+              ? <SymbolView name="arrow.left.arrow.right" tintColor={color} size={size} />
+              : <Feather name="repeat" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="contacts"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="expenses"
-        options={{
-          title: "Expenses",
-          tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios"
-              ? <SymbolView name="banknote.fill" tintColor={color} size={size} />
-              : <Feather name="dollar-sign" size={size} color={color} />
-          ),
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="reports"
-        options={{
-          title: "Reports",
-          tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios"
-              ? <SymbolView name="chart.bar.fill" tintColor={color} size={size} />
-              : <Feather name="bar-chart-2" size={size} color={color} />
-          ),
-        }}
+        options={{ href: null }}
       />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  return (
+    <View style={{ flex: 1 }}>
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <TouchableOpacity 
+        style={styles.menuButton} 
+        onPress={() => setIsSidebarOpen(true)}
+      >
+        <Feather name="menu" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  menuButton: {
+    position: 'absolute',
+    top: Platform.OS === 'web' ? 20 : 50,
+    left: 20,
+    zIndex: 900,
+    backgroundColor: C.card,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: C.border,
+  }
+});
