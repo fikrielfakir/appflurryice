@@ -8,6 +8,26 @@ export interface Product {
   stock: number;
   unit: string;
   category: string;
+  image?: string;
+  sku?: string;
+}
+
+export interface TransferItem {
+  sku: string;
+  name: string;
+  qty: number;
+  unit: string;
+}
+
+export interface Transfer {
+  id: string;
+  ref: string;
+  date: string;
+  from: string;
+  to: string;
+  items: TransferItem[];
+  total: number;
+  sig: string;
 }
 
 export interface CartItem {
@@ -63,6 +83,7 @@ interface AppContextValue {
   contacts: Contact[];
   expenses: Expense[];
   products: Product[];
+  transfers: Transfer[];
   cart: CartItem[];
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -72,6 +93,7 @@ interface AppContextValue {
   deleteContact: (id: string) => void;
   addExpense: (expense: Omit<Expense, "id" | "date">) => void;
   deleteExpense: (id: string) => void;
+  addTransfer: (transfer: Transfer) => void;
   addToCart: (product: Product, qty?: number) => void;
   removeFromCart: (productId: string) => void;
   updateCartQty: (productId: string, qty: number) => void;
@@ -90,24 +112,26 @@ const KEYS = {
   sales: "bizpos_sales",
   contacts: "bizpos_contacts",
   expenses: "bizpos_expenses",
+  transfers: "bizpos_transfers",
+  products: "bizpos_products",
   initialDataLoaded: "bizpos_initial_data_loaded",
 };
 
 const DEMO_CREDENTIALS = { username: "admin", password: "admin123" };
 
 export const DEMO_PRODUCTS: Product[] = [
-  { id: "p1", name: "dudu", price: 64.00, stock: 8785, unit: "pcs", category: "Produits finis" },
-  { id: "p2", name: "rene", price: 60.00, stock: 24130, unit: "pcs", category: "Produits finis" },
-  { id: "p3", name: "pikoti", price: 56.00, stock: 42440, unit: "pcs", category: "Produits finis" },
-  { id: "p4", name: "kokix", price: 75.00, stock: 1102, unit: "pcs", category: "Produits finis" },
-  { id: "p5", name: "polero", price: 60.00, stock: 632, unit: "pcs", category: "Produits finis" },
-  { id: "p6", name: "miyomi", price: 100.00, stock: 7, unit: "pcs", category: "Produits finis" },
-  { id: "p7", name: "choco go", price: 130.00, stock: 40, unit: "pcs", category: "Produits finis" },
-  { id: "p8", name: "flurry", price: 87.50, stock: 19604, unit: "pcs", category: "Produits finis" },
-  { id: "p9", name: "tas mini", price: 60.00, stock: 37, unit: "pcs", category: "Produits finis" },
-  { id: "p10", name: "choco bar", price: 45.00, stock: 890, unit: "pcs", category: "Produits finis" },
-  { id: "p11", name: "vanilla ice", price: 55.00, stock: 1250, unit: "pcs", category: "Produits finis" },
-  { id: "p12", name: "sorbet mix", price: 95.00, stock: 8, unit: "pcs", category: "Produits finis" },
+  { id: "p1", name: "dudu", price: 64.00, stock: 8785, unit: "pcs", category: "Produits finis", sku: "19509", image: "https://images.unsplash.com/photo-1585238342024-78d387f4a707?w=200&h=200&fit=crop" },
+  { id: "p2", name: "rene", price: 60.00, stock: 24130, unit: "pcs", category: "Produits finis", sku: "19533", image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=200&h=200&fit=crop" },
+  { id: "p3", name: "pikoti", price: 56.00, stock: 42440, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&h=200&fit=crop" },
+  { id: "p4", name: "kokix", price: 75.00, stock: 1102, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop" },
+  { id: "p5", name: "polero", price: 60.00, stock: 632, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=200&h=200&fit=crop" },
+  { id: "p6", name: "miyomi", price: 100.00, stock: 7, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1551024601-bec78aea704b?w=200&h=200&fit=crop" },
+  { id: "p7", name: "choco go", price: 130.00, stock: 40, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1582298538104-fe2e74c27f59?w=200&h=200&fit=crop" },
+  { id: "p8", name: "flurry", price: 87.50, stock: 19604, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=200&h=200&fit=crop" },
+  { id: "p9", name: "mariposa", price: 60.00, stock: 37, unit: "pcs", category: "Produits finis", sku: "19509", image: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?w=200&h=200&fit=crop" },
+  { id: "p10", name: "kitkat", price: 45.00, stock: 890, unit: "pcs", category: "Produits finis", sku: "19533", image: "https://images.unsplash.com/photo-1582298538104-fe2e74c27f59?w=200&h=200&fit=crop" },
+  { id: "p11", name: "vanilla ice", price: 55.00, stock: 1250, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&h=200&fit=crop" },
+  { id: "p12", name: "sorbet mix", price: 95.00, stock: 8, unit: "pcs", category: "Produits finis", image: "https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=200&h=200&fit=crop" },
 ];
 
 const DEMO_SALES: Sale[] = [
@@ -153,7 +177,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [products] = useState<Product[]>(DEMO_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(DEMO_PRODUCTS);
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -161,11 +186,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedSales, savedContacts, savedExpenses, initialDataLoaded] = await Promise.all([
+      const [savedUser, savedSales, savedContacts, savedExpenses, savedTransfers, savedProducts, initialDataLoaded] = await Promise.all([
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.sales),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
+        AsyncStorage.getItem(KEYS.transfers),
+        AsyncStorage.getItem(KEYS.products),
         AsyncStorage.getItem(KEYS.initialDataLoaded),
       ]);
 
@@ -175,12 +202,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSales(DEMO_SALES);
         setContacts(DEMO_CONTACTS);
         setExpenses(DEMO_EXPENSES);
+        setProducts(DEMO_PRODUCTS);
         
         await Promise.all([
           AsyncStorage.setItem(KEYS.user, "admin"),
           AsyncStorage.setItem(KEYS.sales, JSON.stringify(DEMO_SALES)),
           AsyncStorage.setItem(KEYS.contacts, JSON.stringify(DEMO_CONTACTS)),
           AsyncStorage.setItem(KEYS.expenses, JSON.stringify(DEMO_EXPENSES)),
+          AsyncStorage.setItem(KEYS.products, JSON.stringify(DEMO_PRODUCTS)),
           AsyncStorage.setItem(KEYS.initialDataLoaded, "true"),
         ]);
       } else {
@@ -188,6 +217,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSales(savedSales ? JSON.parse(savedSales) : []);
         setContacts(savedContacts ? JSON.parse(savedContacts) : []);
         setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
+        setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
+        setProducts(savedProducts ? JSON.parse(savedProducts) : DEMO_PRODUCTS);
       }
     } catch (e) {
       console.error("Failed to load data", e);
@@ -256,6 +287,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.expenses, JSON.stringify(updated));
   }
 
+  async function addTransfer(transfer: Transfer) {
+    const updatedTransfers = [transfer, ...transfers];
+    setTransfers(updatedTransfers);
+    await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
+
+    // Update product stock
+    const updatedProducts = products.map(p => {
+      const item = transfer.items.find(it => it.sku === p.sku);
+      if (item) {
+        // Transfer 'to' destination adds quantity, 'from' subtracts? 
+        // User said "update the new quantity Transfed". Usually means from -> to.
+        // If from is our stock, subtract. If to is our stock, add.
+        // Assuming 'Produits finis' is our current stock category.
+        if (transfer.from === "Produits finis") {
+          return { ...p, stock: p.stock - item.qty };
+        } else if (transfer.to === "Produits finis") {
+          return { ...p, stock: p.stock + item.qty };
+        }
+      }
+      return p;
+    });
+    setProducts(updatedProducts);
+    await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
+  }
+
   function addToCart(product: Product, qty = 1) {
     setCart(prev => {
       const existing = prev.find(ci => ci.product.id === product.id);
@@ -289,14 +345,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({
     user, isLoggedIn: !!user,
-    sales, contacts, expenses, products, cart,
+    sales, contacts, expenses, products, transfers, cart,
     login, logout,
     addSale, deleteSale,
     addContact, deleteContact,
     addExpense, deleteExpense,
+    addTransfer,
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit, isLoading,
-  }), [user, sales, contacts, expenses, products, cart, totalSales, totalExpenses, totalDue, netProfit, isLoading]);
+  }), [user, sales, contacts, expenses, products, transfers, cart, totalSales, totalExpenses, totalDue, netProfit, isLoading]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

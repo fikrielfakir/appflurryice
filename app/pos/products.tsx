@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  TextInput, Platform, Alert, Modal, ScrollView,
+  TextInput, Platform, Alert, Modal, ScrollView, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -52,7 +52,11 @@ function ProductCard({ product, cartQty, onAdd, onPress }: {
 
       <View style={styles.productIconArea}>
         <View style={[styles.productIcon, { backgroundColor: POS.primaryBg }]}>
-          <MaterialCommunityIcons name="ice-cream" size={28} color={POS.primary} />
+          {product.image ? (
+            <Image source={{ uri: product.image }} style={styles.productImg} />
+          ) : (
+            <MaterialCommunityIcons name="ice-cream" size={28} color={POS.primary} />
+          )}
         </View>
       </View>
 
@@ -270,7 +274,8 @@ const styles = StyleSheet.create({
   productName: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: POS.text },
   productUnit: { fontSize: 11, fontFamily: "Inter_400Regular", color: POS.textSecondary, marginTop: 2 },
   productIconArea: { marginRight: 8 },
-  productIcon: { width: 52, height: 52, borderRadius: 12, justifyContent: "center", alignItems: "center" },
+  productIcon: { width: 52, height: 52, borderRadius: 12, justifyContent: "center", alignItems: "center", overflow: "hidden" },
+  productImg: { width: "100%", height: "100%", resizeMode: "cover" },
   addBtn: {
     width: 36, height: 36, borderRadius: 8,
     backgroundColor: POS.primaryBg, justifyContent: "center", alignItems: "center",
