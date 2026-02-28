@@ -119,7 +119,8 @@ function SaleCard({ sale, onDelete, onShare }: {
               status: sale.status,
               paymentMethod: sale.paymentMethod,
               date: sale.date,
-              itemsJson: JSON.stringify(sale.items)
+              itemsJson: JSON.stringify(sale.items),
+              discount: "0"
             }
           });
         }}>
