@@ -82,7 +82,7 @@ function ClassicTabLayout() {
         name="sales"
         options={{
           title: "Sales",
-          headerShown: true,
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="creditcard.fill" tintColor={color} size={size} />

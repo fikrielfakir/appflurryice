@@ -116,7 +116,7 @@ export default function SalesScreen() {
   const { sales, deleteSale, totalSales } = useApp();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top;
+  const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
   const [search, setSearch] = useState("");
 
