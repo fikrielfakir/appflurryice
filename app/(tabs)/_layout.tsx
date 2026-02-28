@@ -90,7 +90,7 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="products"
+        name="products/index"
         options={{
           title: "Products",
           tabBarIcon: ({ color, size }) => (
@@ -101,7 +101,7 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="transfers"
+        name="transfers/index"
         options={{
           title: "Transfers",
           tabBarIcon: ({ color, size }) => (
