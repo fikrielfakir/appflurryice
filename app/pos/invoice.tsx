@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Platform, Alert, Share, Image,
+  Platform, Alert, Share, Image, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -9,6 +9,8 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import POS from "@/constants/pos-colors";
+import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { Sale } from "@/context/AppContext";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -23,11 +25,28 @@ export default function InvoiceScreen() {
     discount: string; itemsJson: string;
   }>();
 
+  const { print, isConnecting, isPrinting, isSuccess, error, retry, currentPrinter } = usePrintInvoice();
+
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const items: { name: string; qty: number; price: number }[] = params.itemsJson
     ? JSON.parse(params.itemsJson)
     : [];
+
+  const sale: Sale = useMemo(() => ({
+    id: params.invoiceNumber || Date.now().toString(),
+    invoiceNumber: params.invoiceNumber || '',
+    customerName: params.customerName || '',
+    customerPhone: params.customerPhone || '',
+    amount: parseFloat(params.total?.replace(/,/g, "") || "0"),
+    paid: parseFloat(params.paid?.replace(/,/g, "") || "0"),
+    discount: parseFloat(params.discount || "0"),
+    shippingFee: 0,
+    status: (params.status as 'paid' | 'partial' | 'due') || 'paid',
+    paymentMethod: params.paymentMethod || 'cash',
+    date: params.date || new Date().toISOString(),
+    items: items.map(i => ({ ...i, id: i.name })),
+  }), [params, items]);
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
   const discountPct = parseFloat(params.discount || "0");
@@ -179,20 +198,57 @@ export default function InvoiceScreen() {
 
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
-          style={styles.printBtn}
+          style={[
+            styles.printBtn,
+            (isConnecting || isPrinting) && styles.printBtnDisabled,
+            isSuccess && styles.printBtnSuccess,
+          ]}
           onPress={() => {
+            if (isConnecting || isPrinting) return;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            Alert.alert("Print", "Invoice sent to printer.");
+            print(sale);
           }}
+          disabled={isConnecting || isPrinting}
         >
-          <Feather name="printer" size={18} color="#fff" />
-          <Text style={styles.printBtnText}>Print</Text>
+          {isConnecting || isPrinting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : isSuccess ? (
+            <Feather name="check" size={18} color="#fff" />
+          ) : error ? (
+            <Feather name="alert-circle" size={18} color="#fff" />
+          ) : (
+            <Feather name="printer" size={18} color="#fff" />
+          )}
+          <Text style={styles.printBtnText}>
+            {isConnecting ? "Connexion..." : isPrinting ? "Impression..." : isSuccess ? "Imprimé!" : error ? "Erreur" : "Imprimer"}
+          </Text>
         </TouchableOpacity>
+        
+        {error && (
+          <TouchableOpacity
+            style={styles.retryBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              retry();
+            }}
+          >
+            <Feather name="refresh-cw" size={18} color={POS.danger} />
+            <Text style={styles.retryBtnText}>Réessayer</Text>
+          </TouchableOpacity>
+        )}
+        
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Feather name="share-2" size={18} color={POS.primary} />
           <Text style={styles.shareBtnText}>Share</Text>
         </TouchableOpacity>
       </View>
+      
+      {error && (
+        <View style={styles.errorBanner}>
+          <Feather name="alert-circle" size={16} color="#fff" />
+          <Text style={styles.errorBannerText}>{error}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -237,7 +293,13 @@ const styles = StyleSheet.create({
   qrText: { fontSize: 10, fontFamily: "Inter_400Regular", color: POS.textSecondary },
   bottomBar: { backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: POS.border, paddingHorizontal: 16, paddingTop: 12, flexDirection: "row", gap: 10 },
   printBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primary, borderRadius: 12, paddingVertical: 14 },
+  printBtnDisabled: { backgroundColor: POS.textMuted },
+  printBtnSuccess: { backgroundColor: "#4CAF50" },
   printBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  retryBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, backgroundColor: POS.danger + "20", borderRadius: 12, paddingVertical: 14, paddingHorizontal: 12, borderWidth: 1, borderColor: POS.danger },
+  retryBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.danger },
+  errorBanner: { position: "absolute", bottom: 100, left: 16, right: 16, backgroundColor: POS.danger, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 8 },
+  errorBannerText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: "#fff" },
   shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primaryBg, borderRadius: 12, paddingVertical: 14, borderWidth: 1.5, borderColor: POS.primary },
   shareBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: POS.primary },
 });
