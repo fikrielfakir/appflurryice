@@ -90,6 +90,7 @@ const KEYS = {
   sales: "bizpos_sales",
   contacts: "bizpos_contacts",
   expenses: "bizpos_expenses",
+  initialDataLoaded: "bizpos_initial_data_loaded",
 };
 
 const DEMO_CREDENTIALS = { username: "admin", password: "admin123" };
@@ -160,20 +161,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedSales, savedContacts, savedExpenses] = await Promise.all([
+      const [savedUser, savedSales, savedContacts, savedExpenses, initialDataLoaded] = await Promise.all([
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.sales),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
+        AsyncStorage.getItem(KEYS.initialDataLoaded),
       ]);
-      if (savedUser) setUser(savedUser);
-      setSales(savedSales ? JSON.parse(savedSales) : DEMO_SALES);
-      setContacts(savedContacts ? JSON.parse(savedContacts) : DEMO_CONTACTS);
-      setExpenses(savedExpenses ? JSON.parse(savedExpenses) : DEMO_EXPENSES);
-      if (!savedSales) await AsyncStorage.setItem(KEYS.sales, JSON.stringify(DEMO_SALES));
-      if (!savedContacts) await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(DEMO_CONTACTS));
-      if (!savedExpenses) await AsyncStorage.setItem(KEYS.expenses, JSON.stringify(DEMO_EXPENSES));
+
+      if (!initialDataLoaded) {
+        // First time opening the app, initialize with demo data
+        setUser("admin");
+        setSales(DEMO_SALES);
+        setContacts(DEMO_CONTACTS);
+        setExpenses(DEMO_EXPENSES);
+        
+        await Promise.all([
+          AsyncStorage.setItem(KEYS.user, "admin"),
+          AsyncStorage.setItem(KEYS.sales, JSON.stringify(DEMO_SALES)),
+          AsyncStorage.setItem(KEYS.contacts, JSON.stringify(DEMO_CONTACTS)),
+          AsyncStorage.setItem(KEYS.expenses, JSON.stringify(DEMO_EXPENSES)),
+          AsyncStorage.setItem(KEYS.initialDataLoaded, "true"),
+        ]);
+      } else {
+        if (savedUser) setUser(savedUser);
+        setSales(savedSales ? JSON.parse(savedSales) : []);
+        setContacts(savedContacts ? JSON.parse(savedContacts) : []);
+        setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
+      }
     } catch (e) {
+      console.error("Failed to load data", e);
       setSales(DEMO_SALES); setContacts(DEMO_CONTACTS); setExpenses(DEMO_EXPENSES);
     } finally {
       setIsLoading(false);

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
+import QRCode from "react-native-qrcode-svg";
 import POS from "@/constants/pos-colors";
 
 function fmt(n: number) {
@@ -34,6 +35,14 @@ export default function InvoiceScreen() {
   const paid = parseFloat(params.paid?.replace(/,/g, "") || "0");
   const dateObj = params.date ? new Date(params.date) : new Date();
   const dateStr = dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+  const qrData = JSON.stringify({
+    invoice: params.invoiceNumber,
+    customer: params.customerName,
+    total: total,
+    date: dateStr,
+    items: items.map(i => ({ n: i.name, q: i.qty, p: i.price }))
+  });
 
   async function handleShare() {
     try {
@@ -156,19 +165,15 @@ export default function InvoiceScreen() {
 
           <View style={styles.divider} />
 
-          <View style={styles.barcodeArea}>
-            {[...Array(40)].map((_, i) => (
-              <View
-                key={i}
-                style={[styles.barLine, {
-                  width: i % 3 === 0 ? 3 : i % 5 === 0 ? 2 : 1,
-                  height: i % 4 === 0 ? 40 : 30,
-                  backgroundColor: "#000",
-                }]}
-              />
-            ))}
+          <View style={styles.qrArea}>
+            <QRCode
+              value={qrData}
+              size={120}
+              color="#000"
+              backgroundColor="#fff"
+            />
+            <Text style={styles.qrText}>Scannez pour vérifier la facture</Text>
           </View>
-          <Text style={styles.barcodeText}>{params.invoiceNumber}</Text>
         </View>
       </ScrollView>
 
@@ -228,9 +233,8 @@ const styles = StyleSheet.create({
   paidRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 4 },
   paidLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: POS.textSecondary },
   paidValue: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: POS.success },
-  barcodeArea: { flexDirection: "row", justifyContent: "center", alignItems: "flex-end", gap: 1, marginTop: 16 },
-  barLine: { borderRadius: 1 },
-  barcodeText: { textAlign: "center", fontSize: 10, fontFamily: "Inter_400Regular", color: POS.textSecondary, marginTop: 4 },
+  qrArea: { alignItems: "center", marginTop: 20, gap: 10 },
+  qrText: { fontSize: 10, fontFamily: "Inter_400Regular", color: POS.textSecondary },
   bottomBar: { backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: POS.border, paddingHorizontal: 16, paddingTop: 12, flexDirection: "row", gap: 10 },
   printBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primary, borderRadius: 12, paddingVertical: 14 },
   printBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff" },
