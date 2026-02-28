@@ -82,10 +82,19 @@ function ClassicTabLayout() {
         name="sales"
         options={{
           title: "Sales",
+          headerShown: true,
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="creditcard.fill" tintColor={color} size={size} />
               : <Feather name="shopping-cart" size={size} color={color} />
+          ),
+          headerRight: () => (
+            <TouchableOpacity 
+              style={{ marginRight: 15 }} 
+              onPress={() => router.push("/pos/products")}
+            >
+              <Feather name="plus-circle" size={24} color={C.primary} />
+            </TouchableOpacity>
           ),
         }}
       />

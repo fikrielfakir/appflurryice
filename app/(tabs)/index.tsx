@@ -17,16 +17,18 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function StatCard({ label, value, icon, color, bg }: {
-  label: string; value: string; icon: string; color: string; bg: string;
+function StatCard({ label, value, icon, color, bg, isSmall }: {
+  label: string; value: string; icon: string; color: string; bg: string; isSmall?: boolean;
 }) {
   return (
-    <View style={[styles.statCard, { borderColor: color + "30" }]}>
-      <View style={[styles.statIcon, { backgroundColor: bg }]}>
-        <Feather name={icon as any} size={18} color={color} />
+    <View style={[styles.statCard, { borderColor: color + "30" }, isSmall && styles.statCardSmall]}>
+      <View style={[styles.statIcon, { backgroundColor: bg }, isSmall && styles.statIconSmall]}>
+        <Feather name={icon as any} size={isSmall ? 14 : 18} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <View>
+        <Text style={[styles.statValue, isSmall && styles.statValueSmall]}>{value}</Text>
+        <Text style={[styles.statLabel, isSmall && styles.statLabelSmall]}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -73,12 +75,15 @@ export default function DashboardScreen() {
           colors={["#0A1628", "#0E1C3F", C.background]}
           style={[styles.header, { paddingTop: topInset + 12 }]}
         >
-          <View style={styles.headerTop}>
+          <View style={styles.headerTopCenter}>
             <Image
               source={require("../../assets/flurry-logo.png")}
-              style={styles.headerLogo}
+              style={styles.headerLogoSmall}
               resizeMode="contain"
             />
+          </View>
+
+          <View style={styles.headerRight}>
             <TouchableOpacity
               style={styles.logoutBtn}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); logout(); }}
@@ -101,11 +106,15 @@ export default function DashboardScreen() {
           <Text style={styles.heroAmount}>MAD {fmt(totalSales)}</Text>
         </LinearGradient>
 
-        <View style={styles.statsGrid}>
-          <StatCard label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.gold} bg={C.gold + "18"} />
-          <StatCard label="Due Amount" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
-          <StatCard label="Net Profit" value={`MAD ${fmt(netProfit)}`} icon="award" color={C.success} bg={C.success + "18"} />
-          <StatCard label="Sales Count" value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg={C.primary + "18"} />
+        <View style={styles.statsContainer}>
+          <View style={styles.statsRow}>
+            <StatCard label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.gold} bg={C.gold + "18"} />
+            <StatCard label="Due Amount" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
+          </View>
+          <View style={styles.statsRow}>
+            <StatCard label="Net Profit" value={`MAD ${fmt(netProfit)}`} icon="award" color={C.success} bg={C.success + "18"} isSmall />
+            <StatCard label="Sales Count" value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg={C.primary + "18"} isSmall />
+          </View>
         </View>
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
@@ -170,8 +179,9 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   header: { paddingHorizontal: 20, paddingBottom: 28 },
-  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
-  headerLogo: { width: 130, height: 70 },
+  headerTopCenter: { alignItems: "center", marginBottom: 16, width: '100%' },
+  headerRight: { position: "absolute", right: 20, top: 50, zIndex: 10 },
+  headerLogoSmall: { width: 100, height: 50 },
   logoutBtn: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
@@ -184,14 +194,19 @@ const styles = StyleSheet.create({
   heroBadge: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   heroBadgeText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.gold },
   heroAmount: { fontSize: 36, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 12, marginTop: 20 },
+  statsContainer: { paddingHorizontal: 16, gap: 12, marginTop: 20 },
+  statsRow: { flexDirection: "row", gap: 12 },
   statCard: {
-    flex: 1, minWidth: "45%",
+    flex: 1,
     backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1,
   },
+  statCardSmall: { padding: 12 },
   statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", marginBottom: 12 },
+  statIconSmall: { width: 28, height: 28, marginBottom: 8 },
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 2 },
+  statValueSmall: { fontSize: 15 },
   statLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  statLabelSmall: { fontSize: 10 },
   sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff", marginHorizontal: 20, marginTop: 24, marginBottom: 12 },
   actionsGrid: { flexDirection: "row", paddingHorizontal: 16, gap: 10 },
   actionCard: {

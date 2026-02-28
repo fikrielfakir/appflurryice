@@ -102,8 +102,11 @@ export default function ProductsScreen() {
   }
 
   function handleProductPress(product: Product) {
-    setQtyModalProduct(product);
-    setManualQty("1");
+    if (product.stock !== undefined && product.stock === 0) {
+      Alert.alert("Out of stock", "This product is currently unavailable.");
+      return;
+    }
+    handleQuickAdd(product);
   }
 
   function handleManualAdd() {

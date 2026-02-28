@@ -61,6 +61,18 @@ function SaleCard({ sale, onDelete, onShare }: {
           <Text style={styles.metaKey}>Customer:</Text>
           <Text style={styles.metaVal}>{sale.customerName}</Text>
         </View>
+        <View style={styles.metaItem}>
+          <Text style={styles.metaKey}>Status:</Text>
+          <Text style={[styles.metaVal, { color: statusColor(sale.status), fontWeight: '700' }]}>
+            {sale.status === 'paid' ? 'Paid' : sale.status === 'partial' ? 'Partial' : 'Unpaid'}
+          </Text>
+        </View>
+        <View style={styles.metaItem}>
+          <Text style={styles.metaKey}>Due:</Text>
+          <Text style={[styles.metaVal, { color: due > 0 ? C.danger : C.success }]}>
+            MAD {fmt(due)}
+          </Text>
+        </View>
         {sale.customerPhone ? (
           <View style={styles.metaItem}>
             <Text style={styles.metaKey}>Phone:</Text>
@@ -184,23 +196,10 @@ export default function SalesScreen() {
           <View style={styles.empty}>
             <MaterialCommunityIcons name="receipt" size={44} color={C.textMuted} />
             <Text style={styles.emptyText}>No sales found</Text>
-            <Text style={styles.emptySubText}>Tap + to start a new sale</Text>
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       />
-
-      <TouchableOpacity
-        style={[styles.fab, { bottom: 90 + bottomInset }]}
-        onPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          router.push("/pos/products");
-        }}
-      >
-        <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.fabGradient}>
-          <Feather name="plus" size={24} color="#fff" />
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }
