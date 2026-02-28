@@ -151,74 +151,60 @@ export default function SalesScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
+      <View style={[styles.header, { paddingTop: topInset }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
-          
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerSubtitle}>Historique des ventes</Text>
-            <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
-               <Feather name="refresh-cw" size={18} color={C.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
+          <Text style={styles.headerTitle}>Historique des ventes</Text>
           <TouchableOpacity 
             style={styles.cartBtn} 
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }}
           >
-             <Feather name="printer" size={24} color={C.gold} />
+             <Feather name="printer" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.headerActions}>
-          <View style={styles.filterContainer}>
-            {(["all", "paid", "partial", "due"] as const).map(f => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-              >
-                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                  {f === "all" ? "Tout" : f.charAt(0).toUpperCase() + f.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.searchContainer}>
-            <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Rechercher..."
-              placeholderTextColor={C.textMuted}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Feather name="x" size={18} color={C.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+        <View style={styles.searchRow}>
+          <Feather name="search" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Rechercher..."
+            placeholderTextColor={C.textMuted}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Feather name="x" size={16} color={C.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        <View style={styles.headerRow}>
-          <View style={styles.headerMainInfo}>
-            <Text style={styles.headerTitle}>Ventes</Text>
-            <Text style={styles.headerSub}>{sales.length} factures · MAD {fmt(totalSales)}</Text>
+      <View style={styles.statsStrip}>
+        <View style={styles.filterContainer}>
+          {(["all", "paid", "partial", "due"] as const).map(f => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f === "all" ? "Tout" : f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.headerStats}>
+          <View style={styles.headerStat}>
+            <Text style={[styles.headerStatNum, { color: "#4CAF50" }]}>{paidCount}</Text>
+            <Text style={styles.headerStatLabel}>Payé</Text>
           </View>
-          <View style={styles.headerStats}>
-            <View style={styles.headerStat}>
-              <Text style={[styles.headerStatNum, { color: "#4CAF50" }]}>{paidCount}</Text>
-              <Text style={styles.headerStatLabel}>Payé</Text>
-            </View>
-            <View style={styles.headerStatDivider} />
-            <View style={styles.headerStat}>
-              <Text style={[styles.headerStatNum, { color: C.warning }]}>{dueCount}</Text>
-              <Text style={styles.headerStatLabel}>Impayé</Text>
-            </View>
+          <View style={styles.headerStatDivider} />
+          <View style={styles.headerStat}>
+            <Text style={[styles.headerStatNum, { color: C.warning }]}>{dueCount}</Text>
+            <Text style={styles.headerStatLabel}>Impayé</Text>
           </View>
         </View>
       </View>
@@ -257,80 +243,66 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   header: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: C.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingBottom: 12,
+    backgroundColor: Colors.dark.primary,
   },
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 12,
   },
   headerLeftPlaceholder: {
-    width: 44,
+    width: 36,
   },
   cartBtn: {
-    width: 44,
-    height: 44,
+    width: 36,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
   },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerSubtitle: {
+  headerTitle: {
     fontSize: 18,
     color: "#fff",
-    fontFamily: "Inter_700Bold",
+    fontFamily: "Inter_600SemiBold",
   },
-  headerActions: {
+  searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
-  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
-  filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  filterTextActive: { color: "#D4AF37" },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
-    borderWidth: 1,
-    borderColor: C.border,
   },
   searchInput: {
     flex: 1,
-    color: "#fff",
-    fontSize: 15,
+    color: Colors.dark.text,
+    fontSize: 14,
     fontFamily: "Inter_400Regular",
   },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  headerMainInfo: { flex: 1 },
-  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#fff" },
-  headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
-  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 12, padding: 8, gap: 10, borderWidth: 1, borderColor: C.border },
-  headerStat: { alignItems: "center", minWidth: 40 },
-  headerStatNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
-  headerStatLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  headerStatDivider: { width: 1, height: 20, backgroundColor: C.border },
+  statsStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: C.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  filterContainer: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  filterChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
+  filterText: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  filterTextActive: { color: "#D4AF37" },
+  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 10, padding: 6, gap: 8, borderWidth: 1, borderColor: C.border },
+  headerStat: { alignItems: "center", minWidth: 35 },
+  headerStatNum: { fontSize: 14, fontFamily: "Inter_700Bold" },
+  headerStatLabel: { fontSize: 8, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  headerStatDivider: { width: 1, height: 16, backgroundColor: C.border },
   card: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
