@@ -1,0 +1,25 @@
+const POS = {
+  primary: "#1A3C8F",
+  primaryLight: "#2952C4",
+  primaryDark: "#0D2260",
+  primaryBg: "#EBF0FB",
+  gold: "#D4AF37",
+  goldLight: "#F0D060",
+  goldBg: "#FDF7E0",
+  background: "#F0F4FF",
+  surface: "#FFFFFF",
+  card: "#FFFFFF",
+  text: "#0D2260",
+  textSecondary: "#5A7AB5",
+  textMuted: "#A0B4D8",
+  border: "#D0DCEF",
+  success: "#2ECC71",
+  successBg: "#E8F9F0",
+  danger: "#EF4444",
+  dangerBg: "#FEE8E8",
+  warning: "#F0B429",
+  warningBg: "#FFF5D6",
+  stockLow: "#EF4444",
+};
+
+export default POS;
