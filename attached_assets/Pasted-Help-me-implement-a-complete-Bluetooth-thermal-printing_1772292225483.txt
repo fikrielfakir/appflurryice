@@ -1,0 +1,178 @@
+Help me implement a complete Bluetooth thermal 
+printing solution in my React Native app (version: [YOUR RN VERSION], targeting 
+iOS [VERSION] and Android [API LEVEL]).
+
+---
+
+## 📦 DEPENDENCIES & SETUP
+
+Guide me through installing and linking these packages:
+- `react-native-ble-manager` (BLE device discovery & connection)
+- `react-native-esc-pos-printer` OR `react-native-thermal-receipt-printer-image-qr`
+- `react-native-permissions` (runtime permission handling)
+- `buffer` (for encoding ESC/POS byte commands)
+
+For each package, provide:
+1. Exact install command (npm/yarn)
+2. Any `npx pod-install` or autolinking steps
+3. Manual linking steps if autolinking fails
+4. Gradle/Podfile modifications needed
+
+---
+
+## 🔐 PERMISSIONS CONFIGURATION
+
+### Android (AndroidManifest.xml)
+Provide the exact XML permission tags for:
+- BLUETOOTH, BLUETOOTH_ADMIN (API < 31)
+- BLUETOOTH_SCAN, BLUETOOTH_CONNECT, BLUETOOTH_ADVERTISE (API 31+)
+- ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION
+- Runtime permission request code using PermissionsAndroid
+
+### iOS (Info.plist)
+Provide the exact keys and description strings for:
+- NSBluetoothAlwaysUsageDescription
+- NSBluetoothPeripheralUsageDescription
+- NSLocationWhenInUseUsageDescription (if needed)
+
+---
+
+## 🏗️ ARCHITECTURE: PrintingService Class
+
+Build me a singleton `BluetoothPrintingService` class with these methods:
+
+1. `initialize()` — Start BLE manager, register event listeners
+2. `requestPermissions()` — Handle Android 12+ and iOS permission flows
+3. `scanForPrinters(duration: number)` — Scan and return discovered BLE devices
+4. `connectToPrinter(deviceId: string)` — Connect and cache connection
+5. `disconnectPrinter()` — Clean disconnect with event cleanup
+6. `printReceipt(data: ReceiptData)` — Main print method
+7. `printRawBytes(bytes: number[])` — Low-level ESC/POS command sender
+8. `isConnected()` — Connection status check
+9. `getPairedPrinters()` — Retrieve previously paired devices
+
+Include:
+- TypeScript interfaces for all parameters and return types
+- Error handling with custom error codes (PERMISSION_DENIED, DEVICE_NOT_FOUND, 
+  CONNECTION_FAILED, PRINT_FAILED, TIMEOUT)
+- Retry logic with exponential backoff for connection failures
+- Event emitter pattern for connection state changes
+
+---
+
+## 🧾 ESC/POS COMMAND BUILDER
+
+Create an `EscPosBuilder` utility class that supports:
+
+### Text Formatting
+- Font size (normal, double width, double height, quad)
+- Bold, italic, underline toggles
+- Text alignment (left, center, right)
+- Character encoding (UTF-8, CP437, CP850)
+
+### Receipt Elements  
+- Header with logo placeholder (bitmap printing if supported)
+- Divider lines (solid, dashed)
+- Two-column rows (item name + price) with dot-fill padding
+- Multi-line text blocks
+- Subtotal / Tax / Total summary section
+- Footer with custom message
+
+### Special Features
+- QR code generation (ESC/POS native QR commands)
+- Barcode printing (CODE128, EAN13)
+- Cut paper command (full cut, partial cut)
+- Cash drawer kick command
+- Feed lines before cut
+
+---
+
+## 📱 REACT NATIVE UI COMPONENTS
+
+Build these components:
+
+### 1. `<PrinterSearchModal />`
+- Scan button with animated BLE scanning indicator
+- FlatList of discovered devices showing: name, RSSI signal strength, 
+  connection status badge
+- Connect/Disconnect button per device
+- "Remember this printer" toggle (persists to AsyncStorage)
+- Auto-reconnect to saved printer on app launch
+
+### 2. `<PrintButton />` 
+- Handles full print flow: permission check → connect → print → disconnect
+- Loading states: idle, connecting, printing, success, error
+- Haptic feedback on success/failure
+- Retry button on failure with error message display
+
+### 3. `useBluetooth()` Custom Hook
+- Exposes: connectedDevice, isScanning, availableDevices, connectionError
+- Actions: scan, connect, disconnect, print
+- Auto-cleanup of BLE event listeners on unmount
+
+---
+
+## 🧪 SAMPLE RECEIPT DATA & PRINT FLOW
+
+Provide a complete working example that:
+1. Requests permissions on component mount
+2. Auto-connects to a saved printer (from AsyncStorage)
+3. Prints this sample receipt structure:
+
+{
+  storeName: "My Store",
+  storeAddress: "123 Main St",
+  receiptNumber: "RCP-20240228-001",
+  items: [
+    { name: "Product A", qty: 2, price: 15.99 },
+    { name: "Product B x Long Name", qty: 1, price: 8.50 }
+  ],
+  subtotal: 40.48,
+  tax: 3.24,
+  discount: 5.00,
+  total: 38.72,
+  paymentMethod: "Cash",
+  cashierName: "John",
+  footerNote: "Thank you for shopping!"
+}
+
+4. Shows success toast on completion
+5. Handles all error states gracefully
+
+---
+
+## ⚠️ ERROR HANDLING & EDGE CASES
+
+Address these specific scenarios:
+- Printer goes out of range mid-print → auto-retry or user prompt
+- Bluetooth disabled → deep link to settings
+- Android 12 permission denied → rationale dialog → settings redirect
+- Paper out / printer error signals from BLE notifications
+- App goes to background during print → foreground service consideration
+- Multiple print jobs queued → print queue implementation
+- Large receipts causing buffer overflow → chunk large payloads
+
+---
+
+## 🔧 DEBUGGING TOOLS
+
+Include:
+- A `PrinterDebugConsole` component showing raw BLE events
+- Logging utility that captures BLE communication for bug reports
+- Test print function that prints all supported ESC/POS features
+- Mock printer service for development without hardware
+
+---
+
+## 📋 ADDITIONAL REQUIREMENTS
+
+- All code in TypeScript with strict mode
+- Compatible with React Native New Architecture (Fabric/TurboModules) 
+  if applicable for my RN version
+- Works with Expo bare workflow (note any Expo-specific gotchas)
+- Include unit test stubs using Jest + React Native Testing Library
+- Add JSDoc comments on all public methods
+
+Please structure your response with clear file separation showing exact file 
+paths (e.g., `src/services/BluetoothPrintingService.ts`, 
+`src/hooks/useBluetooth.ts`, `src/components/PrinterSearchModal.tsx`).
