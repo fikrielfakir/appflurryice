@@ -1,0 +1,63 @@
+Sales Workflow Description
+Based on the screenshots, here's the complete sales process in your app:
+Step 1 – Product Selection (Image 1)
+The salesperson browses the product catalog ("Produits finis") showing product name, unit price (MAD), and available stock. Products like dudu, rene, pikoti, kokix, polero, etc. are listed with their prices and inventory levels.
+Step 2 – Shopping Cart (Images 2 & 3)
+Selected products are added to the cart (عربة التسوق). Each item shows unit price, quantity controls (+/-), total per item, and available stock. A subtotal (الإجمالي الفرعي) of MAD 255.00 is shown. Tapping "انقر للتخصيص" opens the discount/total panel where a percentage discount can be applied.
+Step 3 – Customer Selection (Images 4 & 5)
+The customer screen (العميل) requires selecting a customer either manually via search or by scanning their QR code. Once selected (e.g. Mahdi Wadlaw – 0623845152), a green "تم التحقق من العميل" (Customer Verified) confirmation appears. Then the user proceeds via "الدفع والمتابعة".
+Step 4 – Payment (Images 6, 7 & 8)
+The payment screen (الدفع) shows: GPS location verification, transaction date/time, payment method (cash – En espèces), amount (MAD 255.00), optional shipping fees, return amount, and shipping notes. The payment summary confirms total due = total paid = 255.00 MAD, with remaining balance = 0.00. Final actions: Print (طباعة) or Share (المشاركة).
+Step 5 – Invoice Generated (Image 9)
+A formatted invoice (FACTURE) is printed under the "Flurry ice" brand with: invoice number, date, customer billing info, itemized product list (dudu, rene, pikoti, kokix), subtotal, total, and amount paid — plus a barcode.
+Step 6 – Sale Recorded (Image 10)
+The sale appears in المبيعات (Sales) dashboard marked as PAID, showing invoice number, total, payment amount, customer name, and location. Actions available: return, call, share, print, delete, edit.
+
+App Improvement Prompt
+I have a mobile sales/POS app (Arabic RTL interface, MAD currency, 
+Moroccan market) with the following workflow:
+
+1. Product catalog browsing with stock levels
+2. Cart management with quantity controls and discount
+3. Customer selection (manual search or QR scan)
+4. Payment processing (cash/other methods, GPS verification)
+5. Invoice generation and printing
+6. Sales history dashboard
+
+Please suggest and implement the following improvements:
+
+WORKFLOW IMPROVEMENTS:
+- Add quick-add buttons on product list (single tap to add to cart)
+- Add barcode scanner shortcut directly from product list
+- Allow partial payments / split payment methods (cash + transfer)
+- Add a "favorite products" or recent products section for faster selling
+- Enable bulk quantity input (type number instead of tapping +/- repeatedly)
+
+UI/UX IMPROVEMENTS:
+- Show low stock warning (e.g. red badge when stock < 10)
+- Add product search with voice input
+- Display customer purchase history when selecting a customer
+- Add a "quick sale" mode that skips customer selection for walk-in customers
+- Show profit margin indicator per product (optional, manager-only)
+
+INVOICE IMPROVEMENTS:
+- Add optional custom note field per invoice
+- Support multiple invoice templates
+- Auto-send invoice via WhatsApp after confirmation
+- Add digital signature field for customer confirmation
+
+REPORTING IMPROVEMENTS:
+- Daily/weekly/monthly sales summary on home screen
+- Best-selling products chart
+- Sales per customer report
+- Export sales data to Excel/PDF
+
+TECHNICAL:
+- Offline mode with sync when connection restored
+- Multi-warehouse/location support
+- Role-based access (salesperson vs manager views)
+- Audit log for edits and deletions
+
+The app uses Arabic RTL layout, MAD (Moroccan Dirham) currency, 
+and targets field sales representatives. Keep the pink/magenta 
+color scheme and Arabic-first interface.

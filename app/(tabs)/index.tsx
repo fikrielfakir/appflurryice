@@ -35,7 +35,7 @@ function StatCard({ label, value, icon, color, bg }: { label: string; value: str
 }
 
 const QUICK_ACTIONS = [
-  { title: "New Sale", icon: "shopping-cart", color: C.primary, route: "/(tabs)/sales" },
+  { title: "New Sale", icon: "shopping-cart", color: C.primary, route: "/pos/products" },
   { title: "Add Expense", icon: "dollar-sign", color: C.secondary, route: "/(tabs)/expenses" },
   { title: "Contacts", icon: "users", color: C.success, route: "/(tabs)/contacts" },
   { title: "Reports", icon: "bar-chart-2", color: C.warning, route: "/(tabs)/reports" },

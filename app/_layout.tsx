@@ -8,11 +8,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider, useApp } from "@/context/AppContext";
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
+  Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts,
 } from "@expo-google-fonts/inter";
 import { View, ActivityIndicator } from "react-native";
 import Colors from "@/constants/colors";
@@ -23,18 +19,13 @@ function RootLayoutNav() {
   const { isLoggedIn, isLoading } = useApp();
 
   useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync();
-    }
+    if (!isLoading) SplashScreen.hideAsync();
   }, [isLoading]);
 
   useEffect(() => {
     if (!isLoading) {
-      if (isLoggedIn) {
-        router.replace("/(tabs)");
-      } else {
-        router.replace("/login");
-      }
+      if (isLoggedIn) router.replace("/(tabs)");
+      else router.replace("/login");
     }
   }, [isLoggedIn, isLoading]);
 
@@ -50,27 +41,19 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.dark.background } }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="pos" options={{ presentation: "fullScreenModal" }} />
     </Stack>
   );
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
 
   useEffect(() => {
-    if (!fontsLoaded) {
-      SplashScreen.preventAutoHideAsync();
-    }
+    if (!fontsLoaded) SplashScreen.preventAutoHideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
-    return null;
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <ErrorBoundary>

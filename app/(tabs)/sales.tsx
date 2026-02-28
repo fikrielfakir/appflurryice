@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Platform, Alert, KeyboardAvoidingView, ScrollView,
+  Platform, Alert, Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
@@ -17,61 +18,81 @@ function fmt(n: number) {
 }
 
 function statusColor(s: string) {
-  if (s === "paid") return C.success;
+  if (s === "paid") return "#4CAF50";
   if (s === "partial") return C.warning;
   return C.danger;
 }
 
-function SaleCard({ sale, onDelete }: { sale: Sale; onDelete: () => void }) {
+function SaleCard({ sale, onDelete, onShare }: {
+  sale: Sale;
+  onDelete: () => void;
+  onShare: () => void;
+}) {
   const due = sale.amount - sale.paid;
+
   return (
     <View style={styles.card}>
-      <View style={styles.cardTop}>
-        <View style={[styles.avatar, { backgroundColor: C.primary + "20" }]}>
-          <Text style={[styles.avatarText, { color: C.primary }]}>
-            {sale.customerName.charAt(0).toUpperCase()}
-          </Text>
+      <View style={styles.cardHeader}>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor(sale.status) }]}>
+          <Text style={styles.statusText}>{sale.status.toUpperCase()}</Text>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardName}>{sale.customerName}</Text>
-          <Text style={styles.cardDate}>
-            {new Date(sale.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-          </Text>
+        <Text style={styles.invoiceDate}>
+          {new Date(sale.date).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+        </Text>
+      </View>
+
+      <Text style={styles.invoiceNumber}>Invoice #.{sale.invoiceNumber}</Text>
+
+      <View style={styles.amountsRow}>
+        <View style={styles.amountBlock}>
+          <Text style={styles.amountChip}>MAD {fmt(sale.amount)}</Text>
+          <Text style={styles.amountLabel}>Total Amount</Text>
         </View>
-        <View style={styles.cardRight}>
-          <Text style={styles.cardAmount}>${fmt(sale.amount)}</Text>
-          <View style={[styles.badge, { backgroundColor: statusColor(sale.status) + "20" }]}>
-            <Text style={[styles.badgeText, { color: statusColor(sale.status) }]}>
-              {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
-            </Text>
-          </View>
+        <View style={styles.amountBlock}>
+          <Text style={[styles.amountChipLight, due > 0 && { color: C.warning }]}>
+            MAD {fmt(sale.paid)}
+          </Text>
+          <Text style={styles.amountLabel}>Paid</Text>
         </View>
       </View>
-      <View style={styles.cardDivider} />
-      <View style={styles.cardFooter}>
-        <View style={styles.footerItem}>
-          <Text style={styles.footerLabel}>Paid</Text>
-          <Text style={[styles.footerValue, { color: C.success }]}>${fmt(sale.paid)}</Text>
+
+      <View style={styles.cardMeta}>
+        <View style={styles.metaItem}>
+          <Text style={styles.metaKey}>Customer:</Text>
+          <Text style={styles.metaVal}>{sale.customerName}</Text>
         </View>
-        <View style={styles.footerItem}>
-          <Text style={styles.footerLabel}>Due</Text>
-          <Text style={[styles.footerValue, { color: due > 0 ? C.danger : C.textMuted }]}>${fmt(due)}</Text>
+        {sale.customerPhone ? (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaKey}>Phone:</Text>
+            <Text style={styles.metaVal}>{sale.customerPhone}</Text>
+          </View>
+        ) : null}
+        <View style={styles.metaItem}>
+          <Text style={styles.metaKey}>Method:</Text>
+          <Text style={styles.metaVal}>{sale.paymentMethod}</Text>
         </View>
-        <View style={styles.footerItem}>
-          <Text style={styles.footerLabel}>Items</Text>
-          <Text style={styles.footerValue}>{sale.items.length}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            Alert.alert("Delete Sale", "Remove this sale record?", [
-              { text: "Cancel", style: "cancel" },
-              { text: "Delete", style: "destructive", onPress: onDelete },
-            ]);
-          }}
-          style={styles.deleteBtn}
-        >
-          <Feather name="trash-2" size={14} color={C.danger} />
+      </View>
+
+      <View style={styles.cardActions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Return", "Return flow coming soon.")}>
+          <Feather name="corner-up-left" size={16} color={C.warning} />
+        </TouchableOpacity>
+        {sale.customerPhone ? (
+          <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Call", `Calling ${sale.customerPhone}`)}>
+            <Feather name="phone" size={16} color={C.success} />
+          </TouchableOpacity>
+        ) : null}
+        <TouchableOpacity style={styles.actionBtn} onPress={onShare}>
+          <Feather name="share-2" size={16} color={C.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Print", "Sending to printer...")}>
+          <Feather name="printer" size={16} color={C.textSecondary} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
+          <Feather name="trash-2" size={16} color={C.danger} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Edit", "Edit functionality coming soon.")}>
+          <Feather name="edit-2" size={16} color={C.primary} />
         </TouchableOpacity>
       </View>
     </View>
@@ -80,161 +101,146 @@ function SaleCard({ sale, onDelete }: { sale: Sale; onDelete: () => void }) {
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, addSale, deleteSale, totalSales } = useApp();
-  const [modalVisible, setModalVisible] = useState(false);
-  const [customerName, setCustomerName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [paid, setPaid] = useState("");
-  const [note, setNote] = useState("");
+  const { sales, deleteSale, totalSales } = useApp();
+  const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  function openModal() {
-    setCustomerName(""); setAmount(""); setPaid(""); setNote("");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setModalVisible(true);
-  }
+  const filtered = filter === "all" ? sales : sales.filter(s => s.status === filter);
 
-  function handleAdd() {
-    if (!customerName.trim() || !amount.trim()) {
-      Alert.alert("Required", "Please fill in customer name and amount.");
-      return;
-    }
-    const amtNum = parseFloat(amount);
-    const paidNum = parseFloat(paid || "0");
-    if (isNaN(amtNum) || amtNum <= 0) {
-      Alert.alert("Invalid", "Enter a valid amount.");
-      return;
-    }
-    const paidFinal = Math.min(paidNum, amtNum);
-    const status: Sale["status"] = paidFinal >= amtNum ? "paid" : paidFinal > 0 ? "partial" : "due";
-    addSale({
-      customerName: customerName.trim(),
-      amount: amtNum,
-      paid: isNaN(paidNum) ? 0 : paidFinal,
-      status,
-      items: [{ name: "Sale Item", qty: 1, price: amtNum }],
-      note: note.trim() || undefined,
-    });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setModalVisible(false);
+  const paidCount = sales.filter(s => s.status === "paid").length;
+  const dueCount = sales.filter(s => s.status === "due" || s.status === "partial").length;
+
+  async function handleShare(sale: Sale) {
+    try {
+      const text = [
+        `Invoice #${sale.invoiceNumber}`,
+        `Customer: ${sale.customerName}`,
+        `Total: MAD ${fmt(sale.amount)}`,
+        `Paid: MAD ${fmt(sale.paid)}`,
+        `Status: ${sale.status.toUpperCase()}`,
+        ...sale.items.map(i => `  ${i.name} x${i.qty} = MAD ${fmt(i.qty * i.price)}`),
+      ].join("\n");
+      await Share.share({ message: text });
+    } catch (e) {}
   }
 
   return (
     <View style={styles.screen}>
       <LinearGradient colors={["#1A2240", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={styles.headerTitle}>Sales</Text>
-        <Text style={styles.headerSub}>{sales.length} records · ${fmt(totalSales)} total</Text>
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.headerTitle}>Sales</Text>
+            <Text style={styles.headerSub}>{sales.length} invoices · MAD {fmt(totalSales)}</Text>
+          </View>
+          <View style={styles.headerStats}>
+            <View style={styles.headerStat}>
+              <Text style={[styles.headerStatNum, { color: "#4CAF50" }]}>{paidCount}</Text>
+              <Text style={styles.headerStatLabel}>Paid</Text>
+            </View>
+            <View style={styles.headerStatDivider} />
+            <View style={styles.headerStat}>
+              <Text style={[styles.headerStatNum, { color: C.warning }]}>{dueCount}</Text>
+              <Text style={styles.headerStatLabel}>Unpaid</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.filterRow}>
+          {(["all", "paid", "partial", "due"] as const).map(f => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
+            >
+              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </LinearGradient>
 
       <FlatList
-        data={sales}
+        data={filtered}
         keyExtractor={s => s.id}
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 120 + bottomInset }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <SaleCard sale={item} onDelete={() => deleteSale(item.id)} />
+          <SaleCard
+            sale={item}
+            onDelete={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              Alert.alert("Delete Sale", "Remove this invoice?", [
+                { text: "Cancel", style: "cancel" },
+                { text: "Delete", style: "destructive", onPress: () => deleteSale(item.id) },
+              ]);
+            }}
+            onShare={() => handleShare(item)}
+          />
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Feather name="shopping-cart" size={40} color={C.textMuted} />
-            <Text style={styles.emptyText}>No sales yet</Text>
-            <Text style={styles.emptySubText}>Tap + to add your first sale</Text>
+            <MaterialCommunityIcons name="receipt" size={44} color={C.textMuted} />
+            <Text style={styles.emptyText}>No sales found</Text>
+            <Text style={styles.emptySubText}>Tap + to start a new sale</Text>
           </View>
         }
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
       />
 
-      <TouchableOpacity style={[styles.fab, { bottom: 90 + bottomInset }]} onPress={openModal}>
-        <LinearGradient colors={["#5B7FFF", "#4C6FFF"]} style={styles.fabGradient}>
+      <TouchableOpacity
+        style={[styles.fab, { bottom: 90 + bottomInset }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push("/pos/products");
+        }}
+      >
+        <LinearGradient colors={["#D81B60", "#C2185B"]} style={styles.fabGradient}>
           <Feather name="plus" size={24} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
-
-      <Modal visible={modalVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modal}>
-          <View style={styles.modalHandle} />
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>New Sale</Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
-              <Feather name="x" size={22} color={C.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-            <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Customer Name *</Text>
-                <TextInput style={styles.fieldInput} value={customerName} onChangeText={setCustomerName}
-                  placeholder="Enter customer name" placeholderTextColor={C.textMuted} />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Total Amount *</Text>
-                <TextInput style={styles.fieldInput} value={amount} onChangeText={setAmount}
-                  placeholder="0.00" placeholderTextColor={C.textMuted} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Amount Paid</Text>
-                <TextInput style={styles.fieldInput} value={paid} onChangeText={setPaid}
-                  placeholder="0.00" placeholderTextColor={C.textMuted} keyboardType="decimal-pad" />
-              </View>
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Note (optional)</Text>
-                <TextInput style={[styles.fieldInput, { height: 80 }]} value={note} onChangeText={setNote}
-                  placeholder="Add a note..." placeholderTextColor={C.textMuted} multiline />
-              </View>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleAdd}>
-                <LinearGradient colors={["#5B7FFF", "#4C6FFF"]} style={styles.saveBtnGradient}>
-                  <Text style={styles.saveBtnText}>Add Sale</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
-  header: { paddingHorizontal: 20, paddingBottom: 20 },
+  header: { paddingHorizontal: 20, paddingBottom: 16 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
   headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
   headerSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 4 },
+  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 12, padding: 12, gap: 12, borderWidth: 1, borderColor: C.border },
+  headerStat: { alignItems: "center" },
+  headerStatNum: { fontSize: 20, fontFamily: "Inter_700Bold" },
+  headerStatLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  headerStatDivider: { width: 1, height: 24, backgroundColor: C.border },
+  filterRow: { flexDirection: "row", gap: 8 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  filterChipActive: { backgroundColor: "#C2185B20", borderColor: "#C2185B" },
+  filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  filterTextActive: { color: "#C2185B" },
   card: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
-  cardTop: { flexDirection: "row", alignItems: "center" },
-  avatar: { width: 44, height: 44, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  avatarText: { fontSize: 18, fontFamily: "Inter_700Bold" },
-  cardInfo: { flex: 1, marginLeft: 12 },
-  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  cardDate: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
-  cardRight: { alignItems: "flex-end", gap: 4 },
-  cardAmount: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff" },
-  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold" },
-  cardDivider: { height: 1, backgroundColor: C.border, marginVertical: 12 },
-  cardFooter: { flexDirection: "row", alignItems: "center", gap: 4 },
-  footerItem: { flex: 1, alignItems: "center" },
-  footerLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginBottom: 2 },
-  footerValue: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  deleteBtn: { padding: 6 },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
+  statusText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
+  invoiceDate: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  invoiceNumber: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 12, textAlign: "right" },
+  amountsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
+  amountBlock: { flex: 1 },
+  amountChip: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.warning },
+  amountChipLight: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  amountLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
+  cardMeta: { gap: 4, marginBottom: 12, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
+  metaItem: { flexDirection: "row", gap: 6 },
+  metaKey: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, width: 70 },
+  metaVal: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#fff", flex: 1 },
+  cardActions: { flexDirection: "row", gap: 8, justifyContent: "flex-end", borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
+  actionBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: C.surface, justifyContent: "center", alignItems: "center" },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
-  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, overflow: "hidden", elevation: 8, shadowColor: C.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 },
+  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, overflow: "hidden", elevation: 8, shadowColor: "#C2185B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 },
   fabGradient: { flex: 1, justifyContent: "center", alignItems: "center" },
-  modal: { flex: 1, backgroundColor: C.card },
-  modalHandle: { width: 36, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: "center", marginTop: 12, marginBottom: 8 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16 },
-  modalTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
-  modalContent: { padding: 20, gap: 16 },
-  field: { gap: 6 },
-  fieldLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
-  fieldInput: {
-    backgroundColor: C.surface, borderRadius: 12, borderWidth: 1, borderColor: C.border,
-    padding: 14, color: "#fff", fontFamily: "Inter_400Regular", fontSize: 15,
-  },
-  saveBtn: { borderRadius: 14, overflow: "hidden", marginTop: 8 },
-  saveBtnGradient: { height: 54, justifyContent: "center", alignItems: "center" },
-  saveBtnText: { color: "#fff", fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });
