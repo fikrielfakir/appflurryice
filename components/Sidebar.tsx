@@ -11,6 +11,7 @@ const MENU_ITEMS = [
   { title: 'Expenses', icon: 'dollar-sign', route: '/(tabs)/expenses' },
   { title: 'Reports', icon: 'bar-chart-2', route: '/(tabs)/reports' },
   { title: 'Contacts', icon: 'users', route: '/(tabs)/contacts' },
+  { title: 'Imprimante', icon: 'printer', route: '/settings/printer' },
 ];
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
