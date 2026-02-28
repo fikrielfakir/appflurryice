@@ -90,20 +90,50 @@ function SaleCard({ sale, onDelete, onShare }: {
           <Feather name="corner-up-left" size={16} color={C.warning} />
         </TouchableOpacity>
         {sale.customerPhone ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Call", `Calling ${sale.customerPhone}`)}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => {
+            const phoneNumber = sale.customerPhone;
+            if (Platform.OS === 'web') {
+              window.open(`tel:${phoneNumber}`);
+            } else {
+              import('react-native').then(({ Linking }) => {
+                Linking.openURL(`tel:${phoneNumber}`);
+              });
+            }
+          }}>
             <Feather name="phone" size={16} color={C.success} />
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity style={styles.actionBtn} onPress={onShare}>
           <Feather name="share-2" size={16} color={C.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Print", "Sending to printer...")}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => {
+          router.push({
+            pathname: "/pos/invoice",
+            params: {
+              invoiceNumber: sale.invoiceNumber,
+              customerName: sale.customerName,
+              customerPhone: sale.customerPhone || "",
+              total: sale.amount.toString(),
+              paid: sale.paid.toString(),
+              remaining: (sale.amount - sale.paid).toString(),
+              status: sale.status,
+              paymentMethod: sale.paymentMethod,
+              date: sale.date,
+              itemsJson: JSON.stringify(sale.items)
+            }
+          });
+        }}>
           <Feather name="printer" size={16} color={C.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
           <Feather name="trash-2" size={16} color={C.danger} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Edit", "Edit functionality coming soon.")}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => {
+          router.push({
+            pathname: "/pos/products",
+            params: { editSaleId: sale.id }
+          });
+        }}>
           <Feather name="edit-2" size={16} color={C.primary} />
         </TouchableOpacity>
       </View>

@@ -81,16 +81,21 @@ function ProductCard({ product, cartQty, onAdd, onPress }: {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, cart, addToCart } = useApp();
+  const { products, cart, addToCart, sales } = useApp();
   const [search, setSearch] = useState("");
   const [qtyModalProduct, setQtyModalProduct] = useState<Product | null>(null);
   const [manualQty, setManualQty] = useState("1");
+  const params = useLocalSearchParams<{ editSaleId: string }>();
 
   useEffect(() => {
-    if (products.length > 0 && cart.length === 0) {
-      addToCart(products[0], 1);
+    if (params.editSaleId) {
+      const sale = sales.find(s => s.id === params.editSaleId);
+      if (sale) {
+        // Here you would normally populate the cart with sale items
+        Alert.alert("Edit Mode", `Editing Invoice #${sale.invoiceNumber}`);
+      }
     }
-  }, []);
+  }, [params.editSaleId]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
