@@ -1,61 +1,139 @@
-// template
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet, useColorScheme } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import React from "react";
-
+import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-//IMPORTANT: iOS 26 Exists, feel free to use NativeTabs for native tabs with liquid glass support.
 function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Home</Label>
+        <Label>Dashboard</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="sales">
+        <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
+        <Label>Sales</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="contacts">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Contacts</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="expenses">
+        <Icon sf={{ default: "banknote", selected: "banknote.fill" }} />
+        <Label>Expenses</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="reports">
+        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
+        <Label>Reports</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
 
 function ClassicTabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
-
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: true,
+        headerShown: false,
+        tabBarActiveTintColor: Colors.dark.primary,
+        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: isDark ? "#000" : "#fff",
+            android: Colors.dark.card,
+            web: Colors.dark.card,
           }),
-          borderTopWidth: 0,
+          borderTopWidth: 1,
+          borderTopColor: Colors.dark.border,
           elevation: 0,
+          height: Platform.OS === "web" ? 84 : 60 + insets.bottom,
+          paddingBottom: Platform.OS === "web" ? 34 : insets.bottom,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
             <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
+              intensity={80}
+              tint="dark"
               style={StyleSheet.absoluteFill}
             />
           ) : null,
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontFamily: "Inter_500Medium",
+          marginTop: -2,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="house" tintColor={color} size={24} />
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios" ? (
+              <SymbolView name="house.fill" tintColor={color} size={size} />
+            ) : (
+              <Feather name="home" size={size} color={color} />
+            )
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="sales"
+        options={{
+          title: "Sales",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios" ? (
+              <SymbolView name="creditcard.fill" tintColor={color} size={size} />
+            ) : (
+              <Feather name="shopping-cart" size={size} color={color} />
+            )
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="contacts"
+        options={{
+          title: "Contacts",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios" ? (
+              <SymbolView name="person.2.fill" tintColor={color} size={size} />
+            ) : (
+              <Feather name="users" size={size} color={color} />
+            )
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="expenses"
+        options={{
+          title: "Expenses",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios" ? (
+              <SymbolView name="banknote.fill" tintColor={color} size={size} />
+            ) : (
+              <Feather name="dollar-sign" size={size} color={color} />
+            )
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="reports"
+        options={{
+          title: "Reports",
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios" ? (
+              <SymbolView name="chart.bar.fill" tintColor={color} size={size} />
+            ) : (
+              <Feather name="bar-chart-2" size={size} color={color} />
+            )
           ),
         }}
       />
