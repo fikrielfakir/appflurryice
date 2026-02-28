@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   TextInput,
   TouchableOpacity,
   Platform,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
@@ -28,12 +29,6 @@ export default function ProductsScreen() {
   const { products, addToCart, cart } = useApp();
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    if (cart.length === 0 && products.length > 0) {
-      addToCart(products[0], 1);
-    }
-  }, [products, cart, addToCart]);
-
   const filteredProducts = useMemo(() => {
     return products.filter((p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -51,23 +46,27 @@ export default function ProductsScreen() {
         addToCart(item, 1);
       }}
     >
-      <View style={styles.productInfo}>
-        <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productCategory}>{item.category}</Text>
-      </View>
-      <View style={styles.productStats}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Price</Text>
-          <Text style={styles.statValue}>MAD {fmt(item.price)}</Text>
+      <View style={styles.productMain}>
+        <View style={styles.priceContainer}>
+          <Text style={styles.priceValue}>{fmt(item.price)}MAD</Text>
+          <View style={styles.stockBadge}>
+            <Text style={styles.stockText}>{fmt(item.stock)}</Text>
+            <MaterialIcons name="Layers" size={12} color="#fff" style={{ marginLeft: 4 }} />
+          </View>
         </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Stock</Text>
-          <Text style={[
-            styles.statValue, 
-            item.stock < 10 ? { color: C.danger } : { color: C.success }
-          ]}>
-            {item.stock} {item.unit}
-          </Text>
+
+        <View style={styles.productCenter}>
+          <Text style={styles.productName}>{item.name}</Text>
+        </View>
+
+        <View style={styles.imageContainer}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.productImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Feather name="image" size={20} color={C.textMuted} />
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -76,21 +75,48 @@ export default function ProductsScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: topInset + 10 }]}>
-        <Text style={styles.headerTitle}>Inventory</Text>
-        <View style={styles.searchContainer}>
-          <Feather name="search" size={18} color={C.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search products..."
-            placeholderTextColor={C.textMuted}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")}>
-              <Feather name="x" size={18} color={C.textMuted} />
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.cartBtn} onPress={() => {}}>
+             <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.length}</Text>
+             </View>
+             <Feather name="shopping-cart" size={24} color={C.primary} />
+          </TouchableOpacity>
+          
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerSubtitle}>Produits finis</Text>
+            <TouchableOpacity>
+               <Feather name="refresh-cw" size={18} color={C.textSecondary} />
             </TouchableOpacity>
-          )}
+          </View>
+
+          <Text style={styles.headerTitle}>المنتجات</Text>
+        </View>
+
+        <View style={styles.headerActions}>
+          <View style={styles.actionButtons}>
+             <TouchableOpacity style={styles.actionIconBtn}>
+                <Feather name="grid" size={18} color={C.textSecondary} />
+             </TouchableOpacity>
+             <TouchableOpacity style={styles.actionIconBtn}>
+                <Feather name="sliders" size={18} color={C.textSecondary} />
+             </TouchableOpacity>
+             <TouchableOpacity style={styles.actionIconBtn}>
+                <Feather name="align-justify" size={18} color={C.textSecondary} />
+             </TouchableOpacity>
+          </View>
+
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="بحث"
+              placeholderTextColor={C.textMuted}
+              value={search}
+              onChangeText={setSearch}
+              textAlign="right"
+            />
+            <Feather name="search" size={18} color={C.textMuted} style={{ marginLeft: 8 }} />
+          </View>
         </View>
       </View>
 
@@ -114,79 +140,158 @@ export default function ProductsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
+  screen: { flex: 1, backgroundColor: "#F8F9FA" },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    backgroundColor: C.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: "#fff",
   },
-  headerTitle: {
-    fontSize: 24,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
-    marginBottom: 16,
-    marginLeft: 45, // Leave space for the menu button
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  searchInput: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    marginLeft: 8,
-  },
-  listContent: { padding: 16 },
-  productCard: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: C.border,
+  headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 16,
   },
-  productInfo: { flex: 1 },
+  cartBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "#E74C3C",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  cartBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  headerTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#444",
+    fontFamily: "Inter_500Medium",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: "#333",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#F1F3F5",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F3F5",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#333",
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+  },
+  listContent: { padding: 12 },
+  productCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  productMain: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  priceContainer: {
+    alignItems: "flex-start",
+    width: 100,
+  },
+  priceValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  stockBadge: {
+    backgroundColor: "#A01B5D",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  stockText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  productCenter: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: 8,
+  },
   productName: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#fff",
-    marginBottom: 4,
+    color: "#444",
+    textAlign: "center",
   },
-  productCategory: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.textSecondary,
-  },
-  productStats: {
-    flexDirection: "row",
-    gap: 16,
+  imageContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: "hidden",
+    backgroundColor: "#F1F3F5",
+    justifyContent: "center",
     alignItems: "center",
   },
-  statItem: { alignItems: "flex-end" },
-  statLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-    marginBottom: 2,
-    textTransform: "uppercase",
+  productImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
-  statValue: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    color: "#fff",
+  placeholderImage: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyState: {
     alignItems: "center",
@@ -200,3 +305,4 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
 });
+
