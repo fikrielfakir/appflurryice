@@ -93,7 +93,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="products/index"
         options={{
-          title: "المنتجات",
+          title: "Products",
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="cart.fill" tintColor={color} size={size} />

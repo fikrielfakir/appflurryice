@@ -10,8 +10,9 @@ import {
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
@@ -48,10 +49,10 @@ export default function ProductsScreen() {
     >
       <View style={styles.productMain}>
         <View style={styles.priceContainer}>
-          <Text style={styles.priceValue}>{fmt(item.price)}MAD</Text>
+          <Text style={styles.priceValue}>{fmt(item.price)} MAD</Text>
           <View style={styles.stockBadge}>
             <Text style={styles.stockText}>{fmt(item.stock)}</Text>
-            <MaterialIcons name="Layers" size={12} color="#fff" style={{ marginLeft: 4 }} />
+            <Feather name="package" size={12} color="#fff" style={{ marginLeft: 4 }} />
           </View>
         </View>
 
@@ -76,46 +77,55 @@ export default function ProductsScreen() {
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: topInset + 10 }]}>
         <View style={styles.headerTop}>
-          <TouchableOpacity style={styles.cartBtn} onPress={() => {}}>
-             <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cart.length}</Text>
-             </View>
-             <Feather name="shopping-cart" size={24} color={C.primary} />
-          </TouchableOpacity>
+          <View style={styles.headerLeftPlaceholder} />
           
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerSubtitle}>Produits finis</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
                <Feather name="refresh-cw" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.headerTitle}>المنتجات</Text>
+          <TouchableOpacity 
+            style={styles.cartBtn} 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/pos/cart");
+            }}
+          >
+             {cart.length > 0 && (
+               <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>{cart.length}</Text>
+               </View>
+             )}
+             <Feather name="shopping-cart" size={24} color={C.gold} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
              <TouchableOpacity style={styles.actionIconBtn}>
-                <Feather name="grid" size={18} color={C.textSecondary} />
+                <Feather name="grid" size={18} color={C.gold} />
              </TouchableOpacity>
              <TouchableOpacity style={styles.actionIconBtn}>
-                <Feather name="sliders" size={18} color={C.textSecondary} />
-             </TouchableOpacity>
-             <TouchableOpacity style={styles.actionIconBtn}>
-                <Feather name="align-justify" size={18} color={C.textSecondary} />
+                <Feather name="list" size={18} color={C.textSecondary} />
              </TouchableOpacity>
           </View>
 
           <View style={styles.searchContainer}>
+            <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder="بحث"
+              placeholder="Search..."
               placeholderTextColor={C.textMuted}
               value={search}
               onChangeText={setSearch}
-              textAlign="right"
             />
-            <Feather name="search" size={18} color={C.textMuted} style={{ marginLeft: 8 }} />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <Feather name="x" size={18} color={C.textMuted} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -140,11 +150,13 @@ export default function ProductsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F8F9FA" },
+  screen: { flex: 1, backgroundColor: C.background },
   header: {
     paddingHorizontal: 16,
     paddingBottom: 16,
-    backgroundColor: "#fff",
+    backgroundColor: C.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
   },
   headerTop: {
     flexDirection: "row",
@@ -152,23 +164,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  headerLeftPlaceholder: {
+    width: 44, // Space for the floating menu button in layout
+  },
   cartBtn: {
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   cartBadge: {
     position: "absolute",
-    top: 0,
-    right: 0,
-    backgroundColor: "#E74C3C",
+    top: -5,
+    right: -5,
+    backgroundColor: C.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1,
+    borderWidth: 2,
+    borderColor: C.surface,
   },
   cartBadgeText: {
     color: "#fff",
@@ -181,14 +202,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: "#444",
-    fontFamily: "Inter_500Medium",
-  },
-  headerTitle: {
-    fontSize: 20,
+    fontSize: 18,
+    color: "#fff",
     fontFamily: "Inter_700Bold",
-    color: "#333",
   },
   headerActions: {
     flexDirection: "row",
@@ -200,39 +216,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   actionIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "#F1F3F5",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: C.card,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: C.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F3F5",
+    backgroundColor: C.card,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   searchInput: {
     flex: 1,
-    color: "#333",
+    color: "#fff",
     fontSize: 15,
     fontFamily: "Inter_400Regular",
   },
   listContent: { padding: 12 },
   productCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: C.card,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: C.border,
   },
   productMain: {
     flexDirection: "row",
@@ -245,22 +262,22 @@ const styles = StyleSheet.create({
   },
   priceValue: {
     fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
     marginBottom: 4,
   },
   stockBadge: {
     backgroundColor: "#A01B5D",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
   },
   stockText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "bold",
+    fontFamily: "Inter_700Bold",
   },
   productCenter: {
     flex: 1,
@@ -270,17 +287,19 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#444",
+    color: "#fff",
     textAlign: "center",
   },
   imageContainer: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#F1F3F5",
+    backgroundColor: C.surface,
     justifyContent: "center",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: C.border,
   },
   productImage: {
     width: "100%",
