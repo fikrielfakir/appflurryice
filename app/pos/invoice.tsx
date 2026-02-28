@@ -1,7 +1,7 @@
 import React from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Platform, Alert, Share,
+  Platform, Alert, Share, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -76,10 +76,11 @@ export default function InvoiceScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 120 }}>
         <View style={styles.invoice}>
           <View style={styles.invoiceHeader}>
-            <View style={styles.logoCircle}>
-              <Feather name="bar-chart" size={28} color={POS.primary} />
-            </View>
-            <Text style={styles.businessName}>BizPOS</Text>
+            <Image
+              source={require("../../assets/flurry-logo.png")}
+              style={styles.invoiceLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.businessAddress}>Business Management Suite</Text>
           </View>
 
@@ -199,9 +200,8 @@ const styles = StyleSheet.create({
   doneBtn: { paddingHorizontal: 12, paddingVertical: 6, backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8 },
   doneBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
   invoice: { backgroundColor: "#fff", borderRadius: 4, padding: 24, elevation: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-  invoiceHeader: { alignItems: "center", marginBottom: 16, gap: 4 },
-  logoCircle: { width: 64, height: 64, borderRadius: 16, backgroundColor: POS.primaryBg, justifyContent: "center", alignItems: "center", marginBottom: 4 },
-  businessName: { fontSize: 20, fontFamily: "Inter_700Bold", color: POS.text },
+  invoiceHeader: { alignItems: "center", marginBottom: 12, gap: 2 },
+  invoiceLogo: { width: 160, height: 88 },
   businessAddress: { fontSize: 11, fontFamily: "Inter_400Regular", color: POS.textSecondary, textAlign: "center" },
   invoiceTitleRow: { alignItems: "center", marginVertical: 12 },
   invoiceTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: POS.text, letterSpacing: 0.5 },

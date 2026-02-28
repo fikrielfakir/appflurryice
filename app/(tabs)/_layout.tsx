@@ -9,6 +9,8 @@ import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+const C = Colors.dark;
+
 function NativeTabLayout() {
   return (
     <NativeTabs>
@@ -42,28 +44,24 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.dark.primary,
-        tabBarInactiveTintColor: Colors.dark.tabIconDefault,
+        tabBarActiveTintColor: C.gold,
+        tabBarInactiveTintColor: C.textMuted,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: Colors.dark.card,
-            web: Colors.dark.card,
+            android: C.card,
+            web: C.card,
           }),
           borderTopWidth: 1,
-          borderTopColor: Colors.dark.border,
+          borderTopColor: "#D4AF3730",
           elevation: 0,
           height: Platform.OS === "web" ? 84 : 60 + insets.bottom,
           paddingBottom: Platform.OS === "web" ? 34 : insets.bottom,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView
-              intensity={80}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : null,
         tabBarLabelStyle: {
           fontSize: 10,
@@ -77,11 +75,9 @@ function ClassicTabLayout() {
         options={{
           title: "Dashboard",
           tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios" ? (
-              <SymbolView name="house.fill" tintColor={color} size={size} />
-            ) : (
-              <Feather name="home" size={size} color={color} />
-            )
+            Platform.OS === "ios"
+              ? <SymbolView name="house.fill" tintColor={color} size={size} />
+              : <Feather name="home" size={size} color={color} />
           ),
         }}
       />
@@ -90,11 +86,9 @@ function ClassicTabLayout() {
         options={{
           title: "Sales",
           tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios" ? (
-              <SymbolView name="creditcard.fill" tintColor={color} size={size} />
-            ) : (
-              <Feather name="shopping-cart" size={size} color={color} />
-            )
+            Platform.OS === "ios"
+              ? <SymbolView name="creditcard.fill" tintColor={color} size={size} />
+              : <Feather name="shopping-cart" size={size} color={color} />
           ),
         }}
       />
@@ -103,11 +97,9 @@ function ClassicTabLayout() {
         options={{
           title: "Contacts",
           tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios" ? (
-              <SymbolView name="person.2.fill" tintColor={color} size={size} />
-            ) : (
-              <Feather name="users" size={size} color={color} />
-            )
+            Platform.OS === "ios"
+              ? <SymbolView name="person.2.fill" tintColor={color} size={size} />
+              : <Feather name="users" size={size} color={color} />
           ),
         }}
       />
@@ -116,11 +108,9 @@ function ClassicTabLayout() {
         options={{
           title: "Expenses",
           tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios" ? (
-              <SymbolView name="banknote.fill" tintColor={color} size={size} />
-            ) : (
-              <Feather name="dollar-sign" size={size} color={color} />
-            )
+            Platform.OS === "ios"
+              ? <SymbolView name="banknote.fill" tintColor={color} size={size} />
+              : <Feather name="dollar-sign" size={size} color={color} />
           ),
         }}
       />
@@ -129,11 +119,9 @@ function ClassicTabLayout() {
         options={{
           title: "Reports",
           tabBarIcon: ({ color, size }) => (
-            Platform.OS === "ios" ? (
-              <SymbolView name="chart.bar.fill" tintColor={color} size={size} />
-            ) : (
-              <Feather name="bar-chart-2" size={size} color={color} />
-            )
+            Platform.OS === "ios"
+              ? <SymbolView name="chart.bar.fill" tintColor={color} size={size} />
+              : <Feather name="bar-chart-2" size={size} color={color} />
           ),
         }}
       />

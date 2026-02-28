@@ -87,7 +87,7 @@ export default function ReportsScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#1A2240", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
         <Text style={styles.headerTitle}>Reports</Text>
         <Text style={styles.headerSub}>Business performance overview</Text>
       </LinearGradient>
@@ -123,7 +123,7 @@ export default function ReportsScreen() {
             <View style={styles.profitBar}>
               <View style={styles.profitTrack}>
                 <LinearGradient
-                  colors={["#4C6FFF", "#6B8FFF"]}
+                  colors={["#2952C4", "#1A3C8F"]}
                   style={[
                     styles.profitFill,
                     {

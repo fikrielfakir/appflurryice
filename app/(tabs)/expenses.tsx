@@ -69,7 +69,7 @@ export default function ExpensesScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#1A2240", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
         <Text style={styles.headerTitle}>Expenses</Text>
         <Text style={styles.headerSub}>{expenses.length} records</Text>
         <View style={styles.totalCard}>
@@ -142,7 +142,7 @@ export default function ExpensesScreen() {
       />
 
       <TouchableOpacity style={[styles.fab, { bottom: 90 + bottomInset }]} onPress={openModal}>
-        <LinearGradient colors={["#FF9A68", "#FF8A48"]} style={styles.fabGradient}>
+        <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.fabGradient}>
           <Feather name="plus" size={24} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
@@ -201,7 +201,7 @@ export default function ExpensesScreen() {
                   placeholder="Add a note..." placeholderTextColor={C.textMuted} multiline />
               </View>
               <TouchableOpacity style={styles.saveBtn} onPress={handleAdd}>
-                <LinearGradient colors={["#FF9A68", "#FF8A48"]} style={styles.saveBtnGradient}>
+                <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.saveBtnGradient}>
                   <Text style={styles.saveBtnText}>Add Expense</Text>
                 </LinearGradient>
               </TouchableOpacity>

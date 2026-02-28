@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   cartBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center", position: "relative" },
   cartBadge: {
     position: "absolute", top: -2, right: -2,
-    backgroundColor: "#FF8A48", borderRadius: 10,
+    backgroundColor: "#D4AF37", borderRadius: 10,
     minWidth: 18, height: 18, justifyContent: "center", alignItems: "center", paddingHorizontal: 3,
   },
   cartBadgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#fff" },

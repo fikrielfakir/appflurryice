@@ -108,7 +108,7 @@ export default function ContactsScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#1A2240", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
         <Text style={styles.headerTitle}>Contacts</Text>
         <Text style={styles.headerSub}>{contacts.length} contacts</Text>
         <View style={styles.searchRow}>
@@ -161,7 +161,7 @@ export default function ContactsScreen() {
       />
 
       <TouchableOpacity style={[styles.fab, { bottom: 90 + bottomInset }]} onPress={openModal}>
-        <LinearGradient colors={["#5B7FFF", "#4C6FFF"]} style={styles.fabGradient}>
+        <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.fabGradient}>
           <Feather name="plus" size={24} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
@@ -207,7 +207,7 @@ export default function ContactsScreen() {
                 </View>
               </View>
               <TouchableOpacity style={styles.saveBtn} onPress={handleAdd}>
-                <LinearGradient colors={["#5B7FFF", "#4C6FFF"]} style={styles.saveBtnGradient}>
+                <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.saveBtnGradient}>
                   <Text style={styles.saveBtnText}>Add Contact</Text>
                 </LinearGradient>
               </TouchableOpacity>

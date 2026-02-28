@@ -1,16 +1,11 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  Platform,
-  RefreshControl,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Platform, RefreshControl, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
@@ -22,7 +17,9 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function StatCard({ label, value, icon, color, bg }: { label: string; value: string; icon: string; color: string; bg: string }) {
+function StatCard({ label, value, icon, color, bg }: {
+  label: string; value: string; icon: string; color: string; bg: string;
+}) {
   return (
     <View style={[styles.statCard, { borderColor: color + "30" }]}>
       <View style={[styles.statIcon, { backgroundColor: bg }]}>
@@ -36,7 +33,7 @@ function StatCard({ label, value, icon, color, bg }: { label: string; value: str
 
 const QUICK_ACTIONS = [
   { title: "New Sale", icon: "shopping-cart", color: C.primary, route: "/pos/products" },
-  { title: "Add Expense", icon: "dollar-sign", color: C.secondary, route: "/(tabs)/expenses" },
+  { title: "Add Expense", icon: "dollar-sign", color: C.gold, route: "/(tabs)/expenses" },
   { title: "Contacts", icon: "users", color: C.success, route: "/(tabs)/contacts" },
   { title: "Reports", icon: "bar-chart-2", color: C.warning, route: "/(tabs)/reports" },
 ];
@@ -67,58 +64,57 @@ export default function DashboardScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={[C.background, C.background]} style={StyleSheet.absoluteFill} />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 + bottomInset }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.gold} />}
       >
         <LinearGradient
-          colors={["#1A2240", C.background]}
-          style={[styles.header, { paddingTop: topInset + 16 }]}
+          colors={["#0A1628", "#0E1C3F", C.background]}
+          style={[styles.header, { paddingTop: topInset + 12 }]}
         >
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={styles.greeting}>{greeting},</Text>
-              <Text style={styles.userName}>{user}</Text>
-            </View>
+          <View style={styles.headerTop}>
+            <Image
+              source={require("../../assets/flurry-logo.png")}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
             <TouchableOpacity
               style={styles.logoutBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                logout();
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); logout(); }}
             >
               <Feather name="log-out" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <View style={styles.heroBadge}>
-            <Feather name="trending-up" size={14} color={C.primary} />
-            <Text style={styles.heroBadgeText}>Today's Overview</Text>
+          <View style={styles.greetingRow}>
+            <Text style={styles.greeting}>{greeting},</Text>
+            <Text style={styles.userName}>{user}</Text>
           </View>
-          <Text style={styles.heroAmount}>${fmt(totalSales)}</Text>
-          <Text style={styles.heroLabel}>Total Revenue</Text>
+
+          <View style={styles.goldSeparator} />
+
+          <View style={styles.heroBadge}>
+            <Feather name="trending-up" size={14} color={C.gold} />
+            <Text style={styles.heroBadgeText}>Total Revenue</Text>
+          </View>
+          <Text style={styles.heroAmount}>MAD {fmt(totalSales)}</Text>
         </LinearGradient>
 
         <View style={styles.statsGrid}>
-          <StatCard label="Expenses" value={`$${fmt(totalExpenses)}`} icon="trending-down" color={C.secondary} bg="rgba(255,138,72,0.12)" />
-          <StatCard label="Due Amount" value={`$${fmt(totalDue)}`} icon="clock" color={C.danger} bg="rgba(255,82,82,0.12)" />
-          <StatCard label="Net Profit" value={`$${fmt(netProfit)}`} icon="award" color={C.success} bg="rgba(65,211,126,0.12)" />
-          <StatCard label="Sales Count" value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg="rgba(76,111,255,0.12)" />
+          <StatCard label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.gold} bg={C.gold + "18"} />
+          <StatCard label="Due Amount" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
+          <StatCard label="Net Profit" value={`MAD ${fmt(netProfit)}`} icon="award" color={C.success} bg={C.success + "18"} />
+          <StatCard label="Sales Count" value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg={C.primary + "18"} />
         </View>
 
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
-          {QUICK_ACTIONS.map((action) => (
+          {QUICK_ACTIONS.map(action => (
             <TouchableOpacity
               key={action.title}
               style={styles.actionCard}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(action.route as any);
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(action.route as any); }}
               activeOpacity={0.8}
             >
               <View style={[styles.actionIcon, { backgroundColor: action.color + "1A" }]}>
@@ -142,10 +138,10 @@ export default function DashboardScreen() {
             <Text style={styles.emptyText}>No sales yet</Text>
           </View>
         ) : (
-          recentSales.map((sale) => (
+          recentSales.map(sale => (
             <View key={sale.id} style={styles.saleCard}>
-              <View style={[styles.saleAvatar, { backgroundColor: C.primary + "20" }]}>
-                <Text style={[styles.saleInitial, { color: C.primary }]}>
+              <View style={[styles.saleAvatar, { backgroundColor: C.gold + "20" }]}>
+                <Text style={[styles.saleInitial, { color: C.gold }]}>
                   {sale.customerName.charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -156,7 +152,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <View style={styles.saleRight}>
-                <Text style={styles.saleAmount}>${fmt(sale.amount)}</Text>
+                <Text style={styles.saleAmount}>MAD {fmt(sale.amount)}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: statusColor(sale.status) + "20" }]}>
                   <Text style={[styles.statusText, { color: statusColor(sale.status) }]}>
                     {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
@@ -174,23 +170,24 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   header: { paddingHorizontal: 20, paddingBottom: 28 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
-  greeting: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  userName: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff", marginTop: 2, textTransform: "capitalize" },
+  headerTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  headerLogo: { width: 130, height: 70 },
   logoutBtn: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: C.surface, borderWidth: 1, borderColor: C.border,
     justifyContent: "center", alignItems: "center",
   },
-  heroBadge: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
-  heroBadgeText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.primary },
-  heroAmount: { fontSize: 40, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1 },
-  heroLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
+  greetingRow: { marginBottom: 12 },
+  greeting: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  userName: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff", marginTop: 2, textTransform: "capitalize" },
+  goldSeparator: { height: 1.5, backgroundColor: "#D4AF3740", marginBottom: 14 },
+  heroBadge: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
+  heroBadgeText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.gold },
+  heroAmount: { fontSize: 36, fontFamily: "Inter_700Bold", color: "#fff", letterSpacing: -1 },
   statsGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, gap: 12, marginTop: 20 },
   statCard: {
     flex: 1, minWidth: "45%",
-    backgroundColor: C.card, borderRadius: 16, padding: 16,
-    borderWidth: 1,
+    backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1,
   },
   statIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: "center", alignItems: "center", marginBottom: 12 },
   statValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 2 },
@@ -204,7 +201,7 @@ const styles = StyleSheet.create({
   actionIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center" },
   actionTitle: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textSecondary, textAlign: "center" },
   recentHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginHorizontal: 20, marginTop: 24, marginBottom: 12 },
-  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.primary },
+  seeAll: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.gold },
   saleCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: C.card, marginHorizontal: 16, marginBottom: 8,

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Platform, Alert, Share,
+  Platform, Alert, Share, Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -128,7 +128,7 @@ export default function SalesScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#1A2240", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Sales</Text>
@@ -197,7 +197,7 @@ export default function SalesScreen() {
           router.push("/pos/products");
         }}
       >
-        <LinearGradient colors={["#D81B60", "#C2185B"]} style={styles.fabGradient}>
+        <LinearGradient colors={["#2952C4", "#1A3C8F"]} style={styles.fabGradient}>
           <Feather name="plus" size={24} color="#fff" />
         </LinearGradient>
       </TouchableOpacity>
@@ -218,9 +218,9 @@ const styles = StyleSheet.create({
   headerStatDivider: { width: 1, height: 24, backgroundColor: C.border },
   filterRow: { flexDirection: "row", gap: 8 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
-  filterChipActive: { backgroundColor: "#C2185B20", borderColor: "#C2185B" },
+  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  filterTextActive: { color: "#C2185B" },
+  filterTextActive: { color: "#D4AF37" },
   card: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
@@ -241,6 +241,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
   emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
-  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, overflow: "hidden", elevation: 8, shadowColor: "#C2185B", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8 },
+  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, overflow: "hidden", elevation: 8, shadowColor: "#1A3C8F", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8 },
   fabGradient: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
