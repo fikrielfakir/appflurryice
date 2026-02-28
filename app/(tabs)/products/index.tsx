@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
@@ -24,8 +25,14 @@ function fmt(n: number) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products } = useApp();
+  const { products, addToCart, cart } = useApp();
   const [search, setSearch] = useState("");
+
+  React.useEffect(() => {
+    if (cart.length === 0 && products.length > 0) {
+      addToCart(products[0], 1);
+    }
+  }, []);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) =>
@@ -37,7 +44,13 @@ export default function ProductsScreen() {
   const topInset = Platform.OS === "web" ? 20 : insets.top;
 
   const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.productCard}>
+    <TouchableOpacity 
+      style={styles.productCard} 
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        addToCart(item, 1);
+      }}
+    >
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productCategory}>{item.category}</Text>
