@@ -21,7 +21,7 @@ function ProductCard({ product, cartQty, onAdd, onPress }: {
   onPress: () => void;
 }) {
   const isLowStock = product.stock < 10;
-  const isOutOfStock = product.stock === 0;
+  const isOutOfStock = product.stock === 0 && product.stock !== undefined;
 
   return (
     <TouchableOpacity style={styles.productCard} onPress={onPress} activeOpacity={0.85}>
@@ -34,7 +34,7 @@ function ProductCard({ product, cartQty, onAdd, onPress }: {
             color={isLowStock ? POS.danger : POS.primary}
           />
           <Text style={[styles.stockText, isLowStock && styles.stockTextLow]}>
-            {fmt(product.stock)}
+            {fmt(product.stock || 0)}
           </Text>
         </View>
         {isLowStock && (
@@ -113,7 +113,8 @@ export default function ProductsScreen() {
       Alert.alert("Invalid", "Please enter a valid quantity.");
       return;
     }
-    if (q > qtyModalProduct.stock) {
+    // Only check stock if it's managed (greater than 0 usually in this context, or we can just allow it)
+    if (qtyModalProduct.stock !== undefined && q > qtyModalProduct.stock && qtyModalProduct.stock > 0) {
       Alert.alert("Stock limit", `Only ${qtyModalProduct.stock} available.`);
       return;
     }
