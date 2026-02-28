@@ -116,7 +116,7 @@ export default function SalesScreen() {
   const { sales, deleteSale, totalSales } = useApp();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
+  const topInset = Platform.OS === "web" ? 20 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const filtered = filter === "all" ? sales : sales.filter(s => s.status === filter);
@@ -140,9 +140,29 @@ export default function SalesScreen() {
 
   return (
     <View style={styles.screen}>
-      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerLeftPlaceholder} />
+          
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerSubtitle}>Sales History</Text>
+            <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+               <Feather name="refresh-cw" size={18} color={C.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.actionIconBtn} 
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            }}
+          >
+             <Feather name="printer" size={24} color={C.gold} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.headerRow}>
-          <View>
+          <View style={styles.headerMainInfo}>
             <Text style={styles.headerTitle}>Sales</Text>
             <Text style={styles.headerSub}>{sales.length} invoices · MAD {fmt(totalSales)}</Text>
           </View>
@@ -167,12 +187,12 @@ export default function SalesScreen() {
               onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
             >
               <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                {f === "all" ? "All Sales" : f.charAt(0).toUpperCase() + f.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
-      </LinearGradient>
+      </View>
 
       <FlatList
         data={filtered}
@@ -206,17 +226,53 @@ export default function SalesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
-  header: { paddingHorizontal: 20, paddingBottom: 16 },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff" },
-  headerSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 4 },
-  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 12, padding: 12, gap: 12, borderWidth: 1, borderColor: C.border },
-  headerStat: { alignItems: "center" },
-  headerStatNum: { fontSize: 20, fontFamily: "Inter_700Bold" },
-  headerStatLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  headerStatDivider: { width: 1, height: 24, backgroundColor: C.border },
+  header: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: C.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  headerLeftPlaceholder: {
+    width: 44, // Space for the floating menu button
+  },
+  actionIconBtn: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  headerTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerSubtitle: {
+    fontSize: 18,
+    color: "#fff",
+    fontFamily: "Inter_700Bold",
+  },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  headerMainInfo: { flex: 1 },
+  headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#fff" },
+  headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
+  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 12, padding: 8, gap: 10, borderWidth: 1, borderColor: C.border },
+  headerStat: { alignItems: "center", minWidth: 40 },
+  headerStatNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  headerStatLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: C.textSecondary },
+  headerStatDivider: { width: 1, height: 20, backgroundColor: C.border },
   filterRow: { flexDirection: "row", gap: 8 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: C.surface, borderWidth: 1, borderColor: C.border },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
   filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
   filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
   filterTextActive: { color: "#D4AF37" },
@@ -228,7 +284,7 @@ const styles = StyleSheet.create({
   invoiceNumber: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 12, textAlign: "right" },
   amountsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   amountBlock: { flex: 1 },
-  amountChip: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.warning },
+  amountChip: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.gold },
   amountChipLight: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
   amountLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
   cardMeta: { gap: 4, marginBottom: 12, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
@@ -239,7 +295,4 @@ const styles = StyleSheet.create({
   actionBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: C.surface, justifyContent: "center", alignItems: "center" },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
-  emptySubText: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
-  fab: { position: "absolute", right: 20, width: 56, height: 56, borderRadius: 28, overflow: "hidden", elevation: 8, shadowColor: "#1A3C8F", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8 },
-  fabGradient: { flex: 1, justifyContent: "center", alignItems: "center" },
 });
