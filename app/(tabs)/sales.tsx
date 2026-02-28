@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Platform, Alert, Share, Image,
+  Platform, Alert, Share, Image, TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -118,8 +118,19 @@ export default function SalesScreen() {
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const [search, setSearch] = useState("");
 
-  const filtered = filter === "all" ? sales : sales.filter(s => s.status === filter);
+  const filtered = useMemo(() => {
+    let result = filter === "all" ? sales : sales.filter(s => s.status === filter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(s => 
+        s.customerName.toLowerCase().includes(q) || 
+        s.invoiceNumber.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [sales, filter, search]);
 
   const paidCount = sales.filter(s => s.status === "paid").length;
   const dueCount = sales.filter(s => s.status === "due" || s.status === "partial").length;
@@ -145,14 +156,14 @@ export default function SalesScreen() {
           <View style={styles.headerLeftPlaceholder} />
           
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerSubtitle}>Sales History</Text>
+            <Text style={styles.headerSubtitle}>Historique des ventes</Text>
             <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
                <Feather name="refresh-cw" size={18} color={C.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity 
-            style={styles.actionIconBtn} 
+            style={styles.cartBtn} 
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             }}
@@ -161,36 +172,54 @@ export default function SalesScreen() {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.headerActions}>
+          <View style={styles.filterContainer}>
+            {(["all", "paid", "partial", "due"] as const).map(f => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterChip, filter === f && styles.filterChipActive]}
+                onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
+              >
+                <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+                  {f === "all" ? "Tout" : f.charAt(0).toUpperCase() + f.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher..."
+              placeholderTextColor={C.textMuted}
+              value={search}
+              onChangeText={setSearch}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch("")}>
+                <Feather name="x" size={18} color={C.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
         <View style={styles.headerRow}>
           <View style={styles.headerMainInfo}>
-            <Text style={styles.headerTitle}>Sales</Text>
-            <Text style={styles.headerSub}>{sales.length} invoices · MAD {fmt(totalSales)}</Text>
+            <Text style={styles.headerTitle}>Ventes</Text>
+            <Text style={styles.headerSub}>{sales.length} factures · MAD {fmt(totalSales)}</Text>
           </View>
           <View style={styles.headerStats}>
             <View style={styles.headerStat}>
               <Text style={[styles.headerStatNum, { color: "#4CAF50" }]}>{paidCount}</Text>
-              <Text style={styles.headerStatLabel}>Paid</Text>
+              <Text style={styles.headerStatLabel}>Payé</Text>
             </View>
             <View style={styles.headerStatDivider} />
             <View style={styles.headerStat}>
               <Text style={[styles.headerStatNum, { color: C.warning }]}>{dueCount}</Text>
-              <Text style={styles.headerStatLabel}>Unpaid</Text>
+              <Text style={styles.headerStatLabel}>Impayé</Text>
             </View>
           </View>
-        </View>
-
-        <View style={styles.filterRow}>
-          {(["all", "paid", "partial", "due"] as const).map(f => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
-              onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-            >
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                {f === "all" ? "All Sales" : f.charAt(0).toUpperCase() + f.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
         </View>
       </View>
 
@@ -240,9 +269,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerLeftPlaceholder: {
-    width: 44, // Space for the floating menu button
+    width: 44,
   },
-  actionIconBtn: {
+  cartBtn: {
     width: 44,
     height: 44,
     justifyContent: "center",
@@ -262,7 +291,38 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Inter_700Bold",
   },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  filterContainer: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
+  filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  filterTextActive: { color: "#D4AF37" },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 40,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#fff",
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+  },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   headerMainInfo: { flex: 1 },
   headerTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#fff" },
   headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, marginTop: 2 },
@@ -271,11 +331,6 @@ const styles = StyleSheet.create({
   headerStatNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
   headerStatLabel: { fontSize: 9, fontFamily: "Inter_400Regular", color: C.textSecondary },
   headerStatDivider: { width: 1, height: 20, backgroundColor: C.border },
-  filterRow: { flexDirection: "row", gap: 8 },
-  filterChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
-  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
-  filterText: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  filterTextActive: { color: "#D4AF37" },
   card: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
