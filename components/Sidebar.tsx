@@ -12,6 +12,7 @@ const MENU_ITEMS = [
   { title: 'Reports', icon: 'bar-chart-2', route: '/(tabs)/reports' },
   { title: 'Contacts', icon: 'users', route: '/(tabs)/contacts' },
   { title: 'Imprimante', icon: 'printer', route: '/settings/printer' },
+  { title: 'Synchronisation', icon: 'cloud', route: '/settings/sync' },
 ];
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {

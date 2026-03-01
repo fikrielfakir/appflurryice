@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import { syncService, SyncResult } from "@/lib/syncService";
 
 export interface Product {
   id: string;
@@ -103,6 +104,9 @@ interface AppContextValue {
   totalDue: number;
   netProfit: number;
   isLoading: boolean;
+  isSyncing: boolean;
+  syncData: () => Promise<void>;
+  lastSyncTime: string | null;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -1859,6 +1863,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -2016,6 +2022,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart([]);
   }
 
+  async function syncData() {
+    if (isSyncing) return;
+    
+    setIsSyncing(true);
+    try {
+      const results = await syncService.syncAll(products, contacts, sales);
+      
+      if (results.products.success && results.products.syncedAt) {
+        const syncedProducts = await AsyncStorage.getItem('@bizpos_products');
+        if (syncedProducts) {
+          setProducts(JSON.parse(syncedProducts));
+        }
+      }
+      
+      if (results.contacts.success && results.contacts.syncedAt) {
+        const syncedContacts = await AsyncStorage.getItem('@bizpos_contacts');
+        if (syncedContacts) {
+          setContacts(JSON.parse(syncedContacts));
+        }
+      }
+      
+      if (results.sales.success && results.sales.syncedAt) {
+        const syncedSales = await AsyncStorage.getItem('@bizpos_sales');
+        if (syncedSales) {
+          setSales(JSON.parse(syncedSales));
+        }
+      }
+      
+      const lastSync = await syncService.getLastSyncTime();
+      setLastSyncTime(lastSync);
+    } catch (error) {
+      console.error('Sync error:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   const totalSales = useMemo(() => sales.reduce((sum, s) => sum + s.amount, 0), [sales]);
   const totalExpenses = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
   const totalDue = useMemo(() => sales.reduce((sum, s) => sum + (s.amount - s.paid), 0), [sales]);
@@ -2031,7 +2074,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addTransfer,
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit, isLoading,
-  }), [user, sales, contacts, expenses, products, transfers, cart, totalSales, totalExpenses, totalDue, netProfit, isLoading]);
+    isSyncing, syncData, lastSyncTime,
+  }), [user, sales, contacts, expenses, products, transfers, cart, totalSales, totalExpenses, totalDue, netProfit, isLoading, isSyncing, lastSyncTime]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
