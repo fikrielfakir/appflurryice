@@ -10,7 +10,7 @@ export interface Database {
     Tables: {
       contacts: {
         Row: {
-          id: string;
+          id: number;
           name: string;
           phone: string | null;
           email: string | null;
@@ -20,7 +20,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
-          id?: string;
+          id?: number;
           name: string;
           phone?: string | null;
           email?: string | null;
@@ -30,7 +30,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
-          id?: string;
+          id?: number;
           name?: string;
           phone?: string | null;
           email?: string | null;
@@ -42,7 +42,7 @@ export interface Database {
       };
       products: {
         Row: {
-          id: string;
+          id: number;
           name: string;
           sku: string;
           price: number;
@@ -53,7 +53,7 @@ export interface Database {
           updated_at: string;
         };
         Insert: {
-          id?: string;
+          id?: number;
           name: string;
           sku: string;
           price: number;
@@ -64,7 +64,7 @@ export interface Database {
           updated_at?: string;
         };
         Update: {
-          id?: string;
+          id?: number;
           name?: string;
           sku?: string;
           price?: number;
@@ -77,24 +77,24 @@ export interface Database {
       };
       sales: {
         Row: {
-          id: string;
-          contact_id: string | null;
+          id: number;
+          contact_id: number | null;
           total_amount: number;
           payment_method: string;
           status: string;
           created_at: string;
         };
         Insert: {
-          id?: string;
-          contact_id?: string | null;
+          id?: number;
+          contact_id?: number | null;
           total_amount: number;
           payment_method: string;
           status?: string;
           created_at?: string;
         };
         Update: {
-          id?: string;
-          contact_id?: string | null;
+          id?: number;
+          contact_id?: number | null;
           total_amount?: number;
           payment_method?: string;
           status?: string;
@@ -103,23 +103,23 @@ export interface Database {
       };
       sale_items: {
         Row: {
-          id: string;
-          sale_id: string | null;
-          product_id: string | null;
+          id: number;
+          sale_id: number | null;
+          product_id: number | null;
           quantity: number;
           unit_price: number;
         };
         Insert: {
-          id?: string;
-          sale_id?: string | null;
-          product_id?: string | null;
+          id?: number;
+          sale_id?: number | null;
+          product_id?: number | null;
           quantity: number;
           unit_price: number;
         };
         Update: {
-          id?: string;
-          sale_id?: string | null;
-          product_id?: string | null;
+          id?: number;
+          sale_id?: number | null;
+          product_id?: number | null;
           quantity?: number;
           unit_price?: number;
         };

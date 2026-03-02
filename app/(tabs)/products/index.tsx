@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Platform,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -27,7 +28,7 @@ function fmt(n: number) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart } = useApp();
+  const { products, addToCart, cart, syncData, isSyncing } = useApp();
   const [search, setSearch] = useState("");
 
   const filteredProducts = useMemo(() => {
@@ -81,8 +82,18 @@ export default function ProductsScreen() {
           
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerSubtitle}>Produits finis</Text>
-            <TouchableOpacity onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
-               <Feather name="refresh-cw" size={18} color={C.textSecondary} />
+            <TouchableOpacity 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                syncData();
+              }}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <ActivityIndicator size="small" color={C.textSecondary} />
+              ) : (
+                <Feather name="cloud" size={18} color={C.textSecondary} />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -130,6 +141,13 @@ export default function ProductsScreen() {
         </View>
       </View>
 
+      {isSyncing && (
+        <View style={styles.syncIndicator}>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
+        </View>
+      )}
+
       <FlatList
         data={filteredProducts}
         renderItem={renderItem}
@@ -151,6 +169,20 @@ export default function ProductsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
+  syncIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.gold,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  syncIndicatorText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
   header: {
     paddingHorizontal: 16,
     paddingBottom: 16,

@@ -33,10 +33,10 @@ class SyncService {
 
       if (data && data.length > 0) {
         const formattedProducts = data.map(p => ({
-          id: p.id,
+          id: String(p.id),
           name: p.name,
           sku: p.sku,
-          price: p.price,
+          price: Number(p.price),
           category: p.category || 'General',
           stock: p.stock_quantity,
           unit: p.unit,
@@ -90,12 +90,12 @@ class SyncService {
 
       if (data && data.length > 0) {
         const formattedContacts = data.map(c => ({
-          id: c.id,
+          id: String(c.id),
           name: c.name,
           phone: c.phone || '',
           email: c.email || '',
           address: c.address || '',
-          balance: c.balance,
+          balance: Number(c.balance),
           type: c.type,
           updatedAt: c.updated_at,
         }));
@@ -152,22 +152,22 @@ class SyncService {
           data.map(async (s) => {
             const items = saleItemsData?.filter((si) => si.sale_id === s.id) || [];
             return {
-              id: s.id,
-              invoiceNumber: s.id.slice(0, 8).toUpperCase(),
+              id: String(s.id),
+              invoiceNumber: String(s.id).slice(-8).toUpperCase(),
               customerName: 'Customer',
               customerPhone: '',
-              amount: s.total_amount,
-              paid: s.total_amount,
+              amount: Number(s.total_amount),
+              paid: Number(s.total_amount),
               discount: 0,
               shippingFee: 0,
               status: s.status as 'paid' | 'partial' | 'due',
               paymentMethod: s.payment_method,
               date: s.created_at,
               items: items.map((i) => ({
-                id: i.product_id || i.id,
+                id: String(i.product_id || i.id),
                 name: 'Product',
                 qty: i.quantity,
-                price: i.unit_price,
+                price: Number(i.unit_price),
               })),
             };
           })

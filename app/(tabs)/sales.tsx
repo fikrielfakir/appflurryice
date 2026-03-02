@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Platform, Alert, Share, Image, TextInput,
+  Platform, Alert, Share, Image, TextInput, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -144,7 +144,7 @@ function SaleCard({ sale, onDelete, onShare }: {
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, deleteSale, totalSales } = useApp();
+  const { sales, deleteSale, totalSales, syncData, isSyncing } = useApp();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -186,14 +186,30 @@ export default function SalesScreen() {
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
           <Text style={styles.headerTitle}>Historique des ventes</Text>
-          <TouchableOpacity 
-            style={styles.cartBtn} 
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            }}
-          >
-             <Feather name="printer" size={22} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={[styles.cartBtn, isSyncing && styles.cartBtnDisabled]} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                syncData();
+              }}
+              disabled={isSyncing}
+            >
+              {isSyncing ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Feather name="cloud" size={22} color="#fff" />
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.cartBtn} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
+            >
+               <Feather name="printer" size={22} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.searchRow}>
@@ -212,6 +228,13 @@ export default function SalesScreen() {
           )}
         </View>
       </View>
+
+      {isSyncing && (
+        <View style={styles.syncIndicator}>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
+        </View>
+      )}
 
       <View style={styles.statsStrip}>
         <View style={styles.filterContainer}>
@@ -272,6 +295,20 @@ export default function SalesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
+  syncIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.dark.gold,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  syncIndicatorText: {
+    color: "#fff",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
   header: {
     paddingHorizontal: 16,
     paddingBottom: 12,
@@ -286,11 +323,18 @@ const styles = StyleSheet.create({
   headerLeftPlaceholder: {
     width: 36,
   },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
   cartBtn: {
     width: 36,
     height: 36,
     justifyContent: "center",
     alignItems: "center",
+  },
+  cartBtnDisabled: {
+    opacity: 0.6,
   },
   headerTitle: {
     fontSize: 18,
