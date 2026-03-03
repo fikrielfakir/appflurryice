@@ -442,9 +442,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updatedProducts = products.map(p => {
       const item = transfer.items.find(it => it.sku === p.sku);
       if (!item) return p;
-      if (transfer.from === "Produits finis") return { ...p, stock: (p.stock ?? 0) - item.qty };
-      if (transfer.to === "Produits finis") return { ...p, stock: (p.stock ?? 0) + item.qty };
-      return p;
+      
+      // Stock update logic based on transfer direction
+      let newStock = p.stock ?? 0;
+      if (transfer.from === "Produits finis" || transfer.from === "Main Store") {
+        newStock -= item.qty;
+      }
+      if (transfer.to === "Produits finis" || transfer.to === "Main Store") {
+        newStock += item.qty;
+      }
+      
+      return { ...p, stock: newStock };
     });
     setProducts(updatedProducts);
     await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
