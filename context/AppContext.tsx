@@ -106,7 +106,8 @@ interface AppContextValue {
   products: Product[];
   transfers: Transfer[];
   cart: CartItem[];
-  setupFromQR: (qrData: string) => Promise<{ success: boolean; error?: string }>;
+  setupFromQR: (qrData: string) => Promise<{ success: boolean; data?: Partial<AppUser>; error?: string }>;
+  completeSetup: (profile: AppUser) => Promise<void>;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   addSale: (sale: Omit<Sale, "id" | "date" | "invoiceNumber">) => Sale;
@@ -285,7 +286,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
    */
   async function setupFromQR(
     qrData: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; data?: Partial<AppUser>; error?: string }> {
     try {
       const parsed = JSON.parse(qrData) as Partial<AppUser>;
 
@@ -293,36 +294,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return { success: false, error: "Invalid QR code: missing username or id." };
       }
 
-      // Use username as initial password when QR password is blank
-      const initialPassword =
-        parsed.password && parsed.password.trim() !== ""
-          ? parsed.password
-          : parsed.username;
-
-      const profile: AppUser = {
-        id: parsed.id,
-        username: parsed.username,
-        password: initialPassword,
-        name: parsed.name ?? parsed.username,
-        email: parsed.email ?? "",
-        role: parsed.role ?? "",
-        business_id: parsed.business_id ?? 0,
-        status: parsed.status ?? "active",
-        locations: parsed.locations ?? [],
-        created_at: parsed.created_at ?? new Date().toISOString(),
-      };
-
-      await AsyncStorage.setItem(KEYS.userProfile, JSON.stringify(profile));
-      setUserProfile(profile);
-      setNeedsSetup(false);
-
-      return { success: true };
+      return { success: true, data: parsed };
     } catch {
       return {
         success: false,
         error: "Failed to parse QR code. Make sure it contains valid JSON.",
       };
     }
+  }
+
+  async function completeSetup(profile: AppUser) {
+    await AsyncStorage.setItem(KEYS.userProfile, JSON.stringify(profile));
+    setUserProfile(profile);
+    setNeedsSetup(false);
   }
 
   // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -499,6 +483,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     needsSetup,
     sales, contacts, expenses, products, transfers, cart,
     setupFromQR,
+    completeSetup,
     login, logout,
     addSale, deleteSale,
     addContact, deleteContact,

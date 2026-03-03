@@ -1,23 +1,28 @@
 import React, { useState } from "react";
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  Image, Modal, ActivityIndicator,
+  Image, Modal, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, ScrollView
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useApp } from "@/context/AppContext";
+import { useApp, AppUser } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();
-  const { setupFromQR } = useApp();
+  const { setupFromQR, completeSetup } = useApp();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  
+  const [step, setStep] = useState<"scan" | "manual">("scan");
+  const [tempProfile, setTempProfile] = useState<Partial<AppUser>>({});
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   async function handleQRScan({ data }: { data: string }) {
     setScanning(false);
@@ -25,14 +30,53 @@ export default function SetupScreen() {
     setError("");
     try {
       const result = await setupFromQR(data);
-      if (!result.success) {
+      if (!result.success || !result.data) {
         setError(result.error || "Invalid QR Code data");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       } else {
+        setTempProfile(result.data);
+        setPassword(result.data.password || "");
+        setConfirmPassword(result.data.password || "");
+        setStep("manual");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (e) {
       setError("Failed to process QR Code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCompleteSetup() {
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+    
+    if (password.length < 4) {
+      setError("Password must be at least 4 characters");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const finalProfile: AppUser = {
+        id: tempProfile.id!,
+        username: tempProfile.username!,
+        password: password,
+        name: tempProfile.name || tempProfile.username!,
+        email: tempProfile.email || "",
+        role: tempProfile.role || "",
+        business_id: tempProfile.business_id || 0,
+        status: tempProfile.status || "active",
+        locations: tempProfile.locations || [],
+        created_at: tempProfile.created_at || new Date().toISOString(),
+      };
+      
+      await completeSetup(finalProfile);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e) {
+      setError("Failed to save profile");
     } finally {
       setLoading(false);
     }
@@ -47,6 +91,97 @@ export default function SetupScreen() {
       }
     }
     setScanning(true);
+  }
+
+  if (step === "manual") {
+    return (
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
+        <LinearGradient colors={["#040C20", "#081430", "#0E1C3F"]} style={StyleSheet.absoluteFill} />
+        <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 40, paddingBottom: 40 }]}>
+          <View style={styles.logoArea}>
+            <Image source={require("../assets/flurry-logo.png")} style={styles.logo} resizeMode="contain" />
+            <Text style={styles.title}>Account Setup</Text>
+            <Text style={styles.subtitle}>Verify your details and set a password</Text>
+          </View>
+
+          <View style={styles.card}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <View style={[styles.inputWrapper, styles.disabledInput]}>
+                <Feather name="user" size={18} color={Colors.dark.textMuted} style={styles.inputIcon} />
+                <Text style={styles.disabledText}>{tempProfile.username}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Full Name</Text>
+              <View style={[styles.inputWrapper, styles.disabledInput]}>
+                <Feather name="info" size={18} color={Colors.dark.textMuted} style={styles.inputIcon} />
+                <Text style={styles.disabledText}>{tempProfile.name}</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Set Password</Text>
+              <View style={styles.inputWrapper}>
+                <Feather name="lock" size={18} color={Colors.dark.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  placeholder="Enter password"
+                  placeholderTextColor={Colors.dark.textMuted}
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.inputWrapper}>
+                <Feather name="check-circle" size={18} color={Colors.dark.textMuted} style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  placeholder="Confirm password"
+                  placeholderTextColor={Colors.dark.textMuted}
+                />
+              </View>
+            </View>
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Feather name="alert-circle" size={14} color={Colors.dark.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <TouchableOpacity
+              style={[styles.qrButton, loading && { opacity: 0.7 }]}
+              onPress={handleCompleteSetup}
+              disabled={loading}
+            >
+              <LinearGradient colors={["#2952C4", "#1A3C8F", "#0D2260"]} style={styles.buttonGradient}>
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.qrButtonText}>Complete Setup</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => setStep("scan")} style={styles.backButton}>
+              <Text style={styles.backButtonText}>Back to Scanner</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
   }
 
   return (
@@ -158,4 +293,18 @@ const styles = StyleSheet.create({
     color: "#fff", fontSize: 18, fontFamily: "Inter_600SemiBold",
     backgroundColor: "rgba(0,0,0,0.6)", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24,
   },
+  inputGroup: { marginBottom: 20 },
+  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.dark.textSecondary, marginBottom: 8 },
+  inputWrapper: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: Colors.dark.surface,
+    borderRadius: 12, borderWidth: 1, borderColor: Colors.dark.border,
+    paddingHorizontal: 14, height: 52,
+  },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, color: "#fff", fontFamily: "Inter_400Regular", fontSize: 15 },
+  disabledInput: { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "transparent" },
+  disabledText: { color: Colors.dark.textSecondary, fontFamily: "Inter_400Regular", fontSize: 15 },
+  backButton: { marginTop: 16, alignItems: "center" },
+  backButtonText: { color: Colors.dark.textMuted, fontSize: 14, fontFamily: "Inter_500Medium" },
 });
