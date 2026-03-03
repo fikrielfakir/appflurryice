@@ -2023,41 +2023,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function syncData() {
-    if (isSyncing) return;
-    
-    setIsSyncing(true);
-    try {
-      const results = await syncService.syncAll(products, contacts, sales);
-      
-      if (results.products.success && results.products.syncedAt) {
-        const syncedProducts = await AsyncStorage.getItem('@bizpos_products');
-        if (syncedProducts) {
-          setProducts(JSON.parse(syncedProducts));
-        }
-      }
-      
-      if (results.contacts.success && results.contacts.syncedAt) {
-        const syncedContacts = await AsyncStorage.getItem('@bizpos_contacts');
-        if (syncedContacts) {
-          setContacts(JSON.parse(syncedContacts));
-        }
-      }
-      
-      if (results.sales.success && results.sales.syncedAt) {
-        const syncedSales = await AsyncStorage.getItem('@bizpos_sales');
-        if (syncedSales) {
-          setSales(JSON.parse(syncedSales));
-        }
-      }
-      
-      const lastSync = await syncService.getLastSyncTime();
-      setLastSyncTime(lastSync);
-    } catch (error) {
-      console.error('Sync error:', error);
-    } finally {
-      setIsSyncing(false);
-    }
+  if (isSyncing) {
+    console.log('⏳ Sync already in progress');
+    return;
   }
+  
+  setIsSyncing(true);
+  try {
+    console.log('🔄 Starting sync from Supabase...');
+    
+    // Call pullAll instead of syncAll
+    const results = await syncService.forceFullSync();
+    
+    console.log('📦 Sync results:', results);
+    
+    // Reload products from AsyncStorage if sync was successful
+    if (results.products.success) {
+      const syncedProducts = await AsyncStorage.getItem('@bizpos_products');
+      if (syncedProducts) {
+        const parsedProducts = JSON.parse(syncedProducts);
+        console.log(`✅ Loaded ${parsedProducts.length} products from storage`);
+        setProducts(parsedProducts);
+      }
+    }
+    
+    // Reload contacts from AsyncStorage if sync was successful
+    if (results.contacts.success) {
+      const syncedContacts = await AsyncStorage.getItem('@bizpos_contacts');
+      if (syncedContacts) {
+        const parsedContacts = JSON.parse(syncedContacts);
+        console.log(`✅ Loaded ${parsedContacts.length} contacts from storage`);
+        setContacts(parsedContacts);
+      }
+    }
+    
+    // Reload sales from AsyncStorage if sync was successful
+    if (results.sales.success) {
+      const syncedSales = await AsyncStorage.getItem('@bizpos_sales');
+      if (syncedSales) {
+        const parsedSales = JSON.parse(syncedSales);
+        console.log(`✅ Loaded ${parsedSales.length} sales from storage`);
+        setSales(parsedSales);
+      }
+    }
+    
+    // Update last sync time
+    const lastSync = await syncService.getLastSyncTime();
+    setLastSyncTime(lastSync);
+    
+    // Show success message
+    if (results.overall.success) {
+      console.log('✅ Sync completed successfully!');
+      alert(`Sync Complete!\n\n${results.products.count || 0} products\n${results.contacts.count || 0} contacts\n${results.sales.count || 0} sales`);
+    } else {
+      console.error('❌ Sync completed with errors:', results.overall.error);
+      alert(`Sync Error: ${results.overall.error}`);
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Sync error:', error);
+    alert(`Sync Failed: ${error.message || 'Unknown error occurred'}`);
+  } finally {
+    setIsSyncing(false);
+  }
+}
 
   const totalSales = useMemo(() => sales.reduce((sum, s) => sum + s.amount, 0), [sales]);
   const totalExpenses = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
