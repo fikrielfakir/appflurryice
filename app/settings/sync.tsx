@@ -16,6 +16,8 @@ import Colors from '@/constants/colors';
 
 const C = Colors.dark;
 
+import Toast from 'react-native-root-toast';
+
 export default function SyncSettingsScreen() {
   const insets = useSafeAreaInsets();
   const { isSyncing, syncData, lastSyncTime } = useApp();
@@ -24,7 +26,11 @@ export default function SyncSettingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await syncData();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert('Succès', 'Données synchronisées avec Supabase');
+    Toast.show('Données synchronisées avec Supabase', {
+      duration: Toast.durations.SHORT,
+      position: Toast.positions.BOTTOM,
+      backgroundColor: C.success,
+    });
   };
 
   const formatLastSync = (dateStr: string | null) => {

@@ -67,6 +67,8 @@ function ContactCard({ contact, onDelete }: { contact: Contact; onDelete: () => 
   );
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function ContactsScreen() {
   const insets = useSafeAreaInsets();
   const { contacts, addContact, deleteContact } = useApp();
@@ -98,12 +100,17 @@ export default function ContactsScreen() {
 
   function handleAdd() {
     if (!name.trim() || !phone.trim()) {
-      Alert.alert("Required", "Please fill name and phone number.");
+      Toast.show("Please fill name and phone number.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: C.danger,
+      });
       return;
     }
     addContact({ name: name.trim(), phone: phone.trim(), email: email.trim() || undefined, type });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setModalVisible(false);
+    Toast.show("Contact ajouté", { duration: Toast.durations.SHORT });
   }
 
   return (

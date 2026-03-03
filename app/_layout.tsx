@@ -48,6 +48,8 @@ function RootLayoutNav() {
   );
 }
 
+import { RootSiblingParent } from 'react-native-root-siblings';
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
 
@@ -59,15 +61,17 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <KeyboardProvider>
-            <AppProvider>
-              <RootLayoutNav />
-            </AppProvider>
-          </KeyboardProvider>
-        </GestureHandlerRootView>
-      </QueryClientProvider>
+      <RootSiblingParent>
+        <QueryClientProvider client={queryClient}>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <KeyboardProvider>
+              <AppProvider>
+                <RootLayoutNav />
+              </AppProvider>
+            </KeyboardProvider>
+          </GestureHandlerRootView>
+        </QueryClientProvider>
+      </RootSiblingParent>
     </ErrorBoundary>
   );
 }

@@ -34,6 +34,8 @@ function catColor(cat: string) {
   return CATEGORY_COLORS[cat] || C.primary;
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, addExpense, deleteExpense, totalExpenses } = useApp();
@@ -59,12 +61,27 @@ export default function ExpensesScreen() {
   }
 
   function handleAdd() {
-    if (!amount.trim()) { Alert.alert("Required", "Please enter an amount."); return; }
+    if (!amount.trim()) {
+      Toast.show("Please enter an amount.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: C.danger,
+      });
+      return;
+    }
     const amtNum = parseFloat(amount);
-    if (isNaN(amtNum) || amtNum <= 0) { Alert.alert("Invalid", "Enter a valid amount."); return; }
+    if (isNaN(amtNum) || amtNum <= 0) {
+      Toast.show("Enter a valid amount.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: C.danger,
+      });
+      return;
+    }
     addExpense({ category, amount: amtNum, paymentMethod, note: note.trim() || undefined });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setModalVisible(false);
+    Toast.show("Dépense ajoutée", { duration: Toast.durations.SHORT });
   }
 
   return (

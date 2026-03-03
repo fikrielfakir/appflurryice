@@ -16,6 +16,8 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function InvoiceScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
@@ -80,7 +82,11 @@ export default function InvoiceScreen() {
 
       await Share.share({ message: text, title: `Invoice #${params.invoiceNumber}` });
     } catch (e) {
-      Alert.alert("Error", "Could not share invoice.");
+      Toast.show("Could not share invoice.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.danger,
+      });
     }
   }
 

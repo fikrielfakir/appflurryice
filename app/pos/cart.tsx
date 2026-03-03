@@ -14,6 +14,8 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const { cart, updateCartQty, removeFromCart, clearCart } = useApp();
@@ -76,7 +78,11 @@ export default function CartScreen() {
             onPress={() => {
               Alert.alert("Clear Cart", "Remove all items?", [
                 { text: "Cancel", style: "cancel" },
-                { text: "Clear", style: "destructive", onPress: () => { clearCart(); router.back(); } },
+                { text: "Clear", style: "destructive", onPress: () => { 
+                  clearCart(); 
+                  router.back(); 
+                  Toast.show("Panier vidé", { duration: Toast.durations.SHORT });
+                }},
               ]);
             }}
             style={styles.clearBtn}
@@ -141,7 +147,10 @@ export default function CartScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   Alert.alert("Remove", `Remove ${ci.product.name}?`, [
                     { text: "Cancel", style: "cancel" },
-                    { text: "Remove", style: "destructive", onPress: () => removeFromCart(ci.product.id) },
+                    { text: "Remove", style: "destructive", onPress: () => {
+                      removeFromCart(ci.product.id);
+                      Toast.show("Article supprimé", { duration: Toast.durations.SHORT });
+                    }},
                   ]);
                 }}
               >

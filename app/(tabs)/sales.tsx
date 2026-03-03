@@ -142,6 +142,8 @@ function SaleCard({ sale, onDelete, onShare }: {
   );
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
   const { sales, deleteSale, totalSales, syncData, isSyncing } = useApp();
@@ -275,7 +277,10 @@ export default function SalesScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               Alert.alert("Delete Sale", "Remove this invoice?", [
                 { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => deleteSale(item.id) },
+                { text: "Delete", style: "destructive", onPress: () => {
+                  deleteSale(item.id);
+                  Toast.show("Vente supprimée", { duration: Toast.durations.SHORT });
+                }},
               ]);
             }}
             onShare={() => handleShare(item)}

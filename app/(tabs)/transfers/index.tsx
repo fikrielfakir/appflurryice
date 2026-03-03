@@ -10,9 +10,11 @@ import { router } from 'expo-router';
 const C = Colors.dark;
 const { width } = Dimensions.get('window');
 
+import Toast from 'react-native-root-toast';
+
 export default function TransfersScreen() {
   const insets = useSafeAreaInsets();
-  const { transfers, addTransfer } = useApp();
+  const { transfers, addTransfer, products } = useApp();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
 
@@ -57,13 +59,25 @@ export default function TransfersScreen() {
           sig: transferData.sig || ""
         };
         addTransfer(newTransfer);
-        Alert.alert("Success", `Transfer ${newTransfer.ref} recorded and stock updated.`);
+        Toast.show(`Transfer ${newTransfer.ref} recorded and stock updated.`, {
+          duration: Toast.durations.LONG,
+          position: Toast.positions.BOTTOM,
+          backgroundColor: C.success,
+        });
       } else {
-        Alert.alert("Error", "Invalid QR code format.");
+        Toast.show("Invalid QR code format.", {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+          backgroundColor: C.danger,
+        });
       }
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Failed to parse QR code.");
+      Toast.show("Failed to parse QR code.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: C.danger,
+      });
     }
   };
 

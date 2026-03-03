@@ -16,6 +16,8 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{
@@ -50,7 +52,11 @@ export default function PaymentScreen() {
 
   function handleComplete() {
     if (cart.length === 0) {
-      Alert.alert("Empty cart", "Add products before completing a sale.");
+      Toast.show("Add products before completing a sale.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.warning,
+      });
       return;
     }
     setProcessing(true);

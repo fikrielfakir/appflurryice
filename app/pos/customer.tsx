@@ -14,6 +14,8 @@ function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function CustomerScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ discount: string; subtotal: string; total: string }>();
@@ -73,13 +75,18 @@ export default function CustomerScreen() {
 
   function handleAddCustomer() {
     if (!newName.trim() || !newPhone.trim()) {
-      Alert.alert("Required", "Please enter name and phone.");
+      Toast.show("Please enter name and phone.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.danger,
+      });
       return;
     }
     addContact({ name: newName.trim(), phone: newPhone.trim(), type: "customer" });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAddModalVisible(false);
     setNewName(""); setNewPhone("");
+    Toast.show("Client ajouté", { duration: Toast.durations.SHORT });
   }
 
   return (

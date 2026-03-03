@@ -79,6 +79,8 @@ function ProductCard({ product, cartQty, onAdd, onPress }: {
   );
 }
 
+import Toast from 'react-native-root-toast';
+
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const { products, cart, addToCart, sales } = useApp();
@@ -92,7 +94,10 @@ export default function ProductsScreen() {
       const sale = sales.find(s => s.id === params.editSaleId);
       if (sale) {
         // Here you would normally populate the cart with sale items
-        Alert.alert("Edit Mode", `Editing Invoice #${sale.invoiceNumber}`);
+        Toast.show(`Editing Invoice #${sale.invoiceNumber}`, {
+          duration: Toast.durations.SHORT,
+          position: Toast.positions.BOTTOM,
+        });
       }
     }
   }, [params.editSaleId]);
@@ -114,7 +119,11 @@ export default function ProductsScreen() {
 
   function handleProductPress(product: Product) {
     if (product.stock !== undefined && product.stock === 0) {
-      Alert.alert("Out of stock", "This product is currently unavailable.");
+      Toast.show("This product is currently unavailable.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.danger,
+      });
       return;
     }
     handleQuickAdd(product);
@@ -124,12 +133,20 @@ export default function ProductsScreen() {
     if (!qtyModalProduct) return;
     const q = parseInt(manualQty);
     if (isNaN(q) || q <= 0) {
-      Alert.alert("Invalid", "Please enter a valid quantity.");
+      Toast.show("Please enter a valid quantity.", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.danger,
+      });
       return;
     }
     // Only check stock if it's managed (greater than 0 usually in this context, or we can just allow it)
     if (qtyModalProduct.stock !== undefined && q > qtyModalProduct.stock && qtyModalProduct.stock > 0) {
-      Alert.alert("Stock limit", `Only ${qtyModalProduct.stock} available.`);
+      Toast.show(`Only ${qtyModalProduct.stock} available.`, {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.warning,
+      });
       return;
     }
     addToCart(qtyModalProduct, q);

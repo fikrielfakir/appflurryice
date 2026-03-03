@@ -17,6 +17,8 @@ import Colors from '@/constants/colors';
 
 const C = Colors.dark;
 
+import Toast from 'react-native-root-toast';
+
 export default function PrinterSettingsScreen() {
   const insets = useSafeAreaInsets();
   const {
@@ -62,6 +64,7 @@ export default function PrinterSettingsScreen() {
           onPress: async () => {
             await disconnectPrinter();
             setSelectedPrinter(null);
+            Toast.show("Imprimante déconnectée", { duration: Toast.durations.SHORT });
           },
         },
       ]
