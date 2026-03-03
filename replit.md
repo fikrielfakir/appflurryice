@@ -23,7 +23,6 @@ A React Native (Expo) business POS/CRM management mobile app. Rebuilt from a Flu
 
 Full-screen modal POS workflow (registered as `fullScreenModal` in root Stack):
 
-- `app/pos/products.tsx` — Product catalog with search, quick add (+), quantity modal, cart bar
 - `app/pos/cart.tsx` — Cart with qty controls (+/-), discount panel (%), and "Select Customer" CTA
 - `app/pos/customer.tsx` — Customer search/select, QR scan option, walk-in shortcut, add new customer
 - `app/pos/payment.tsx` — Payment method chips, amount paid input, shipping fee, payment summary

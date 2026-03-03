@@ -131,7 +131,7 @@ function SaleCard({ sale, onDelete, onShare }: {
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionBtn} onPress={() => {
           router.push({
-            pathname: "/pos/products",
+            pathname: "/(tabs)/products",
             params: { editSaleId: sale.id }
           });
         }}>
