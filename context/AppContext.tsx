@@ -78,7 +78,7 @@ export interface Expense {
 }
 
 interface AppContextValue {
-  user: string | null;
+  user: any | null;
   isLoggedIn: boolean;
   sales: Sale[];
   contacts: Contact[];
@@ -128,12 +128,6 @@ const SYNC_KEYS = {
   sales: "@bizpos_sales",
 };
 
-const DEMO_CREDENTIALS = { username: "admin", password: "admin123" };
-
-function genId() {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
-}
-
 function genInvoiceNumber(existingCount: number) {
   const now = new Date();
   const y = now.getFullYear();
@@ -171,12 +165,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const initUser = async () => {
+      const savedUser = await AsyncStorage.getItem(KEYS.user);
+      if (!savedUser) {
+        const initialUserData = {
+          id: 12,
+          username: "basiri",
+          password: "",
+          name: "ABDALAH BASIRI",
+          email: "abdlahbasiri3@gmail.com",
+          role: "Distribtion",
+          business_id: 1,
+          status: "active",
+          locations: [{ id: 10, name: "CAM 01 - 0199-A-44", location_id: "0199-A-44" }],
+          created_at: "2025-03-01T16:33:05+00:00",
+        };
+        const userStr = JSON.stringify(initialUserData);
+        await AsyncStorage.setItem(KEYS.user, userStr);
+        setUser(userStr);
+      } else {
+        setUser(savedUser);
+      }
+    };
+    initUser();
+    loadData();
+  }, []);
 
   async function loadData() {
     try {
       const [
-        savedUser,
         savedSales,
         savedContacts,
         savedExpenses,
@@ -184,7 +202,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         savedProducts,
         initialDataLoaded,
       ] = await Promise.all([
-        AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.sales),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
@@ -192,9 +209,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.products),
         AsyncStorage.getItem(KEYS.initialDataLoaded),
       ]);
-
-      // Restore user session
-      if (savedUser) setUser(savedUser);
 
       // Load whatever is in local storage first (instant startup)
       setSales(savedSales ? JSON.parse(savedSales) : []);
@@ -291,13 +305,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function login(username: string, password: string): Promise<boolean> {
-    if (
-      username.toLowerCase() === DEMO_CREDENTIALS.username &&
-      password === DEMO_CREDENTIALS.password
-    ) {
-      setUser(username);
-      await AsyncStorage.setItem(KEYS.user, username);
-      return true;
+    try {
+      const savedUser = await AsyncStorage.getItem(KEYS.user);
+      if (savedUser) {
+        const userData = JSON.parse(savedUser);
+        if (userData.username.toLowerCase() === username.toLowerCase()) {
+          // If password matches or is empty (for initial user)
+          if (userData.password === "" || userData.password === password) {
+            if (userData.password === "" && password !== "") {
+              // Update password on first login
+              userData.password = password;
+              const updatedUser = JSON.stringify(userData);
+              await AsyncStorage.setItem(KEYS.user, updatedUser);
+              setUser(updatedUser);
+            }
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Login error", e);
     }
     return false;
   }
