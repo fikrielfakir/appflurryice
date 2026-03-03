@@ -58,8 +58,12 @@ export default function ProductsScreen() {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
-      style={styles.productCard} 
+      style={[styles.productCard, item.stock <= 0 && styles.productCardDisabled]} 
       onPress={() => {
+        if (item.stock <= 0) {
+          Alert.alert("Indisponible", "Ce produit est en rupture de stock.");
+          return;
+        }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         addToCart(item, 1);
       }}
@@ -352,6 +356,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: C.border,
+  },
+  productCardDisabled: {
+    opacity: 0.6,
   },
   productMain: {
     flexDirection: "row",
