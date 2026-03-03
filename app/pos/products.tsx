@@ -113,13 +113,21 @@ export default function ProductsScreen() {
   const cartTotal = cart.reduce((s, ci) => s + ci.qty * ci.product.price, 0);
 
   function handleQuickAdd(product: Product) {
+    if (product.stock !== undefined && product.stock <= 0) {
+      Toast.show("Product is out of stock", {
+        duration: Toast.durations.SHORT,
+        position: Toast.positions.BOTTOM,
+        backgroundColor: POS.danger,
+      });
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     addToCart(product, 1);
   }
 
   function handleProductPress(product: Product) {
-    if (product.stock !== undefined && product.stock === 0) {
-      Toast.show("This product is currently unavailable.", {
+    if (product.stock !== undefined && product.stock <= 0) {
+      Toast.show("Product is out of stock", {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: POS.danger,
