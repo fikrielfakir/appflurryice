@@ -19,7 +19,8 @@ import Colors from "@/constants/colors";
 
 const C = Colors.dark;
 
-function fmt(n: number) {
+function fmt(n: number | undefined | null) {
+  if (n === undefined || n === null) return "0.00";
   return n.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
