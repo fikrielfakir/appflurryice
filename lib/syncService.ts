@@ -100,7 +100,6 @@ class SyncService {
         sku: p.sku,
         price: Number(p.price),
         category: p.category || 'General',
-        stock: p.stock_quantity || 0,
         unit: p.unit || 'pcs',
         image: p.image_url || null,
         active: true, // You can add this field to Supabase if needed
