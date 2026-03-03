@@ -87,6 +87,7 @@ interface AppContextValue {
   transfers: Transfer[];
   cart: CartItem[];
   login: (username: string, password: string) => Promise<boolean>;
+  loginWithQR: (qrData: string) => Promise<boolean>;
   logout: () => void;
   addSale: (sale: Omit<Sale, "id" | "date" | "invoiceNumber">) => Sale;
   deleteSale: (id: string) => void;
@@ -329,6 +330,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return false;
   }
 
+  async function loginWithQR(qrData: string): Promise<boolean> {
+    try {
+      const userData = JSON.parse(qrData);
+      // Basic validation of the expected format
+      if (userData && userData.username && userData.id) {
+        const userStr = JSON.stringify(userData);
+        await AsyncStorage.setItem(KEYS.user, userStr);
+        setUser(userStr);
+        return true;
+      }
+    } catch (e) {
+      console.error("QR Login error", e);
+    }
+    return false;
+  }
+
   async function logout() {
     setUser(null);
     await AsyncStorage.removeItem(KEYS.user);
@@ -452,6 +469,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     transfers,
     cart,
     login,
+    loginWithQR,
     logout,
     addSale,
     deleteSale,

@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Image,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Image, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
@@ -14,12 +15,43 @@ const C = Colors.dark;
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login } = useApp();
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin123");
+  const { login, loginWithQR } = useApp();
+  const [username, setUsername] = useState("basiri");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  async function handleQRScan({ data }: { data: string }) {
+    setScanning(false);
+    setLoading(true);
+    try {
+      const success = await loginWithQR(data);
+      if (!success) {
+        setError("Invalid QR Code data");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (e) {
+      setError("Failed to process QR Code");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function startScanning() {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        setError("Camera permission required for QR login");
+        return;
+      }
+    }
+    setScanning(true);
+  }
 
   async function handleLogin() {
     if (!username.trim() || !password.trim()) {
@@ -126,11 +158,41 @@ export default function LoginScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={[styles.qrButton, loading && { opacity: 0.7 }]}
+            onPress={startScanning}
+            disabled={loading}
+          >
+            <Feather name="maximize" size={20} color="#D4AF37" />
+            <Text style={styles.qrButtonText}>Scan QR Login</Text>
+          </TouchableOpacity>
+
+          <Modal visible={scanning} animationType="slide">
+            <View style={styles.cameraContainer}>
+              <CameraView
+                style={styles.camera}
+                onBarcodeScanned={handleQRScan}
+                barcodeScannerSettings={{
+                  barcodeTypes: ["qr"],
+                }}
+              />
+              <TouchableOpacity
+                style={styles.closeCamera}
+                onPress={() => setScanning(false)}
+              >
+                <Feather name="x" size={30} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.cameraOverlay}>
+                <Text style={styles.cameraText}>Scan your login QR code</Text>
+              </View>
+            </View>
+          </Modal>
+
           <View style={styles.goldDivider} />
 
           <View style={styles.hint}>
             <Feather name="info" size={13} color={C.textMuted} />
-            <Text style={styles.hintText}>Demo: admin / admin123</Text>
+            <Text style={styles.hintText}>Initial: basiri / (empty)</Text>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -178,4 +240,51 @@ const styles = StyleSheet.create({
   goldDivider: { height: 1.5, backgroundColor: "#D4AF3730", marginVertical: 20 },
   hint: { flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center" },
   hintText: { color: Colors.dark.textMuted, fontSize: 12, fontFamily: "Inter_400Regular" },
+  qrButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 16,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#D4AF3740",
+    backgroundColor: "rgba(212,175,55,0.05)",
+  },
+  qrButtonText: {
+    color: "#D4AF37",
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+  },
+  cameraContainer: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  camera: {
+    flex: 1,
+  },
+  closeCamera: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+  },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 100,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  cameraText: {
+    color: "#fff",
+    fontSize: 18,
+    fontFamily: "Inter_600SemiBold",
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
 });
