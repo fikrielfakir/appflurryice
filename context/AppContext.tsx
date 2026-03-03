@@ -226,14 +226,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.initialDataLoaded),
       ]);
 
-      // ── Credential check ───────────────────────────────────────────────────
-      if (!profileRaw) {
-        // No user ever registered → show QR setup screen
-        setNeedsSetup(true);
-      } else {
+      // Restore user session
+      if (profileRaw) {
         const profile: AppUser = JSON.parse(profileRaw);
         setUserProfile(profile);
         if (activeUserRaw) setActiveUser(activeUserRaw);
+      } else {
+        setNeedsSetup(true);
       }
 
       // ── Local data ─────────────────────────────────────────────────────────

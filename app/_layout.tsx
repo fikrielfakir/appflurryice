@@ -16,7 +16,7 @@ import Colors from "@/constants/colors";
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isLoggedIn, isLoading } = useApp();
+  const { isLoggedIn, isLoading, needsSetup } = useApp();
 
   useEffect(() => {
     if (!isLoading) SplashScreen.hideAsync();
@@ -24,10 +24,11 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (!isLoading) {
-      if (isLoggedIn) router.replace("/(tabs)");
+      if (needsSetup) router.replace("/setup");
+      else if (isLoggedIn) router.replace("/(tabs)");
       else router.replace("/login");
     }
-  }, [isLoggedIn, isLoading]);
+  }, [isLoggedIn, isLoading, needsSetup]);
 
   if (isLoading) {
     return (
@@ -39,6 +40,7 @@ function RootLayoutNav() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.dark.background } }}>
+      <Stack.Screen name="setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="pos" options={{ presentation: "fullScreenModal" }} />
