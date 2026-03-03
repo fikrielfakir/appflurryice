@@ -36,11 +36,25 @@ export default function TransfersScreen() {
     try {
       const transferData = JSON.parse(data);
       if (transferData.ref && transferData.items) {
-        // Create a unique ID if not present
+        // Handle new format: find product names for SKUs
+        const items = transferData.items.map((item: any) => {
+          const product = products.find(p => p.sku === item.sku);
+          return {
+            ...item,
+            name: product?.name || `SKU: ${item.sku}`,
+            unit: product?.unit || "Unit"
+          };
+        });
+
         const newTransfer: Transfer = {
           ...transferData,
+          items,
           id: transferData.id?.toString() || Date.now().toString(),
           date: transferData.date || new Date().toISOString(),
+          from: transferData.from || "Unknown",
+          to: transferData.to || "Unknown",
+          total: transferData.total || 0,
+          sig: transferData.sig || ""
         };
         addTransfer(newTransfer);
         Alert.alert("Success", `Transfer ${newTransfer.ref} recorded and stock updated.`);
@@ -48,6 +62,7 @@ export default function TransfersScreen() {
         Alert.alert("Error", "Invalid QR code format.");
       }
     } catch (e) {
+      console.error(e);
       Alert.alert("Error", "Failed to parse QR code.");
     }
   };
