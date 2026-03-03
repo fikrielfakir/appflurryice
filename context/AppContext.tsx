@@ -1,6 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
-import { syncService, SyncResult } from "@/lib/syncService";
+import { syncService } from "@/lib/syncService";
+
+// ─── Interfaces ────────────────────────────────────────────────────────────────
+
+export interface AppUser {
+  id: number;
+  username: string;
+  /** password stored locally after QR setup */
+  password: string;
+  name: string;
+  email: string;
+  role: string;
+  business_id: number;
+  status: string;
+  locations: { id: number; name: string; location_id: string }[];
+  created_at: string;
+}
 
 export interface Product {
   id: string;
@@ -77,17 +93,21 @@ export interface Expense {
   paymentMethod: string;
 }
 
+// ─── Context shape ──────────────────────────────────────────────────────────────
+
 interface AppContextValue {
-  user: any | null;
+  user: string | null;
+  userProfile: AppUser | null;
   isLoggedIn: boolean;
+  needsSetup: boolean;
   sales: Sale[];
   contacts: Contact[];
   expenses: Expense[];
   products: Product[];
   transfers: Transfer[];
   cart: CartItem[];
+  setupFromQR: (qrData: string) => Promise<{ success: boolean; error?: string }>;
   login: (username: string, password: string) => Promise<boolean>;
-  loginWithQR: (qrData: string) => Promise<boolean>;
   logout: () => void;
   addSale: (sale: Omit<Sale, "id" | "date" | "invoiceNumber">) => Sale;
   deleteSale: (id: string) => void;
@@ -110,10 +130,11 @@ interface AppContextValue {
   lastSyncTime: string | null;
 }
 
-const AppContext = createContext<AppContextValue | null>(null);
+// ─── Storage keys ───────────────────────────────────────────────────────────────
 
 const KEYS = {
-  user: "bizpos_user",
+  userProfile: "bizpos_user_profile",
+  activeUser: "bizpos_active_user",
   sales: "bizpos_sales",
   contacts: "bizpos_contacts",
   expenses: "bizpos_expenses",
@@ -122,12 +143,17 @@ const KEYS = {
   initialDataLoaded: "bizpos_initial_data_loaded",
 };
 
-// Supabase storage keys used by syncService
 const SYNC_KEYS = {
   products: "@bizpos_products",
   contacts: "@bizpos_contacts",
   sales: "@bizpos_sales",
 };
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
+function genId() {
+  return Date.now().toString() + Math.random().toString(36).substr(2, 9);
+}
 
 function genInvoiceNumber(existingCount: number) {
   const now = new Date();
@@ -154,48 +180,35 @@ async function checkOnline(): Promise<boolean> {
   }
 }
 
+const AppContext = createContext<AppContextValue | null>(null);
+
+// ─── Provider ───────────────────────────────────────────────────────────────────
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<string | null>(null);
+  const [userProfile, setUserProfile] = useState<AppUser | null>(null);
+  const [activeUser, setActiveUser] = useState<string | null>(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
+
   const [sales, setSales] = useState<Sale[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initUser = async () => {
-      const savedUser = await AsyncStorage.getItem(KEYS.user);
-      if (!savedUser) {
-        const initialUserData = {
-          id: 12,
-          username: "basiri",
-          password: "",
-          name: "ABDALAH BASIRI",
-          email: "abdlahbasiri3@gmail.com",
-          role: "Distribtion",
-          business_id: 1,
-          status: "active",
-          locations: [{ id: 10, name: "CAM 01 - 0199-A-44", location_id: "0199-A-44" }],
-          created_at: "2025-03-01T16:33:05+00:00",
-        };
-        const userStr = JSON.stringify(initialUserData);
-        await AsyncStorage.setItem(KEYS.user, userStr);
-        setUser(userStr);
-      } else {
-        setUser(savedUser);
-      }
-    };
-    initUser();
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
+
+  // ── Bootstrap ────────────────────────────────────────────────────────────────
 
   async function loadData() {
     try {
       const [
+        profileRaw,
+        activeUserRaw,
         savedSales,
         savedContacts,
         savedExpenses,
@@ -203,6 +216,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         savedProducts,
         initialDataLoaded,
       ] = await Promise.all([
+        AsyncStorage.getItem(KEYS.userProfile),
+        AsyncStorage.getItem(KEYS.activeUser),
         AsyncStorage.getItem(KEYS.sales),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
@@ -211,35 +226,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.initialDataLoaded),
       ]);
 
-      // Load whatever is in local storage first (instant startup)
+      // ── Credential check ───────────────────────────────────────────────────
+      if (!profileRaw) {
+        // No user ever registered → show QR setup screen
+        setNeedsSetup(true);
+      } else {
+        const profile: AppUser = JSON.parse(profileRaw);
+        setUserProfile(profile);
+        if (activeUserRaw) setActiveUser(activeUserRaw);
+      }
+
+      // ── Local data ─────────────────────────────────────────────────────────
       setSales(savedSales ? JSON.parse(savedSales) : []);
       setContacts(savedContacts ? JSON.parse(savedContacts) : []);
       setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
       setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
       setProducts(savedProducts ? JSON.parse(savedProducts) : []);
 
-      // Load last sync time
       const lastSync = await syncService.getLastSyncTime();
       setLastSyncTime(lastSync);
 
-      const localIsEmpty =
-        !savedProducts || JSON.parse(savedProducts).length === 0;
-
-      const shouldAutoSync = !initialDataLoaded || localIsEmpty;
-
-      if (shouldAutoSync) {
-        // Check connectivity before trying to sync
+      // ── Auto-sync when local data is empty ─────────────────────────────────
+      const localIsEmpty = !savedProducts || JSON.parse(savedProducts).length === 0;
+      if (!initialDataLoaded || localIsEmpty) {
         const online = await checkOnline();
         if (online) {
-          console.log("📡 Online detected — auto-syncing from Supabase...");
-          setIsLoading(false); // unblock UI while syncing in background
-          await performSync(true /* silent */);
+          console.log("📡 Auto-syncing from Supabase...");
+          setIsLoading(false);
+          await performSync(true);
           if (!initialDataLoaded) {
             await AsyncStorage.setItem(KEYS.initialDataLoaded, "true");
           }
           return;
         } else {
-          console.log("📴 Offline — using local data (empty on first launch)");
+          console.log("📴 Offline — using local data");
         }
       }
     } catch (e) {
@@ -249,7 +269,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  /** Internal sync that loads results into state */
+  // ── QR Setup ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Scanned QR JSON format:
+   * {
+   *   "id": 12, "username": "basiri", "password": "",
+   *   "name": "ABDALAH BASIRI", "email": "abdlahbasiri3@gmail.com",
+   *   "role": "Distribution", "business_id": 1, "status": "active",
+   *   "locations": [{"id":10,"name":"CAM 01 - 0199-A-44","location_id":"0199-A-44"}],
+   *   "created_at": "2025-03-01T16:33:05+00:00"
+   * }
+   *
+   * If the password field in the QR is empty, the username is used as the
+   * initial local password so the user can log in immediately after scanning.
+   */
+  async function setupFromQR(
+    qrData: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const parsed = JSON.parse(qrData) as Partial<AppUser>;
+
+      if (!parsed.username || !parsed.id) {
+        return { success: false, error: "Invalid QR code: missing username or id." };
+      }
+
+      // Use username as initial password when QR password is blank
+      const initialPassword =
+        parsed.password && parsed.password.trim() !== ""
+          ? parsed.password
+          : parsed.username;
+
+      const profile: AppUser = {
+        id: parsed.id,
+        username: parsed.username,
+        password: initialPassword,
+        name: parsed.name ?? parsed.username,
+        email: parsed.email ?? "",
+        role: parsed.role ?? "",
+        business_id: parsed.business_id ?? 0,
+        status: parsed.status ?? "active",
+        locations: parsed.locations ?? [],
+        created_at: parsed.created_at ?? new Date().toISOString(),
+      };
+
+      await AsyncStorage.setItem(KEYS.userProfile, JSON.stringify(profile));
+      setUserProfile(profile);
+      setNeedsSetup(false);
+
+      return { success: true };
+    } catch {
+      return {
+        success: false,
+        error: "Failed to parse QR code. Make sure it contains valid JSON.",
+      };
+    }
+  }
+
+  // ── Auth ──────────────────────────────────────────────────────────────────────
+
+  async function login(username: string, password: string): Promise<boolean> {
+    if (!userProfile) return false;
+
+    const usernameMatch =
+      userProfile.username.toLowerCase() === username.toLowerCase();
+    const passwordMatch = userProfile.password === password;
+
+    if (usernameMatch && passwordMatch) {
+      const displayName = userProfile.name || userProfile.username;
+      setActiveUser(displayName);
+      await AsyncStorage.setItem(KEYS.activeUser, displayName);
+      return true;
+    }
+    return false;
+  }
+
+  async function logout() {
+    setActiveUser(null);
+    await AsyncStorage.removeItem(KEYS.activeUser);
+  }
+
+  // ── Sync ──────────────────────────────────────────────────────────────────────
+
   async function performSync(silent = false) {
     if (isSyncing) return;
     setIsSyncing(true);
@@ -259,27 +360,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (results.products.success) {
         const raw = await AsyncStorage.getItem(SYNC_KEYS.products);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          setProducts(parsed);
-          // Mirror to the legacy key so subsequent cold starts load it
+          setProducts(JSON.parse(raw));
           await AsyncStorage.setItem(KEYS.products, raw);
         }
       }
-
       if (results.contacts.success) {
         const raw = await AsyncStorage.getItem(SYNC_KEYS.contacts);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          setContacts(parsed);
+          setContacts(JSON.parse(raw));
           await AsyncStorage.setItem(KEYS.contacts, raw);
         }
       }
-
       if (results.sales.success) {
         const raw = await AsyncStorage.getItem(SYNC_KEYS.sales);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          setSales(parsed);
+          setSales(JSON.parse(raw));
           await AsyncStorage.setItem(KEYS.sales, raw);
         }
       }
@@ -305,51 +400,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function login(username: string, password: string): Promise<boolean> {
-    try {
-      const savedUser = await AsyncStorage.getItem(KEYS.user);
-      if (savedUser) {
-        const userData = JSON.parse(savedUser);
-        if (userData.username.toLowerCase() === username.toLowerCase()) {
-          // If password matches or is empty (for initial user)
-          if (userData.password === "" || userData.password === password) {
-            if (userData.password === "" && password !== "") {
-              // Update password on first login
-              userData.password = password;
-              const updatedUser = JSON.stringify(userData);
-              await AsyncStorage.setItem(KEYS.user, updatedUser);
-              setUser(updatedUser);
-            }
-            return true;
-          }
-        }
-      }
-    } catch (e) {
-      console.error("Login error", e);
-    }
-    return false;
+  async function syncData() {
+    await performSync(false);
   }
 
-  async function loginWithQR(qrData: string): Promise<boolean> {
-    try {
-      const userData = JSON.parse(qrData);
-      // Basic validation of the expected format
-      if (userData && userData.username && userData.id) {
-        const userStr = JSON.stringify(userData);
-        await AsyncStorage.setItem(KEYS.user, userStr);
-        setUser(userStr);
-        return true;
-      }
-    } catch (e) {
-      console.error("QR Login error", e);
-    }
-    return false;
-  }
-
-  async function logout() {
-    setUser(null);
-    await AsyncStorage.removeItem(KEYS.user);
-  }
+  // ── CRUD ──────────────────────────────────────────────────────────────────────
 
   function addSale(sale: Omit<Sale, "id" | "date" | "invoiceNumber">): Sale {
     const newSale: Sale = {
@@ -371,11 +426,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function addContact(contact: Omit<Contact, "id" | "date">) {
-    const newContact: Contact = {
-      ...contact,
-      id: genId(),
-      date: new Date().toISOString(),
-    };
+    const newContact: Contact = { ...contact, id: genId(), date: new Date().toISOString() };
     const updated = [newContact, ...contacts];
     setContacts(updated);
     await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(updated));
@@ -388,11 +439,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function addExpense(expense: Omit<Expense, "id" | "date">) {
-    const newExpense: Expense = {
-      ...expense,
-      id: genId(),
-      date: new Date().toISOString(),
-    };
+    const newExpense: Expense = { ...expense, id: genId(), date: new Date().toISOString() };
     const updated = [newExpense, ...expenses];
     setExpenses(updated);
     await AsyncStorage.setItem(KEYS.expenses, JSON.stringify(updated));
@@ -411,13 +458,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const updatedProducts = products.map(p => {
       const item = transfer.items.find(it => it.sku === p.sku);
-      if (item) {
-        if (transfer.from === "Produits finis") {
-          return { ...p, stock: (p.stock ?? 0) - item.qty };
-        } else if (transfer.to === "Produits finis") {
-          return { ...p, stock: (p.stock ?? 0) + item.qty };
-        }
-      }
+      if (!item) return p;
+      if (transfer.from === "Produits finis") return { ...p, stock: (p.stock ?? 0) - item.qty };
+      if (transfer.to === "Produits finis") return { ...p, stock: (p.stock ?? 0) + item.qty };
       return p;
     });
     setProducts(updatedProducts);
@@ -427,11 +470,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   function addToCart(product: Product, qty = 1) {
     setCart(prev => {
       const existing = prev.find(ci => ci.product.id === product.id);
-      if (existing) {
-        return prev.map(ci =>
-          ci.product.id === product.id ? { ...ci, qty: ci.qty + qty } : ci
-        );
-      }
+      if (existing) return prev.map(ci => ci.product.id === product.id ? { ...ci, qty: ci.qty + qty } : ci);
       return [...prev, { product, qty }];
     });
   }
@@ -442,56 +481,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   function updateCartQty(productId: string, qty: number) {
     if (qty <= 0) { removeFromCart(productId); return; }
-    setCart(prev =>
-      prev.map(ci => ci.product.id === productId ? { ...ci, qty } : ci)
-    );
+    setCart(prev => prev.map(ci => ci.product.id === productId ? { ...ci, qty } : ci));
   }
 
   function clearCart() { setCart([]); }
 
-  /** Public syncData — called manually from UI */
-  async function syncData() {
-    await performSync(false);
-  }
+  // ── Computed totals ───────────────────────────────────────────────────────────
 
-  const totalSales = useMemo(() => sales.reduce((sum, s) => sum + s.amount, 0), [sales]);
-  const totalExpenses = useMemo(() => expenses.reduce((sum, e) => sum + e.amount, 0), [expenses]);
-  const totalDue = useMemo(() => sales.reduce((sum, s) => sum + (s.amount - s.paid), 0), [sales]);
+  const totalSales = useMemo(() => sales.reduce((s, x) => s + x.amount, 0), [sales]);
+  const totalExpenses = useMemo(() => expenses.reduce((s, x) => s + x.amount, 0), [expenses]);
+  const totalDue = useMemo(() => sales.reduce((s, x) => s + (x.amount - x.paid), 0), [sales]);
   const netProfit = useMemo(() => totalSales - totalExpenses, [totalSales, totalExpenses]);
 
-  const value = useMemo(() => ({
-    user,
-    isLoggedIn: !!user,
-    sales,
-    contacts,
-    expenses,
-    products,
-    transfers,
-    cart,
-    login,
-    loginWithQR,
-    logout,
-    addSale,
-    deleteSale,
-    addContact,
-    deleteContact,
-    addExpense,
-    deleteExpense,
+  const value = useMemo<AppContextValue>(() => ({
+    user: activeUser,
+    userProfile,
+    isLoggedIn: !!activeUser,
+    needsSetup,
+    sales, contacts, expenses, products, transfers, cart,
+    setupFromQR,
+    login, logout,
+    addSale, deleteSale,
+    addContact, deleteContact,
+    addExpense, deleteExpense,
     addTransfer,
-    addToCart,
-    removeFromCart,
-    updateCartQty,
-    clearCart,
-    totalSales,
-    totalExpenses,
-    totalDue,
-    netProfit,
-    isLoading,
-    isSyncing,
-    syncData,
-    lastSyncTime,
+    addToCart, removeFromCart, updateCartQty, clearCart,
+    totalSales, totalExpenses, totalDue, netProfit,
+    isLoading, isSyncing, syncData, lastSyncTime,
   }), [
-    user, sales, contacts, expenses, products, transfers, cart,
+    activeUser, userProfile, needsSetup,
+    sales, contacts, expenses, products, transfers, cart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, lastSyncTime,
   ]);
