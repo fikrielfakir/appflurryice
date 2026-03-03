@@ -445,10 +445,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Stock update logic based on transfer direction
       let newStock = p.stock ?? 0;
-      if (transfer.from === "Produits finis" || transfer.from === "Main Store") {
+      const fromLoc = (transfer.from || "").toLowerCase();
+      const toLoc = (transfer.to || "").toLowerCase();
+      
+      const isFinisOrStore = (loc: string) => 
+        loc.includes("produits finis") || 
+        loc.includes("main store") || 
+        loc.includes("cam 01") ||
+        loc.includes("0199-a-44");
+
+      if (isFinisOrStore(fromLoc)) {
         newStock -= item.qty;
       }
-      if (transfer.to === "Produits finis" || transfer.to === "Main Store") {
+      if (isFinisOrStore(toLoc)) {
         newStock += item.qty;
       }
       
