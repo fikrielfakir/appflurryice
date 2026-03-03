@@ -9,6 +9,8 @@ import {
   Platform,
   Image,
   ActivityIndicator,
+  Modal,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -29,8 +31,21 @@ function fmt(n: number | undefined | null) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, syncData, isSyncing } = useApp();
+  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile } = useApp();
   const [search, setSearch] = useState("");
+  const [isResetModalVisible, setIsResetModalVisible] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const handleResetStock = () => {
+    if (password === userProfile?.password) {
+      resetAllStock();
+      setIsResetModalVisible(false);
+      setPassword("");
+      Alert.alert("Success", "All stock has been reset to 0.");
+    } else {
+      Alert.alert("Error", "Incorrect password.");
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) =>
@@ -98,20 +113,32 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.cartBtn} 
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/pos/cart");
-            }}
-          >
-             {cart.length > 0 && (
-               <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>{cart.length}</Text>
-               </View>
-             )}
-             <Feather name="shopping-cart" size={24} color={C.gold} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity 
+              style={styles.cartBtn} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setIsResetModalVisible(true);
+              }}
+            >
+              <Feather name="refresh-cw" size={20} color={C.danger} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.cartBtn} 
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/pos/cart");
+              }}
+            >
+               {cart.length > 0 && (
+                 <View style={styles.cartBadge}>
+                    <Text style={styles.cartBadgeText}>{cart.length}</Text>
+                 </View>
+               )}
+               <Feather name="shopping-cart" size={24} color={C.gold} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.headerActions}>
@@ -164,6 +191,48 @@ export default function ProductsScreen() {
           </View>
         }
       />
+
+      <Modal
+        visible={isResetModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsResetModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reset All Stock</Text>
+            <Text style={styles.modalSubtitle}>Enter your password to confirm resetting all product quantities to 0.</Text>
+            
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Password"
+              placeholderTextColor={C.textMuted}
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, { backgroundColor: C.card }]}
+                onPress={() => {
+                  setIsResetModalVisible(false);
+                  setPassword("");
+                }}
+              >
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalBtn, { backgroundColor: C.danger }]}
+                onPress={handleResetStock}
+              >
+                <Text style={styles.modalBtnText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -355,6 +424,59 @@ const styles = StyleSheet.create({
     color: C.textMuted,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: C.textSecondary,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalInput: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 12,
+    color: '#fff',
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBtnText: {
+    color: '#fff',
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
   },
 });
 

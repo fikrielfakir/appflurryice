@@ -117,6 +117,7 @@ interface AppContextValue {
   addExpense: (expense: Omit<Expense, "id" | "date">) => void;
   deleteExpense: (id: string) => void;
   addTransfer: (transfer: Transfer) => void;
+  resetAllStock: () => void;
   addToCart: (product: Product, qty?: number) => void;
   removeFromCart: (productId: string) => void;
   updateCartQty: (productId: string, qty: number) => void;
@@ -506,6 +507,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addContact, deleteContact,
     addExpense, deleteExpense,
     addTransfer,
+    resetAllStock: () => {
+      const updatedProducts = products.map(p => ({ ...p, stock: 0 }));
+      setProducts(updatedProducts);
+      AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
+    },
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, syncData, lastSyncTime,
