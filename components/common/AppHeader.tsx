@@ -1,7 +1,3 @@
-// components/common/AppHeader.tsx
-// FlurryIce — Unified header used on ALL screens.
-// Height is always HeaderHeight.bar (56px) — never override.
-
 import React from 'react';
 import {
   View,

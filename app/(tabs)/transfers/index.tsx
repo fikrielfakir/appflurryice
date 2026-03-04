@@ -1,3 +1,4 @@
+import * as Haptics from "expo-haptics";
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Dimensions, Platform } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';

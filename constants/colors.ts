@@ -3,7 +3,7 @@
 
 export const Colors = {
   // ── Brand Core ────────────────────────────────
-  primary:      '#0A2463',  // Deep Navy — trust, premium
+  primary:      '#1C439C',  // Deep Navy — trust, premium
   primaryLight: '#1B3FA0',  // Medium Navy — buttons, active states
   primaryDark:  '#061540',  // Darker navy — pressed states
   secondary:    '#64748B',  // Secondary color

@@ -34,7 +34,7 @@ function NativeTabLayout() {
   );
 }
 
-function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean }) {
+function ClassicTabLayout({ theme: C }: { theme: any }) {
   const insets = useSafeAreaInsets();
   return (
     <Tabs
@@ -57,7 +57,7 @@ function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean })
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
         tabBarLabelStyle: {
           fontSize: 10,
@@ -128,12 +128,12 @@ function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean })
 }
 
 export default function TabLayout() {
-  const { isDark, isSidebarOpen, setIsSidebarOpen } = useApp();
+  const { isSidebarOpen, setIsSidebarOpen } = useApp();
   const C = Colors;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>
-      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout theme={C} isDark={isDark} />}
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout theme={C} />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
     </View>
   );

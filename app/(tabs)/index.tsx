@@ -33,7 +33,7 @@ function StatCard({ label, value, icon, color, bg, isSmall, theme: C }: {
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
-  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout, toggleTheme, isDark } = useApp();
+  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout } = useApp();
   const C = Colors;
   const [refreshing, setRefreshing] = useState(false);
 
@@ -85,12 +85,6 @@ export default function DashboardScreen() {
           <View style={styles.headerRight}>
             <TouchableOpacity
               style={[styles.logoutBtn, { backgroundColor: C.surface, borderColor: C.border }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); toggleTheme(); }}
-            >
-              <Feather name={isDark ? "sun" : "moon"} size={18} color={C.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.logoutBtn, { backgroundColor: C.surface, borderColor: C.border, marginTop: 10 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); logout(); }}
             >
               <Feather name="log-out" size={18} color={C.textSecondary} />

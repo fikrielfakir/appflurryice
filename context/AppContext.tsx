@@ -1,7 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { syncService } from "@/lib/syncService";
-import { useColorScheme } from "react-native";
 import Colors from "@/constants/colors";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -134,11 +133,6 @@ interface AppContextValue {
   setIsSidebarOpen: (open: boolean) => void;
   syncData: () => Promise<void>;
   lastSyncTime: string | null;
-  theme: typeof Colors.light;
-  isDark: boolean;
-  toggleTheme: () => void;
-  themeMode: "light" | "dark" | "auto";
-  setThemeMode: (mode: "light" | "dark" | "auto") => void;
 }
 
 // ─── Storage keys ───────────────────────────────────────────────────────────────
@@ -212,33 +206,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
-
-  const systemColorScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<"light" | "dark" | "auto">("auto");
-
-  const isDark = useMemo(() => {
-    if (themeMode === "auto") return systemColorScheme === "dark";
-    return themeMode === "dark";
-  }, [themeMode, systemColorScheme]);
-
-  const theme = useMemo(() => (isDark ? Colors.dark : Colors.light), [isDark]);
-
-  const setThemeMode = async (mode: "light" | "dark" | "auto") => {
-    setThemeModeState(mode);
-    await AsyncStorage.setItem(KEYS.themeMode, mode);
-  };
-
-  const toggleTheme = () => {
-    setThemeMode(isDark ? "light" : "dark");
-  };
-
-  useEffect(() => {
-    const loadTheme = async () => {
-      const savedMode = await AsyncStorage.getItem(KEYS.themeMode);
-      if (savedMode) setThemeModeState(savedMode as any);
-    };
-    loadTheme();
-  }, []);
 
   useEffect(() => { loadData(); }, []);
 
@@ -539,13 +506,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, isSidebarOpen, setIsSidebarOpen, syncData, lastSyncTime,
-    theme, isDark, toggleTheme, themeMode, setThemeMode,
   }), [
     activeUser, userProfile, needsSetup,
     sales, contacts, expenses, products, transfers, cart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, isSidebarOpen, lastSyncTime,
-    theme, isDark, themeMode,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
