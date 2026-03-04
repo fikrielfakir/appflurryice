@@ -146,7 +146,7 @@ import Toast from 'react-native-root-toast';
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, deleteSale, totalSales, syncData, isSyncing } = useApp();
+  const { sales, deleteSale, totalSales, syncData, isSyncing, setIsSidebarOpen } = useApp();
   const C = Colors;
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
@@ -191,8 +191,7 @@ export default function SalesScreen() {
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          // @ts-ignore - Sidebar is usually controlled via navigation or global state
-          router.setParams({ showSidebar: 'true' });
+          setIsSidebarOpen(true);
         }}
         rightActions={
           <>

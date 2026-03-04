@@ -130,6 +130,8 @@ interface AppContextValue {
   netProfit: number;
   isLoading: boolean;
   isSyncing: boolean;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
   syncData: () => Promise<void>;
   lastSyncTime: string | null;
   theme: typeof Colors.light;
@@ -208,6 +210,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
   const systemColorScheme = useColorScheme();
@@ -535,13 +538,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit,
-    isLoading, isSyncing, syncData, lastSyncTime,
+    isLoading, isSyncing, isSidebarOpen, setIsSidebarOpen, syncData, lastSyncTime,
     theme, isDark, toggleTheme, themeMode, setThemeMode,
   }), [
     activeUser, userProfile, needsSetup,
     sales, contacts, expenses, products, transfers, cart,
     totalSales, totalExpenses, totalDue, netProfit,
-    isLoading, isSyncing, lastSyncTime,
+    isLoading, isSyncing, isSidebarOpen, lastSyncTime,
     theme, isDark, themeMode,
   ]);
 

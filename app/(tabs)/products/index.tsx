@@ -54,7 +54,7 @@ const productCardStyle = (C: any): ViewStyle => ({
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile } = useApp();
+  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile, setIsSidebarOpen } = useApp();
   const C = Colors;
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
@@ -143,8 +143,7 @@ export default function ProductsScreen() {
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          // @ts-ignore
-          router.setParams({ showSidebar: 'true' });
+          setIsSidebarOpen(true);
         }}
         rightActions={
           <View style={{ flexDirection: "row", gap: 10 }}>

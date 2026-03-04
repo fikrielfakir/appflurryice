@@ -1,10 +1,10 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs, router, useLocalSearchParams } from "expo-router";
+import { Tabs, router } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
 import { Platform, StyleSheet, View, TouchableOpacity } from "react-native";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -128,18 +128,8 @@ function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean })
 }
 
 export default function TabLayout() {
-  const { isDark } = useApp();
+  const { isDark, isSidebarOpen, setIsSidebarOpen } = useApp();
   const C = Colors;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const params = useLocalSearchParams();
-
-  useEffect(() => {
-    if (params.showSidebar === 'true') {
-      setIsSidebarOpen(true);
-      // Reset the param so it doesn't trigger again on re-render
-      router.setParams({ showSidebar: undefined });
-    }
-  }, [params.showSidebar]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.surface }}>

@@ -15,7 +15,7 @@ import Toast from 'react-native-root-toast';
 
 export default function TransfersScreen() {
   const insets = useSafeAreaInsets();
-  const { transfers, addTransfer, products } = useApp();
+  const { transfers, addTransfer, products, setIsSidebarOpen } = useApp();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
 
@@ -105,8 +105,7 @@ export default function TransfersScreen() {
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          // @ts-ignore
-          router.setParams({ showSidebar: 'true' });
+          setIsSidebarOpen(true);
         }}
         rightActions={
           <TouchableOpacity 
