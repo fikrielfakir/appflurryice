@@ -62,42 +62,6 @@ export const Colors = {
   sidebarItemActive: 'rgba(0,180,216,0.18)',
   sidebarText:    '#FFFFFF',
   sidebarTextMuted: 'rgba(255,255,255,0.6)',
-
-  // Compatibility with old code
-  light: {
-    background: '#F8FAFC',
-    surface: '#FFFFFF',
-    card: '#FFFFFF',
-    border: '#E2E8F0',
-    primary: '#0A2463',
-    secondary: '#1B3FA0',
-    accent: '#00B4D8',
-    success: '#10B981',
-    warning: '#F59E0B',
-    danger: '#EF4444',
-    text: '#0F172A',
-    textSecondary: '#64748B',
-    textMuted: '#94A3B8',
-    gold: '#F59E0B',
-  },
-  dark: {
-    background: '#061540',
-    card: '#0A2463',
-    surface: '#1B3FA0',
-    border: '#1E2D5A',
-    primary: '#1B3FA0',
-    primaryDark: '#061540',
-    gold: '#F59E0B',
-    goldLight: '#FFFBEB',
-    secondary: '#F59E0B',
-    success: '#10B981',
-    warning: '#F59E0B',
-    danger: '#EF4444',
-    text: '#FFFFFF',
-    textSecondary: '#94A3B8',
-    textMuted: '#64748B',
-    accent: '#00B4D8',
-  }
 };
 
 // Quick-access named semantic colors
