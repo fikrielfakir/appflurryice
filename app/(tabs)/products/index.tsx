@@ -10,6 +10,7 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -18,7 +19,7 @@ import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from "expo-linear-gradient";
 
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
@@ -28,6 +29,28 @@ function fmt(n: number | undefined | null) {
   });
 }
 
+const headerStyle = (C: any): ViewStyle => ({
+  paddingHorizontal: 16,
+  paddingBottom: 16,
+  backgroundColor: C.surface,
+  borderBottomWidth: 1,
+  borderBottomColor: C.border,
+});
+
+const productCardStyle = (C: any): ViewStyle => ({
+  backgroundColor: C.card,
+  borderRadius: 16,
+  padding: 12,
+  marginBottom: 10,
+  borderWidth: 1,
+  borderColor: C.border,
+  elevation: 2,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 1 },
+  shadowOpacity: 0.1,
+  shadowRadius: 2,
+});
+
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile } = useApp();
@@ -35,20 +58,20 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
-  
+
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error' | 'info';
+    type: "success" | "error" | "info";
   }>({
     visible: false,
     title: "",
     message: "",
-    type: 'info'
+    type: "info",
   });
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
@@ -64,17 +87,18 @@ export default function ProductsScreen() {
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase())
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        p.category.toLowerCase().includes(search.toLowerCase())
     );
   }, [products, search]);
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
 
   const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity 
-      style={[styles.productCard(C), item.stock <= 0 && styles.productCardDisabled]} 
+    <TouchableOpacity
+      style={[productCardStyle(C), item.stock <= 0 && styles.productCardDisabled]}
       onPress={() => {
         if (item.stock <= 0) {
           showAlert("Indisponible", "Ce produit est en rupture de stock.", "error");
@@ -111,17 +135,14 @@ export default function ProductsScreen() {
   );
 
   return (
-    <LinearGradient
-      colors={[C.accent, C.surface]}
-      style={styles.screen}
-    >
-      <View style={[styles.header(C), { paddingTop: topInset + 10 }]}>
+    <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
+      <View style={[headerStyle(C), { paddingTop: topInset + 10 }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
-          
+
           <View style={styles.headerTitleContainer}>
             <Text style={[styles.headerSubtitle, { color: C.textPrimary }]}>Produits finis</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 syncData();
@@ -136,9 +157,9 @@ export default function ProductsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <TouchableOpacity 
-              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]} 
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity
+              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsResetModalVisible(true);
@@ -147,31 +168,31 @@ export default function ProductsScreen() {
               <Feather name="refresh-cw" size={20} color={C.danger} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]} 
+            <TouchableOpacity
+              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/pos/cart");
               }}
             >
-               {cart.length > 0 && (
-                 <View style={[styles.cartBadge, { backgroundColor: C.danger, borderColor: C.surface }]}>
-                    <Text style={styles.cartBadgeText}>{cart.length}</Text>
-                 </View>
-               )}
-               <Feather name="shopping-cart" size={24} color={C.accent} />
+              {cart.length > 0 && (
+                <View style={[styles.cartBadge, { backgroundColor: C.danger, borderColor: C.surface }]}>
+                  <Text style={styles.cartBadgeText}>{cart.length}</Text>
+                </View>
+              )}
+              <Feather name="shopping-cart" size={24} color={C.accent} />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
-             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
-                <Feather name="grid" size={18} color={C.accent} />
-             </TouchableOpacity>
-             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
-                <Feather name="list" size={18} color={C.textSecondary} />
-             </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Feather name="grid" size={18} color={C.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
+              <Feather name="list" size={18} color={C.textSecondary} />
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.searchContainer, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -203,10 +224,7 @@ export default function ProductsScreen() {
         data={filteredProducts}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 100 },
-        ]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Feather name="package" size={48} color={C.textMuted} />
@@ -224,8 +242,10 @@ export default function ProductsScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
             <Text style={[styles.modalTitle, { color: C.text }]}>Reset All Stock</Text>
-            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>Enter your password to confirm resetting all product quantities to 0.</Text>
-            
+            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>
+              Enter your password to confirm resetting all product quantities to 0.
+            </Text>
+
             <TextInput
               style={[styles.modalInput, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
               placeholder="Password"
@@ -236,7 +256,7 @@ export default function ProductsScreen() {
             />
 
             <View style={styles.modalActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: C.border }]}
                 onPress={() => {
                   setIsResetModalVisible(false);
@@ -245,8 +265,8 @@ export default function ProductsScreen() {
               >
                 <Text style={[styles.modalBtnText, { color: C.text }]}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: C.danger }]}
                 onPress={handleResetStock}
               >
@@ -283,13 +303,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
-  header: (C: any) => ({
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    backgroundColor: C.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  }),
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -365,19 +378,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
   },
   listContent: { padding: 12 },
-  productCard: (C: any) => ({
-    backgroundColor: C.card,
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  }),
   productCardDisabled: {
     opacity: 0.6,
   },
@@ -449,15 +449,15 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   modalContent: {
     borderRadius: 20,
     padding: 24,
-    width: '100%',
+    width: "100%",
     maxWidth: 400,
     elevation: 5,
     shadowColor: "#000",
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontFamily: 'Inter_700Bold',
+    fontFamily: "Inter_700Bold",
     marginBottom: 8,
   },
   modalSubtitle: {
@@ -483,19 +483,19 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
   },
   modalBtn: {
     flex: 1,
     height: 48,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   modalBtnText: {
-    color: '#fff',
-    fontFamily: 'Inter_600SemiBold',
+    color: "#fff",
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
   },
 });

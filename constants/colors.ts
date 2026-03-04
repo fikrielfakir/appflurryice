@@ -6,12 +6,14 @@ export const Colors = {
   primary:      '#0A2463',  // Deep Navy — trust, premium
   primaryLight: '#1B3FA0',  // Medium Navy — buttons, active states
   primaryDark:  '#061540',  // Darker navy — pressed states
+  secondary:    '#64748B',  // Secondary color
   accent:       '#00B4D8',  // Ice Blue — highlights, badges, links
   accentLight:  '#38C9E8',  // Lighter ice blue
   accentSoft:   '#E0F7FC',  // Ice Blue tint — chips, selected bg
 
   // ── Neutrals ─────────────────────────────────
   white:        '#FFFFFF',
+  background:   '#F8FAFC',  // App background
   surface:      '#F8FAFC',  // App background
   card:         '#FFFFFF',  // Card background
   border:       '#E2E8F0',  // Dividers and card borders
@@ -24,6 +26,7 @@ export const Colors = {
   textMuted:     '#94A3B8', // Placeholders, disabled
   textOnDark:    '#FFFFFF', // Text on primary/dark backgrounds
   textOnAccent:  '#FFFFFF', // Text on accent backgrounds
+  text:          '#0F172A', // Default text color
 
   // ── Semantic / Status ─────────────────────────
   success:    '#10B981',
@@ -62,6 +65,23 @@ export const Colors = {
   sidebarItemActive: 'rgba(0,180,216,0.18)',
   sidebarText:    '#FFFFFF',
   sidebarTextMuted: 'rgba(255,255,255,0.6)',
+
+  // ── Dark Theme ────────────────────────────────
+  dark: {
+    primary: '#1A3C8F',
+    secondary: '#2D3748',
+    gold: '#D4AF37',
+    background: '#0B0F1A',
+    surface: '#151C28',
+    card: '#1E2738',
+    text: '#FFFFFF',
+    textSecondary: '#94A3B8',
+    textMuted: '#64748B',
+    border: '#2D3748',
+    success: '#2ECC71',
+    danger: '#EF4444',
+    warning: '#F0B429',
+  },
 };
 
 // Quick-access named semantic colors

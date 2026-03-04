@@ -19,7 +19,7 @@ function StatCard({ label, value, icon, color, bg, isSmall, theme: C }: {
   label: string; value: string; icon: string; color: string; bg: string; isSmall?: boolean; theme: any;
 }) {
   return (
-    <View style={[styles.statCard(C), { borderColor: color + "30" }, isSmall && styles.statCardSmall]}>
+    <View style={[styles.statCard(C), { borderColor: color + "30" }, isSmall && styles.statCardSmall] as any}>
       <View style={[styles.statIcon, { backgroundColor: bg }, isSmall && styles.statIconSmall]}>
         <Feather name={icon as any} size={isSmall ? 14 : 18} color={color} />
       </View>
