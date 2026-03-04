@@ -6,7 +6,7 @@ import { SymbolView } from "expo-symbols";
 import { Platform, StyleSheet, View, TouchableOpacity } from "react-native";
 import React, { useState } from "react";
 import { Feather } from "@expo/vector-icons";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Sidebar from "@/components/Sidebar";
 import { useApp } from "@/context/AppContext";
@@ -40,14 +40,14 @@ function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean })
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.primary,
-        tabBarInactiveTintColor: C.textMuted,
+        tabBarActiveTintColor: C.tabActive,
+        tabBarInactiveTintColor: C.tabInactive,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: C.surface,
-            web: C.surface,
+            android: C.tabBar,
+            web: C.tabBar,
           }),
           borderTopWidth: 1,
           borderTopColor: C.border,
@@ -128,11 +128,12 @@ function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean })
 }
 
 export default function TabLayout() {
-  const { theme: C, isDark } = useApp();
+  const { isDark } = useApp();
+  const C = Colors;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.background }}>
+    <View style={{ flex: 1, backgroundColor: C.surface }}>
       {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout theme={C} isDark={isDark} />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <TouchableOpacity 

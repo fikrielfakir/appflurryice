@@ -16,7 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -30,7 +30,8 @@ function fmt(n: number | undefined | null) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile, theme: C } = useApp();
+  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile } = useApp();
+  const C = Colors;
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
@@ -111,7 +112,7 @@ export default function ProductsScreen() {
 
   return (
     <LinearGradient
-      colors={[C.accent, C.background]}
+      colors={[C.accent, C.surface]}
       style={styles.screen}
     >
       <View style={[styles.header(C), { paddingTop: topInset + 10 }]}>
@@ -119,7 +120,7 @@ export default function ProductsScreen() {
           <View style={styles.headerLeftPlaceholder} />
           
           <View style={styles.headerTitleContainer}>
-            <Text style={[styles.headerSubtitle, { color: C.text }]}>Produits finis</Text>
+            <Text style={[styles.headerSubtitle, { color: C.textPrimary }]}>Produits finis</Text>
             <TouchableOpacity 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -137,7 +138,7 @@ export default function ProductsScreen() {
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity 
-              style={[styles.cartBtn, { backgroundColor: C.background, borderColor: C.border }]} 
+              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]} 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsResetModalVisible(true);
@@ -147,7 +148,7 @@ export default function ProductsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.cartBtn, { backgroundColor: C.background, borderColor: C.border }]} 
+              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]} 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/pos/cart");
@@ -158,25 +159,25 @@ export default function ProductsScreen() {
                     <Text style={styles.cartBadgeText}>{cart.length}</Text>
                  </View>
                )}
-               <Feather name="shopping-cart" size={24} color={C.gold} />
+               <Feather name="shopping-cart" size={24} color={C.accent} />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
-             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.background, borderColor: C.border }]}>
-                <Feather name="grid" size={18} color={C.gold} />
+             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
+                <Feather name="grid" size={18} color={C.accent} />
              </TouchableOpacity>
-             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.background, borderColor: C.border }]}>
+             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
                 <Feather name="list" size={18} color={C.textSecondary} />
              </TouchableOpacity>
           </View>
 
-          <View style={[styles.searchContainer, { backgroundColor: C.background, borderColor: C.border }]}>
+          <View style={[styles.searchContainer, { backgroundColor: C.surface, borderColor: C.border }]}>
             <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
             <TextInput
-              style={[styles.searchInput, { color: C.text }]}
+              style={[styles.searchInput, { color: C.textPrimary }]}
               placeholder="Search..."
               placeholderTextColor={C.textMuted}
               value={search}
@@ -192,7 +193,7 @@ export default function ProductsScreen() {
       </View>
 
       {isSyncing && (
-        <View style={[styles.syncIndicator, { backgroundColor: C.gold }]}>
+        <View style={[styles.syncIndicator, { backgroundColor: C.accent }]}>
           <ActivityIndicator size="small" color="#fff" />
           <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
         </View>
@@ -226,7 +227,7 @@ export default function ProductsScreen() {
             <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>Enter your password to confirm resetting all product quantities to 0.</Text>
             
             <TextInput
-              style={[styles.modalInput, { backgroundColor: C.background, color: C.text, borderColor: C.border }]}
+              style={[styles.modalInput, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
               placeholder="Password"
               placeholderTextColor={C.textMuted}
               secureTextEntry

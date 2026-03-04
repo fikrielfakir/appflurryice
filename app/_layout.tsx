@@ -11,12 +11,13 @@ import {
   Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts,
 } from "@expo-google-fonts/inter";
 import { View, ActivityIndicator } from "react-native";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isLoggedIn, isLoading, needsSetup, theme } = useApp();
+  const { isLoggedIn, isLoading, needsSetup } = useApp();
+  const theme = Colors;
 
   useEffect(() => {
     if (!isLoading) SplashScreen.hideAsync();
@@ -32,14 +33,14 @@ function RootLayoutNav() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: theme?.background || "#F8F9FA", justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, backgroundColor: theme?.surface || "#F8F9FA", justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={theme?.primary || "#1C439C"} size="large" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme?.background || "#F8F9FA" } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme?.surface || "#F8F9FA" } }}>
       <Stack.Screen name="setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />

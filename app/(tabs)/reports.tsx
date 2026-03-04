@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
-const C = Colors.dark;
+const C = Colors;
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -16,13 +16,13 @@ function fmt(n: number) {
 
 function MetricCard({ label, value, icon, color, sub }: { label: string; value: string; icon: string; color: string; sub?: string }) {
   return (
-    <View style={[styles.metricCard, { borderColor: color + "30" }]}>
+    <View style={[styles.metricCard, { backgroundColor: C.card, borderColor: color + "30" }]}>
       <View style={[styles.metricIcon, { backgroundColor: color + "15" }]}>
         <Feather name={icon as any} size={20} color={color} />
       </View>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-      {sub ? <Text style={styles.metricSub}>{sub}</Text> : null}
+      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{value}</Text>
+      <Text style={[styles.metricLabel, { color: C.textSecondary }]}>{label}</Text>
+      {sub ? <Text style={[styles.metricSub, { color: C.textMuted }]}>{sub}</Text> : null}
     </View>
   );
 }
@@ -86,44 +86,44 @@ export default function ReportsScreen() {
   const marginPct = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : "0.0";
 
   return (
-    <View style={styles.screen}>
-      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={styles.headerTitle}>Reports</Text>
-        <Text style={styles.headerSub}>Business performance overview</Text>
+    <View style={[styles.screen, { backgroundColor: C.surface }]}>
+      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Reports</Text>
+        <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>Business performance overview</Text>
       </LinearGradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + bottomInset }}>
         <View style={styles.metricsGrid}>
-          <MetricCard label="Total Revenue" value={`$${fmt(totalSales)}`} icon="trending-up" color={C.primary} sub={`${sales.length} sales`} />
-          <MetricCard label="Total Expenses" value={`$${fmt(totalExpenses)}`} icon="trending-down" color={C.secondary} sub={`${expenses.length} records`} />
-          <MetricCard label="Net Profit" value={`$${fmt(netProfit)}`} icon="award" color={netProfit >= 0 ? C.success : C.danger} sub={`${marginPct}% margin`} />
-          <MetricCard label="Amount Due" value={`$${fmt(totalDue)}`} icon="clock" color={C.warning} sub={`${dueSales} unpaid`} />
+          <MetricCard label="Total Revenue" value={`MAD ${fmt(totalSales)}`} icon="trending-up" color={C.primaryLight} sub={`${sales.length} sales`} />
+          <MetricCard label="Total Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.accent} sub={`${expenses.length} records`} />
+          <MetricCard label="Net Profit" value={`MAD ${fmt(netProfit)}`} icon="award" color={netProfit >= 0 ? C.success : C.danger} sub={`${marginPct}% margin`} />
+          <MetricCard label="Amount Due" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.warning} sub={`${dueSales} unpaid`} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Revenue vs Expenses</Text>
-          <View style={styles.compCard}>
+          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>Revenue vs Expenses</Text>
+          <View style={[styles.compCard, { backgroundColor: C.card, borderColor: C.border }]}>
             <View style={styles.compRow}>
               <View style={styles.compItem}>
-                <View style={[styles.compDot, { backgroundColor: C.primary }]} />
+                <View style={[styles.compDot, { backgroundColor: C.primaryLight }]} />
                 <View>
-                  <Text style={styles.compLabel}>Revenue</Text>
-                  <Text style={[styles.compValue, { color: C.primary }]}>${fmt(totalSales)}</Text>
+                  <Text style={[styles.compLabel, { color: C.textSecondary }]}>Revenue</Text>
+                  <Text style={[styles.compValue, { color: C.primaryLight }]}>MAD {fmt(totalSales)}</Text>
                 </View>
               </View>
-              <View style={styles.compDivider} />
+              <View style={[styles.compDivider, { backgroundColor: C.border }]} />
               <View style={styles.compItem}>
-                <View style={[styles.compDot, { backgroundColor: C.secondary }]} />
+                <View style={[styles.compDot, { backgroundColor: C.accent }]} />
                 <View>
-                  <Text style={styles.compLabel}>Expenses</Text>
-                  <Text style={[styles.compValue, { color: C.secondary }]}>${fmt(totalExpenses)}</Text>
+                  <Text style={[styles.compLabel, { color: C.textSecondary }]}>Expenses</Text>
+                  <Text style={[styles.compValue, { color: C.accent }]}>MAD {fmt(totalExpenses)}</Text>
                 </View>
               </View>
             </View>
             <View style={styles.profitBar}>
-              <View style={styles.profitTrack}>
+              <View style={[styles.profitTrack, { backgroundColor: C.surface }]}>
                 <LinearGradient
-                  colors={["#2952C4", "#1A3C8F"]}
+                  colors={[C.primary, C.primaryLight]}
                   style={[
                     styles.profitFill,
                     {
@@ -133,8 +133,8 @@ export default function ReportsScreen() {
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                 />
               </View>
-              <Text style={styles.profitPct}>
-                {netProfit >= 0 ? "+" : ""}{fmt(netProfit)} net
+              <Text style={[styles.profitPct, { color: C.textSecondary }]}>
+                {netProfit >= 0 ? "+" : ""}MAD {fmt(netProfit)} net
               </Text>
             </View>
           </View>

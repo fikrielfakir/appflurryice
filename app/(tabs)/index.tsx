@@ -9,7 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -33,7 +33,8 @@ function StatCard({ label, value, icon, color, bg, isSmall, theme: C }: {
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
-  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout, theme: C, toggleTheme, isDark } = useApp();
+  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout, toggleTheme, isDark } = useApp();
+  const C = Colors;
   const [refreshing, setRefreshing] = useState(false);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -43,7 +44,7 @@ export default function DashboardScreen() {
 
   const QUICK_ACTIONS = [
     { title: "New Sale", icon: "shopping-cart", color: C.primary, route: "/(tabs)/products" },
-    { title: "Add Expense", icon: "dollar-sign", color: C.gold, route: "/(tabs)/expenses" },
+    { title: "Add Expense", icon: "dollar-sign", color: C.accent, route: "/(tabs)/expenses" },
     { title: "Contacts", icon: "users", color: C.success, route: "/(tabs)/contacts" },
     { title: "Reports", icon: "bar-chart-2", color: C.warning, route: "/(tabs)/reports" },
   ];
@@ -63,14 +64,14 @@ export default function DashboardScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.background }]}>
+    <View style={[styles.screen, { backgroundColor: C.surface }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 + bottomInset }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.gold} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.accent} />}
       >
         <LinearGradient
-          colors={[C.accent, C.background]}
+          colors={[C.accent, C.surface]}
           style={[styles.header, { paddingTop: topInset + 12 }]}
         >
           <View style={styles.headerTopCenter}>
@@ -98,21 +99,21 @@ export default function DashboardScreen() {
 
           <View style={styles.greetingRow}>
             <Text style={[styles.greeting, { color: C.textSecondary }]}>{greeting},</Text>
-            <Text style={[styles.userName, { color: C.text }]}>{user}</Text>
+            <Text style={[styles.userName, { color: C.textPrimary }]}>{user}</Text>
           </View>
 
-          <View style={[styles.goldSeparator, { backgroundColor: C.gold + "40" }]} />
+          <View style={[styles.goldSeparator, { backgroundColor: C.accent + "40" }]} />
 
           <View style={styles.heroBadge}>
-            <Feather name="trending-up" size={14} color={C.gold} />
-            <Text style={[styles.heroBadgeText, { color: C.gold }]}>Total Revenue</Text>
+            <Feather name="trending-up" size={14} color={C.accent} />
+            <Text style={[styles.heroBadgeText, { color: C.accent }]}>Total Revenue</Text>
           </View>
-          <Text style={[styles.heroAmount, { color: C.text }]}>MAD {fmt(totalSales)}</Text>
+          <Text style={[styles.heroAmount, { color: C.textPrimary }]}>MAD {fmt(totalSales)}</Text>
         </LinearGradient>
 
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
-            <StatCard theme={C} label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.gold} bg={C.gold + "18"} />
+            <StatCard theme={C} label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.accent} bg={C.accent + "18"} />
             <StatCard theme={C} label="Due Amount" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
           </View>
           <View style={styles.statsRow}>
@@ -121,7 +122,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: C.text }]}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           {QUICK_ACTIONS.map(action => (
             <TouchableOpacity
@@ -139,9 +140,9 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.recentHeader}>
-          <Text style={[styles.sectionTitle, { color: C.text, marginHorizontal: 0 }]}>Recent Sales</Text>
+          <Text style={[styles.sectionTitle, { color: C.textPrimary, marginHorizontal: 0 }]}>Recent Sales</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)/sales")}>
-            <Text style={[styles.seeAll, { color: C.gold }]}>See all</Text>
+            <Text style={[styles.seeAll, { color: C.accent }]}>See all</Text>
           </TouchableOpacity>
         </View>
 
@@ -153,19 +154,19 @@ export default function DashboardScreen() {
         ) : (
           recentSales.map(sale => (
             <View key={sale.id} style={[styles.saleCard, { backgroundColor: C.card, borderColor: C.border }]}>
-              <View style={[styles.saleAvatar, { backgroundColor: C.gold + "20" }]}>
-                <Text style={[styles.saleInitial, { color: C.gold }]}>
+              <View style={[styles.saleAvatar, { backgroundColor: C.accent + "20" }]}>
+                <Text style={[styles.saleInitial, { color: C.accent }]}>
                   {sale.customerName.charAt(0).toUpperCase()}
                 </Text>
               </View>
               <View style={styles.saleInfo}>
-                <Text style={[styles.saleName, { color: C.text }]}>{sale.customerName}</Text>
+                <Text style={[styles.saleName, { color: C.textPrimary }]}>{sale.customerName}</Text>
                 <Text style={[styles.saleDate, { color: C.textSecondary }]}>
                   {new Date(sale.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                 </Text>
               </View>
               <View style={styles.saleRight}>
-                <Text style={[styles.saleAmount, { color: C.text }]}>MAD {fmt(sale.amount)}</Text>
+                <Text style={[styles.saleAmount, { color: C.textPrimary }]}>MAD {fmt(sale.amount)}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: statusColor(sale.status) + "20" }]}>
                   <Text style={[styles.statusText, { color: statusColor(sale.status) }]}>
                     {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}

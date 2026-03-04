@@ -8,9 +8,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
-const C = Colors.dark;
+const C = Colors;
 
 const CATEGORIES = ["Office Rent", "Utilities", "Salaries", "Marketing", "Supplies", "Travel", "Equipment", "Other"];
 const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Cheque", "Other"];
@@ -23,7 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Office Rent": "#6E62B6",
   "Utilities": C.warning,
   "Salaries": C.primary,
-  "Marketing": C.secondary,
+  "Marketing": C.accent,
   "Supplies": C.success,
   "Travel": "#41C4D3",
   "Equipment": "#FF6B9D",
@@ -85,21 +85,21 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={styles.headerTitle}>Expenses</Text>
-        <Text style={styles.headerSub}>{expenses.length} records</Text>
-        <View style={styles.totalCard}>
+    <View style={[styles.screen, { backgroundColor: C.surface }]}>
+      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Expenses</Text>
+        <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{expenses.length} records</Text>
+        <View style={[styles.totalCard, { backgroundColor: C.accentSoft + "40", borderColor: C.accent + "33" }]}>
           <View>
-            <Text style={styles.totalLabel}>Total Expenses</Text>
-            <Text style={styles.totalValue}>${fmt(totalExpenses)}</Text>
+            <Text style={[styles.totalLabel, { color: C.textSecondary }]}>Total Expenses</Text>
+            <Text style={[styles.totalValue, { color: C.accent }]}>MAD {fmt(totalExpenses)}</Text>
           </View>
           <View style={styles.catSummary}>
             {byCat.map(([cat, amt]) => (
               <View key={cat} style={styles.catRow}>
                 <View style={[styles.catDot, { backgroundColor: catColor(cat) }]} />
-                <Text style={styles.catName} numberOfLines={1}>{cat}</Text>
-                <Text style={styles.catAmt}>${fmt(amt)}</Text>
+                <Text style={[styles.catName, { color: C.textSecondary }]} numberOfLines={1}>{cat}</Text>
+                <Text style={[styles.catAmt, { color: C.textPrimary }]}>MAD {fmt(amt)}</Text>
               </View>
             ))}
           </View>
@@ -114,25 +114,25 @@ export default function ExpensesScreen() {
         renderItem={({ item }) => {
           const col = catColor(item.category);
           return (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
               <View style={[styles.iconBox, { backgroundColor: col + "20" }]}>
                 <Feather name="tag" size={18} color={col} />
               </View>
               <View style={styles.cardInfo}>
-                <Text style={styles.cardCat}>{item.category}</Text>
+                <Text style={[styles.cardCat, { color: C.textPrimary }]}>{item.category}</Text>
                 <View style={styles.cardMeta}>
-                  <Text style={styles.cardDate}>
+                  <Text style={[styles.cardDate, { color: C.textSecondary }]}>
                     {new Date(item.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </Text>
-                  {item.note ? <Text style={styles.cardNote} numberOfLines={1}>· {item.note}</Text> : null}
+                  {item.note ? <Text style={[styles.cardNote, { color: C.textMuted }]} numberOfLines={1}>· {item.note}</Text> : null}
                 </View>
                 <View style={styles.methodBadge}>
                   <Feather name="credit-card" size={10} color={C.textMuted} />
-                  <Text style={styles.methodText}>{item.paymentMethod}</Text>
+                  <Text style={[styles.methodText, { color: C.textMuted }]}>{item.paymentMethod}</Text>
                 </View>
               </View>
               <View style={styles.cardRight}>
-                <Text style={styles.cardAmt}>${fmt(item.amount)}</Text>
+                <Text style={[styles.cardAmt, { color: C.textPrimary }]}>MAD {fmt(item.amount)}</Text>
                 <TouchableOpacity
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

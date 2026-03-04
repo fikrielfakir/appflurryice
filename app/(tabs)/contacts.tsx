@@ -8,9 +8,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp, Contact } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
-const C = Colors.dark;
+const C = Colors;
 
 const TYPES = ["customer", "lead", "supplier"] as const;
 
@@ -27,22 +27,22 @@ function typeLabel(t: string) {
 function ContactCard({ contact, onDelete }: { contact: Contact; onDelete: () => void }) {
   const col = typeColor(contact.type);
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
       <View style={[styles.avatar, { backgroundColor: col + "20" }]}>
         <Text style={[styles.avatarText, { color: col }]}>
           {contact.name.charAt(0).toUpperCase()}
         </Text>
       </View>
       <View style={styles.info}>
-        <Text style={styles.name}>{contact.name}</Text>
+        <Text style={[styles.name, { color: C.textPrimary }]}>{contact.name}</Text>
         <View style={styles.row}>
           <Feather name="phone" size={11} color={C.textMuted} />
-          <Text style={styles.phone}>{contact.phone}</Text>
+          <Text style={[styles.phone, { color: C.textSecondary }]}>{contact.phone}</Text>
         </View>
         {contact.email ? (
           <View style={styles.row}>
             <Feather name="mail" size={11} color={C.textMuted} />
-            <Text style={styles.email} numberOfLines={1}>{contact.email}</Text>
+            <Text style={[styles.email, { color: C.textSecondary }]} numberOfLines={1}>{contact.email}</Text>
           </View>
         ) : null}
       </View>
@@ -114,15 +114,15 @@ export default function ContactsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <LinearGradient colors={["#0A1628", "#0E1C3F", C.background]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={styles.headerTitle}>Contacts</Text>
-        <Text style={styles.headerSub}>{contacts.length} contacts</Text>
+    <View style={[styles.screen, { backgroundColor: C.surface }]}>
+      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
+        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Contacts</Text>
+        <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{contacts.length} contacts</Text>
         <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
+          <View style={[styles.searchBox, { backgroundColor: C.card, borderColor: C.border }]}>
             <Feather name="search" size={16} color={C.textMuted} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: C.textPrimary }]}
               value={search}
               onChangeText={setSearch}
               placeholder="Search contacts..."
@@ -139,10 +139,10 @@ export default function ContactsScreen() {
           {["all", ...TYPES].map(t => (
             <TouchableOpacity
               key={t}
-              style={[styles.filterChip, filterType === t && styles.filterChipActive]}
+              style={[styles.filterChip, { backgroundColor: C.card, borderColor: C.border }, filterType === t && { backgroundColor: C.accentSoft, borderColor: C.accent }]}
               onPress={() => { Haptics.selectionAsync(); setFilterType(t); }}
             >
-              <Text style={[styles.filterText, filterType === t && styles.filterTextActive]}>
+              <Text style={[styles.filterText, { color: C.textSecondary }, filterType === t && { color: C.accent }]}>
                 {t === "all" ? "All" : typeLabel(t)}
               </Text>
             </TouchableOpacity>

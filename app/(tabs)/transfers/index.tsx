@@ -4,10 +4,10 @@ import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp, Transfer } from '@/context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Colors from '@/constants/colors';
+import { Colors } from '@/constants';
 import { router } from 'expo-router';
 
-const C = Colors.dark;
+const C = Colors;
 const { width } = Dimensions.get('window');
 
 import Toast from 'react-native-root-toast';
@@ -63,22 +63,22 @@ export default function TransfersScreen() {
           duration: Toast.durations.LONG,
           position: Toast.positions.BOTTOM,
           backgroundColor: C.success,
-        });
-      } else {
-        Toast.show("Invalid QR code format.", {
-          duration: Toast.durations.SHORT,
-          position: Toast.positions.BOTTOM,
-          backgroundColor: C.danger,
-        });
-      }
-    } catch (e) {
-      console.error(e);
-      Toast.show("Failed to parse QR code.", {
+      });
+    } else {
+      Toast.show("Invalid QR code format.", {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: C.danger,
       });
     }
+  } catch (e) {
+    console.error(e);
+    Toast.show("Failed to parse QR code.", {
+      duration: Toast.durations.SHORT,
+      position: Toast.positions.BOTTOM,
+      backgroundColor: C.danger,
+    });
+  }
   };
 
   const renderItem = ({ item }: { item: Transfer }) => (
@@ -156,7 +156,7 @@ export default function TransfersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: C.background },
+  container: { flex: 1, backgroundColor: C.surface },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.border
   },
-  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#fff' },
+  headerTitle: { fontSize: 20, fontFamily: 'Inter_700Bold', color: C.textPrimary },
   scanBtn: { 
     flexDirection: 'row', 
     alignItems: 'center', 
@@ -187,15 +187,15 @@ const styles = StyleSheet.create({
     borderColor: C.border
   },
   transferHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  transferRef: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#fff' },
+  transferRef: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C.textPrimary },
   transferDate: { fontSize: 12, color: C.textMuted },
   transferPath: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   transferLocation: { fontSize: 14, color: C.textSecondary, fontFamily: 'Inter_500Medium' },
-  transferItemsCount: { fontSize: 13, color: C.gold, fontFamily: 'Inter_600SemiBold' },
+  transferItemsCount: { fontSize: 13, color: C.accent, fontFamily: 'Inter_600SemiBold' },
   emptyState: { alignItems: 'center', marginTop: 100 },
-  emptyText: { color: '#fff', fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 16 },
+  emptyText: { color: C.textPrimary, fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 16 },
   emptySubtext: { color: C.textMuted, fontSize: 14, marginTop: 8 },
-  permissionText: { color: '#fff', textAlign: 'center', marginTop: 100, paddingHorizontal: 40 },
+  permissionText: { color: C.textPrimary, textAlign: 'center', marginTop: 100, paddingHorizontal: 40 },
   permissionBtn: { backgroundColor: C.primary, padding: 15, borderRadius: 10, alignSelf: 'center', marginTop: 20 },
   permissionBtnText: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' },

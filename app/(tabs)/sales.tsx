@@ -9,7 +9,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,15 +40,15 @@ function SaleCard({ sale, onDelete, onShare, theme: C }: {
         </Text>
       </View>
 
-      <Text style={[styles.invoiceNumber, { color: C.text }]}>Invoice #.{sale.invoiceNumber}</Text>
+      <Text style={[styles.invoiceNumber, { color: C.textPrimary }]}>Invoice #.{sale.invoiceNumber}</Text>
 
       <View style={styles.amountsRow}>
         <View style={styles.amountBlock}>
-          <Text style={[styles.amountChip, { color: C.gold }]}>MAD {fmt(sale.amount)}</Text>
+          <Text style={[styles.amountChip, { color: C.accent }]}>MAD {fmt(sale.amount)}</Text>
           <Text style={[styles.amountLabel, { color: C.textMuted }]}>Total Amount</Text>
         </View>
         <View style={styles.amountBlock}>
-          <Text style={[styles.amountChipLight, { color: C.text }, due > 0 && { color: C.warning }]}>
+          <Text style={[styles.amountChipLight, { color: C.textPrimary }, due > 0 && { color: C.warning }]}>
             MAD {fmt(sale.paid)}
           </Text>
           <Text style={[styles.amountLabel, { color: C.textMuted }]}>Paid</Text>
@@ -58,7 +58,7 @@ function SaleCard({ sale, onDelete, onShare, theme: C }: {
       <View style={[styles.cardMeta, { borderTopColor: C.border }]}>
         <View style={styles.metaItem}>
           <Text style={[styles.metaKey, { color: C.textSecondary }]}>Customer:</Text>
-          <Text style={[styles.metaVal, { color: C.text }]}>{sale.customerName}</Text>
+          <Text style={[styles.metaVal, { color: C.textPrimary }]}>{sale.customerName}</Text>
         </View>
         <View style={styles.metaItem}>
           <Text style={[styles.metaKey, { color: C.textSecondary }]}>Status:</Text>
@@ -75,12 +75,12 @@ function SaleCard({ sale, onDelete, onShare, theme: C }: {
         {sale.customerPhone ? (
           <View style={styles.metaItem}>
             <Text style={[styles.metaKey, { color: C.textSecondary }]}>Phone:</Text>
-            <Text style={[styles.metaVal, { color: C.text }]}>{sale.customerPhone}</Text>
+            <Text style={[styles.metaVal, { color: C.textPrimary }]}>{sale.customerPhone}</Text>
           </View>
         ) : null}
         <View style={styles.metaItem}>
           <Text style={[styles.metaKey, { color: C.textSecondary }]}>Method:</Text>
-          <Text style={[styles.metaVal, { color: C.text }]}>{sale.paymentMethod}</Text>
+          <Text style={[styles.metaVal, { color: C.textPrimary }]}>{sale.paymentMethod}</Text>
         </View>
       </View>
 
@@ -145,7 +145,8 @@ import Toast from 'react-native-root-toast';
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, deleteSale, totalSales, syncData, isSyncing, theme: C } = useApp();
+  const { sales, deleteSale, totalSales, syncData, isSyncing } = useApp();
+  const C = Colors;
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -216,7 +217,7 @@ export default function SalesScreen() {
         <View style={[styles.searchRow, { backgroundColor: C.surface }]}>
           <Feather name="search" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
           <TextInput
-            style={[styles.searchInput, { color: C.text }]}
+            style={[styles.searchInput, { color: C.textPrimary }]}
             placeholder="Rechercher..."
             placeholderTextColor={C.textMuted}
             value={search}
@@ -231,7 +232,7 @@ export default function SalesScreen() {
       </View>
 
       {isSyncing && (
-        <View style={[styles.syncIndicator, { backgroundColor: C.gold }]}>
+        <View style={[styles.syncIndicator, { backgroundColor: C.accent }]}>
           <ActivityIndicator size="small" color="#fff" />
           <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
         </View>
@@ -242,10 +243,10 @@ export default function SalesScreen() {
           {(["all", "paid", "partial", "due"] as const).map(f => (
             <TouchableOpacity
               key={f}
-              style={[styles.filterChip, { backgroundColor: C.card, borderColor: C.border }, filter === f && { backgroundColor: C.gold + "20", borderColor: C.gold }]}
+              style={[styles.filterChip, { backgroundColor: C.card, borderColor: C.border }, filter === f && { backgroundColor: C.accent + "20", borderColor: C.accent }]}
               onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
             >
-              <Text style={[styles.filterText, { color: C.textSecondary }, filter === f && { color: C.gold }]}>
+              <Text style={[styles.filterText, { color: C.textSecondary }, filter === f && { color: C.accent }]}>
                 {f === "all" ? "Tout" : f.charAt(0).toUpperCase() + f.slice(1)}
               </Text>
             </TouchableOpacity>

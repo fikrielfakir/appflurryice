@@ -8,11 +8,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
-  const { login, theme: C } = useApp();
+  const { login } = useApp();
+  const C = Colors;
   const [username, setUsername] = useState("basiri");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -40,10 +41,10 @@ export default function LoginScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
-      <LinearGradient colors={[C.accent, C.background]} style={StyleSheet.absoluteFill} />
+    <View style={[styles.container, { backgroundColor: C.surface }]}>
+      <LinearGradient colors={[C.accent, C.surface]} style={StyleSheet.absoluteFill} />
       <LinearGradient
-        colors={["rgba(28,67,156,0.1)", "transparent"]}
+        colors={["rgba(10,36,99,0.1)", "transparent"]}
         style={[StyleSheet.absoluteFill, { height: "45%" }]}
       />
 
@@ -57,19 +58,19 @@ export default function LoginScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.tagline, { color: C.secondary }]}>Business Management Suite</Text>
+          <Text style={[styles.tagline, { color: C.primaryLight }]}>Business Management Suite</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
-          <Text style={[styles.cardTitle, { color: C.text }]}>Welcome back</Text>
+          <Text style={[styles.cardTitle, { color: C.textPrimary }]}>Welcome back</Text>
           <Text style={[styles.cardSubtitle, { color: C.textSecondary }]}>Sign in to your account</Text>
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: C.textSecondary }]}>Username</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: C.background, borderColor: C.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
               <Feather name="user" size={18} color={C.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { color: C.text }]}
+                style={[styles.input, { color: C.textPrimary }]}
                 value={username}
                 onChangeText={t => { setUsername(t); setError(""); }}
                 placeholder="Enter username"
@@ -82,10 +83,10 @@ export default function LoginScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={[styles.label, { color: C.textSecondary }]}>Password</Text>
-            <View style={[styles.inputWrapper, { backgroundColor: C.background, borderColor: C.border }]}>
+            <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
               <Feather name="lock" size={18} color={C.textMuted} style={styles.inputIcon} />
               <TextInput
-                style={[styles.input, { color: C.text }]}
+                style={[styles.input, { color: C.textPrimary }]}
                 value={password}
                 onChangeText={t => { setPassword(t); setError(""); }}
                 placeholder="Enter password"
@@ -118,7 +119,7 @@ export default function LoginScreen() {
               ) : (
                 <>
                   <Text style={styles.loginButtonText}>Sign In</Text>
-                  <View style={[styles.goldAccent, { backgroundColor: C.secondary }]} />
+                  <View style={[styles.goldAccent, { backgroundColor: C.accent }]} />
                 </>
               )}
             </LinearGradient>

@@ -9,11 +9,12 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useApp, AppUser } from "@/context/AppContext";
-import Colors from "@/constants/colors";
+import { Colors } from "@/constants";
 
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();
-  const { setupFromQR, completeSetup, theme: C } = useApp();
+  const { setupFromQR, completeSetup } = useApp();
+  const C = Colors;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
@@ -97,13 +98,13 @@ export default function SetupScreen() {
     return (
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={[styles.container, { backgroundColor: C.background }]}
+        style={[styles.container, { backgroundColor: C.surface }]}
       >
-        <LinearGradient colors={[C.accent, C.background]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[C.accent, C.surface]} style={StyleSheet.absoluteFill} />
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 40, paddingBottom: 40 }]}>
           <View style={styles.logoArea}>
             <Image source={require("../assets/flurry-logo.png")} style={styles.logo} resizeMode="contain" />
-            <Text style={[styles.title, { color: C.text }]}>Account Setup</Text>
+            <Text style={[styles.title, { color: C.textPrimary }]}>Account Setup</Text>
             <Text style={[styles.subtitle, { color: C.textSecondary }]}>Verify your details and set a password</Text>
           </View>
 
@@ -129,7 +130,7 @@ export default function SetupScreen() {
                 <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
                   <Feather name="lock" size={18} color={C.textMuted} style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, { color: C.text }]}
+                    style={[styles.input, { color: C.textPrimary }]}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
@@ -144,7 +145,7 @@ export default function SetupScreen() {
                 <View style={[styles.inputWrapper, { backgroundColor: C.surface, borderColor: C.border }]}>
                   <Feather name="check-circle" size={18} color={C.textMuted} style={styles.inputIcon} />
                   <TextInput
-                    style={[styles.input, { color: C.text }]}
+                    style={[styles.input, { color: C.textPrimary }]}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
@@ -185,8 +186,8 @@ export default function SetupScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: C.background }]}>
-      <LinearGradient colors={[C.accent, C.background]} style={StyleSheet.absoluteFill} />
+    <View style={[styles.container, { backgroundColor: C.surface }]}>
+      <LinearGradient colors={[C.accent, C.surface]} style={StyleSheet.absoluteFill} />
       
       <View style={[styles.content, { paddingTop: insets.top + 60 }]}>
         <View style={styles.logoArea}>
@@ -195,7 +196,7 @@ export default function SetupScreen() {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={[styles.title, { color: C.text }]}>App Setup</Text>
+          <Text style={[styles.title, { color: C.textPrimary }]}>App Setup</Text>
           <Text style={[styles.subtitle, { color: C.textSecondary }]}>Scan your business QR code to begin</Text>
         </View>
 
@@ -224,8 +225,8 @@ export default function SetupScreen() {
             </View>
           ) : null}
 
-          <View style={[styles.infoBox, { backgroundColor: C.secondary + "0D", borderColor: C.secondary + "33" }]}>
-            <Feather name="info" size={16} color={C.secondary} />
+          <View style={[styles.infoBox, { backgroundColor: C.primaryLight + "0D", borderColor: C.primaryLight + "33" }]}>
+            <Feather name="info" size={16} color={C.primaryLight} />
             <Text style={[styles.infoText, { color: C.textSecondary }]}>
               Your administrator should provide you with a unique QR code to initialize your profile and business settings.
             </Text>
