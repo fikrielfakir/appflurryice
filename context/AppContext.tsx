@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { syncService } from "@/lib/syncService";
+import { useColorScheme } from "react-native";
+import Colors from "@/constants/colors";
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -130,6 +132,11 @@ interface AppContextValue {
   isSyncing: boolean;
   syncData: () => Promise<void>;
   lastSyncTime: string | null;
+  theme: typeof Colors.light;
+  isDark: boolean;
+  toggleTheme: () => void;
+  themeMode: "light" | "dark" | "auto";
+  setThemeMode: (mode: "light" | "dark" | "auto") => void;
 }
 
 // ─── Storage keys ───────────────────────────────────────────────────────────────
@@ -143,6 +150,7 @@ const KEYS = {
   transfers: "bizpos_transfers",
   products: "bizpos_products",
   initialDataLoaded: "bizpos_initial_data_loaded",
+  themeMode: "bizpos_theme_mode",
 };
 
 const SYNC_KEYS = {
@@ -201,6 +209,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+
+  const systemColorScheme = useColorScheme();
+  const [themeMode, setThemeModeState] = useState<"light" | "dark" | "auto">("auto");
+
+  const isDark = useMemo(() => {
+    if (themeMode === "auto") return systemColorScheme === "dark";
+    return themeMode === "dark";
+  }, [themeMode, systemColorScheme]);
+
+  const theme = useMemo(() => (isDark ? Colors.dark : Colors.light), [isDark]);
+
+  const setThemeMode = async (mode: "light" | "dark" | "auto") => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(KEYS.themeMode, mode);
+  };
+
+  const toggleTheme = () => {
+    setThemeMode(isDark ? "light" : "dark");
+  };
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      const savedMode = await AsyncStorage.getItem(KEYS.themeMode);
+      if (savedMode) setThemeModeState(savedMode as any);
+    };
+    loadTheme();
+  }, []);
 
   useEffect(() => { loadData(); }, []);
 
@@ -272,19 +307,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── QR Setup ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Scanned QR JSON format:
-   * {
-   *   "id": 12, "username": "basiri", "password": "",
-   *   "name": "ABDALAH BASIRI", "email": "abdlahbasiri3@gmail.com",
-   *   "role": "Distribution", "business_id": 1, "status": "active",
-   *   "locations": [{"id":10,"name":"CAM 01 - 0199-A-44","location_id":"0199-A-44"}],
-   *   "created_at": "2025-03-01T16:33:05+00:00"
-   * }
-   *
-   * If the password field in the QR is empty, the username is used as the
-   * initial local password so the user can log in immediately after scanning.
-   */
   async function setupFromQR(
     qrData: string
   ): Promise<{ success: boolean; data?: Partial<AppUser>; error?: string }> {
@@ -444,7 +466,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const item = transfer.items.find(it => it.sku === p.sku);
       if (!item) return p;
       
-      // Stock update logic based on transfer direction
       let newStock = p.stock ?? 0;
       const fromLoc = (transfer.from || "").toLowerCase();
       const toLoc = (transfer.to || "").toLowerCase();
@@ -515,11 +536,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addToCart, removeFromCart, updateCartQty, clearCart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, syncData, lastSyncTime,
+    theme, isDark, toggleTheme, themeMode, setThemeMode,
   }), [
     activeUser, userProfile, needsSetup,
     sales, contacts, expenses, products, transfers, cart,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, lastSyncTime,
+    theme, isDark, themeMode,
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

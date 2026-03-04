@@ -11,86 +11,85 @@ import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
-const C = Colors.light;
-
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function statusColor(s: string) {
-  if (s === "paid") return "#4CAF50";
-  if (s === "partial") return C.warning;
-  return C.danger;
-}
-
-function SaleCard({ sale, onDelete, onShare }: {
+function SaleCard({ sale, onDelete, onShare, theme: C }: {
   sale: Sale;
   onDelete: () => void;
   onShare: () => void;
+  theme: any;
 }) {
   const due = sale.amount - sale.paid;
 
+  function statusColor(s: string) {
+    if (s === "paid") return "#4CAF50";
+    if (s === "partial") return C.warning;
+    return C.danger;
+  }
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
       <View style={styles.cardHeader}>
         <View style={[styles.statusBadge, { backgroundColor: statusColor(sale.status) }]}>
           <Text style={styles.statusText}>{sale.status.toUpperCase()}</Text>
         </View>
-        <Text style={styles.invoiceDate}>
+        <Text style={[styles.invoiceDate, { color: C.textSecondary }]}>
           {new Date(sale.date).toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
         </Text>
       </View>
 
-      <Text style={styles.invoiceNumber}>Invoice #.{sale.invoiceNumber}</Text>
+      <Text style={[styles.invoiceNumber, { color: C.text }]}>Invoice #.{sale.invoiceNumber}</Text>
 
       <View style={styles.amountsRow}>
         <View style={styles.amountBlock}>
-          <Text style={styles.amountChip}>MAD {fmt(sale.amount)}</Text>
-          <Text style={styles.amountLabel}>Total Amount</Text>
+          <Text style={[styles.amountChip, { color: C.gold }]}>MAD {fmt(sale.amount)}</Text>
+          <Text style={[styles.amountLabel, { color: C.textMuted }]}>Total Amount</Text>
         </View>
         <View style={styles.amountBlock}>
-          <Text style={[styles.amountChipLight, due > 0 && { color: C.warning }]}>
+          <Text style={[styles.amountChipLight, { color: C.text }, due > 0 && { color: C.warning }]}>
             MAD {fmt(sale.paid)}
           </Text>
-          <Text style={styles.amountLabel}>Paid</Text>
+          <Text style={[styles.amountLabel, { color: C.textMuted }]}>Paid</Text>
         </View>
       </View>
 
-      <View style={styles.cardMeta}>
+      <View style={[styles.cardMeta, { borderTopColor: C.border }]}>
         <View style={styles.metaItem}>
-          <Text style={styles.metaKey}>Customer:</Text>
-          <Text style={styles.metaVal}>{sale.customerName}</Text>
+          <Text style={[styles.metaKey, { color: C.textSecondary }]}>Customer:</Text>
+          <Text style={[styles.metaVal, { color: C.text }]}>{sale.customerName}</Text>
         </View>
         <View style={styles.metaItem}>
-          <Text style={styles.metaKey}>Status:</Text>
+          <Text style={[styles.metaKey, { color: C.textSecondary }]}>Status:</Text>
           <Text style={[styles.metaVal, { color: statusColor(sale.status), fontWeight: '700' }]}>
             {sale.status === 'paid' ? 'Paid' : sale.status === 'partial' ? 'Partial' : 'Unpaid'}
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Text style={styles.metaKey}>Due:</Text>
+          <Text style={[styles.metaKey, { color: C.textSecondary }]}>Due:</Text>
           <Text style={[styles.metaVal, { color: due > 0 ? C.danger : C.success }]}>
             MAD {fmt(due)}
           </Text>
         </View>
         {sale.customerPhone ? (
           <View style={styles.metaItem}>
-            <Text style={styles.metaKey}>Phone:</Text>
-            <Text style={styles.metaVal}>{sale.customerPhone}</Text>
+            <Text style={[styles.metaKey, { color: C.textSecondary }]}>Phone:</Text>
+            <Text style={[styles.metaVal, { color: C.text }]}>{sale.customerPhone}</Text>
           </View>
         ) : null}
         <View style={styles.metaItem}>
-          <Text style={styles.metaKey}>Method:</Text>
-          <Text style={styles.metaVal}>{sale.paymentMethod}</Text>
+          <Text style={[styles.metaKey, { color: C.textSecondary }]}>Method:</Text>
+          <Text style={[styles.metaVal, { color: C.text }]}>{sale.paymentMethod}</Text>
         </View>
       </View>
 
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert("Return", "Return flow coming soon.")}>
+      <View style={[styles.cardActions, { borderTopColor: C.border }]}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={() => Alert.alert("Return", "Return flow coming soon.")}>
           <Feather name="corner-up-left" size={16} color={C.warning} />
         </TouchableOpacity>
         {sale.customerPhone ? (
-          <TouchableOpacity style={styles.actionBtn} onPress={() => {
+          <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={() => {
             const phoneNumber = sale.customerPhone;
             if (Platform.OS === 'web') {
               window.open(`tel:${phoneNumber}`);
@@ -103,10 +102,10 @@ function SaleCard({ sale, onDelete, onShare }: {
             <Feather name="phone" size={16} color={C.success} />
           </TouchableOpacity>
         ) : null}
-        <TouchableOpacity style={styles.actionBtn} onPress={onShare}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={onShare}>
           <Feather name="share-2" size={16} color={C.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={() => {
           router.push({
             pathname: "/pos/invoice",
             params: {
@@ -126,10 +125,10 @@ function SaleCard({ sale, onDelete, onShare }: {
         }}>
           <Feather name="printer" size={16} color={C.textSecondary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={onDelete}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={onDelete}>
           <Feather name="trash-2" size={16} color={C.danger} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => {
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={() => {
           router.push({
             pathname: "/(tabs)/products",
             params: { editSaleId: sale.id }
@@ -146,7 +145,7 @@ import Toast from 'react-native-root-toast';
 
 export default function SalesScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, deleteSale, totalSales, syncData, isSyncing } = useApp();
+  const { sales, deleteSale, totalSales, syncData, isSyncing, theme: C } = useApp();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -183,8 +182,8 @@ export default function SalesScreen() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: topInset }]}>
+    <View style={[styles.screen, { backgroundColor: C.background }]}>
+      <View style={[styles.header, { paddingTop: topInset, backgroundColor: C.primary }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
           <Text style={styles.headerTitle}>Historique des ventes</Text>
@@ -214,10 +213,10 @@ export default function SalesScreen() {
           </View>
         </View>
 
-        <View style={styles.searchRow}>
+        <View style={[styles.searchRow, { backgroundColor: C.surface }]}>
           <Feather name="search" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: C.text }]}
             placeholder="Rechercher..."
             placeholderTextColor={C.textMuted}
             value={search}
@@ -232,35 +231,35 @@ export default function SalesScreen() {
       </View>
 
       {isSyncing && (
-        <View style={styles.syncIndicator}>
+        <View style={[styles.syncIndicator, { backgroundColor: C.gold }]}>
           <ActivityIndicator size="small" color="#fff" />
           <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
         </View>
       )}
 
-      <View style={styles.statsStrip}>
+      <View style={[styles.statsStrip, { backgroundColor: C.surface, borderBottomColor: C.border }]}>
         <View style={styles.filterContainer}>
           {(["all", "paid", "partial", "due"] as const).map(f => (
             <TouchableOpacity
               key={f}
-              style={[styles.filterChip, filter === f && styles.filterChipActive]}
+              style={[styles.filterChip, { backgroundColor: C.card, borderColor: C.border }, filter === f && { backgroundColor: C.gold + "20", borderColor: C.gold }]}
               onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
             >
-              <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
+              <Text style={[styles.filterText, { color: C.textSecondary }, filter === f && { color: C.gold }]}>
                 {f === "all" ? "Tout" : f.charAt(0).toUpperCase() + f.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.headerStats}>
+        <View style={[styles.headerStats, { backgroundColor: C.card, borderColor: C.border }]}>
           <View style={styles.headerStat}>
             <Text style={[styles.headerStatNum, { color: "#4CAF50" }]}>{paidCount}</Text>
-            <Text style={styles.headerStatLabel}>Payé</Text>
+            <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>Payé</Text>
           </View>
-          <View style={styles.headerStatDivider} />
+          <View style={[styles.headerStatDivider, { backgroundColor: C.border }]} />
           <View style={styles.headerStat}>
             <Text style={[styles.headerStatNum, { color: C.warning }]}>{dueCount}</Text>
-            <Text style={styles.headerStatLabel}>Impayé</Text>
+            <Text style={[styles.headerStatLabel, { color: C.textSecondary }]}>Impayé</Text>
           </View>
         </View>
       </View>
@@ -272,6 +271,7 @@ export default function SalesScreen() {
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
           <SaleCard
+            theme={C}
             sale={item}
             onDelete={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -289,7 +289,7 @@ export default function SalesScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <MaterialCommunityIcons name="receipt" size={44} color={C.textMuted} />
-            <Text style={styles.emptyText}>No sales found</Text>
+            <Text style={[styles.emptyText, { color: C.textSecondary }]}>No sales found</Text>
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
@@ -299,12 +299,11 @@ export default function SalesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
+  screen: { flex: 1 },
   syncIndicator: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.dark.gold,
     paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 8,
@@ -317,7 +316,6 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: Colors.dark.primary,
   },
   headerTop: {
     flexDirection: "row",
@@ -349,14 +347,12 @@ const styles = StyleSheet.create({
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
     borderRadius: 10,
     paddingHorizontal: 12,
     height: 40,
   },
   searchInput: {
     flex: 1,
-    color: Colors.dark.text,
     fontSize: 14,
     fontFamily: "Inter_400Regular",
   },
@@ -366,40 +362,36 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: C.surface,
     borderBottomWidth: 1,
-    borderBottomColor: C.border,
   },
   filterContainer: {
     flexDirection: "row",
     gap: 6,
   },
-  filterChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
-  filterChipActive: { backgroundColor: "#D4AF3720", borderColor: "#D4AF37" },
-  filterText: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  filterTextActive: { color: "#D4AF37" },
-  headerStats: { flexDirection: "row", alignItems: "center", backgroundColor: C.card, borderRadius: 10, padding: 6, gap: 8, borderWidth: 1, borderColor: C.border },
+  filterChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, borderWidth: 1 },
+  filterText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  headerStats: { flexDirection: "row", alignItems: "center", borderRadius: 10, padding: 6, gap: 8, borderWidth: 1 },
   headerStat: { alignItems: "center", minWidth: 35 },
   headerStatNum: { fontSize: 14, fontFamily: "Inter_700Bold" },
-  headerStatLabel: { fontSize: 8, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  headerStatDivider: { width: 1, height: 16, backgroundColor: C.border },
-  card: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
+  headerStatLabel: { fontSize: 8, fontFamily: "Inter_400Regular" },
+  headerStatDivider: { width: 1, height: 16 },
+  card: { borderRadius: 16, padding: 16, borderWidth: 1 },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6 },
   statusText: { fontSize: 11, fontFamily: "Inter_700Bold", color: "#fff" },
-  invoiceDate: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  invoiceNumber: { fontSize: 16, fontFamily: "Inter_700Bold", color: "#fff", marginBottom: 12, textAlign: "right" },
+  invoiceDate: { fontSize: 11, fontFamily: "Inter_400Regular" },
+  invoiceNumber: { fontSize: 16, fontFamily: "Inter_700Bold", marginBottom: 12, textAlign: "right" },
   amountsRow: { flexDirection: "row", gap: 10, marginBottom: 12 },
   amountBlock: { flex: 1 },
-  amountChip: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.gold },
-  amountChipLight: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  amountLabel: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
-  cardMeta: { gap: 4, marginBottom: 12, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
+  amountChip: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  amountChipLight: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  amountLabel: { fontSize: 10, fontFamily: "Inter_400Regular", marginTop: 2 },
+  cardMeta: { gap: 4, marginBottom: 12, borderTopWidth: 1, paddingTop: 12 },
   metaItem: { flexDirection: "row", gap: 6 },
-  metaKey: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary, width: 70 },
-  metaVal: { fontSize: 12, fontFamily: "Inter_500Medium", color: "#fff", flex: 1 },
-  cardActions: { flexDirection: "row", gap: 8, justifyContent: "flex-end", borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
-  actionBtn: { width: 34, height: 34, borderRadius: 8, backgroundColor: C.surface, justifyContent: "center", alignItems: "center" },
+  metaKey: { fontSize: 12, fontFamily: "Inter_400Regular", width: 70 },
+  metaVal: { fontSize: 12, fontFamily: "Inter_500Medium", flex: 1 },
+  cardActions: { flexDirection: "row", gap: 8, justifyContent: "flex-end", borderTopWidth: 1, paddingTop: 12 },
+  actionBtn: { width: 34, height: 34, borderRadius: 8, justifyContent: "center", alignItems: "center" },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
-  emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.textSecondary },
+  emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
 });

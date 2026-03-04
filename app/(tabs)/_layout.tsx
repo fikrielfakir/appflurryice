@@ -9,8 +9,7 @@ import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Sidebar from "@/components/Sidebar";
-
-const C = Colors.dark;
+import { useApp } from "@/context/AppContext";
 
 function NativeTabLayout() {
   return (
@@ -35,7 +34,7 @@ function NativeTabLayout() {
   );
 }
 
-function ClassicTabLayout() {
+function ClassicTabLayout({ theme: C, isDark }: { theme: any, isDark: boolean }) {
   const insets = useSafeAreaInsets();
   return (
     <Tabs
@@ -58,7 +57,7 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           ) : null,
         tabBarLabelStyle: {
           fontSize: 10,
@@ -129,14 +128,15 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
+  const { theme: C, isDark } = useApp();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <View style={{ flex: 1 }}>
-      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+    <View style={{ flex: 1, backgroundColor: C.background }}>
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout theme={C} isDark={isDark} />}
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <TouchableOpacity 
-        style={styles.menuButton} 
+        style={[styles.menuButton, { backgroundColor: C.card, borderColor: C.border }]} 
         onPress={() => setIsSidebarOpen(true)}
       >
         <Feather name="menu" size={24} color={C.primary} />
@@ -151,10 +151,8 @@ const styles = StyleSheet.create({
     top: Platform.OS === 'web' ? 20 : 50,
     left: 20,
     zIndex: 900,
-    backgroundColor: C.card,
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: C.border,
   }
 });

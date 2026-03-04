@@ -31,6 +31,7 @@ const Colors = {
     text: "#FFFFFF",
     textSecondary: "#8FA3CC",
     textMuted: "#4A6090",
+    accent: "#1A3C8F", // Added for compatibility
   },
 };
 

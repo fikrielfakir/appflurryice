@@ -16,7 +16,7 @@ import Colors from "@/constants/colors";
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isLoggedIn, isLoading, needsSetup } = useApp();
+  const { isLoggedIn, isLoading, needsSetup, theme } = useApp();
 
   useEffect(() => {
     if (!isLoading) SplashScreen.hideAsync();
@@ -32,14 +32,14 @@ function RootLayoutNav() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.light.background, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color={Colors.light.primary} size="large" />
+      <View style={{ flex: 1, backgroundColor: theme?.background || "#F8F9FA", justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={theme?.primary || "#1C439C"} size="large" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.light.background } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme?.background || "#F8F9FA" } }}>
       <Stack.Screen name="setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />

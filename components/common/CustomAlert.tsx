@@ -7,7 +7,7 @@ import {
   StyleSheet, 
   Dimensions 
 } from 'react-native';
-import Colors from '@/constants/colors';
+import { useApp } from '@/context/AppContext';
 
 interface AlertProps {
   visible: boolean;
@@ -20,7 +20,7 @@ interface AlertProps {
 const { width } = Dimensions.get('window');
 
 const CustomAlert = ({ visible, title, message, onClose, type = 'info' }: AlertProps) => {
-  const C = Colors.light;
+  const { theme: C } = useApp();
   
   return (
     <Modal

@@ -20,8 +20,6 @@ import Colors from "@/constants/colors";
 import CustomAlert from "@/components/common/CustomAlert";
 import { LinearGradient } from 'expo-linear-gradient';
 
-const C = Colors.light;
-
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
   return n.toLocaleString("en-US", {
@@ -32,7 +30,7 @@ function fmt(n: number | undefined | null) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile } = useApp();
+  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile, theme: C } = useApp();
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
@@ -75,7 +73,7 @@ export default function ProductsScreen() {
 
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
-      style={[styles.productCard, item.stock <= 0 && styles.productCardDisabled]} 
+      style={[styles.productCard(C), item.stock <= 0 && styles.productCardDisabled]} 
       onPress={() => {
         if (item.stock <= 0) {
           showAlert("Indisponible", "Ce produit est en rupture de stock.", "error");
@@ -87,18 +85,18 @@ export default function ProductsScreen() {
     >
       <View style={styles.productMain}>
         <View style={styles.priceContainer}>
-          <Text style={styles.priceValue}>{fmt(item.price)} MAD</Text>
-          <View style={styles.stockBadge}>
+          <Text style={[styles.priceValue, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
+          <View style={[styles.stockBadge, { backgroundColor: C.primary }]}>
             <Text style={styles.stockText}>{fmt(item.stock)}</Text>
             <Feather name="package" size={12} color="#fff" style={{ marginLeft: 4 }} />
           </View>
         </View>
 
         <View style={styles.productCenter}>
-          <Text style={styles.productName}>{item.name}</Text>
+          <Text style={[styles.productName, { color: C.text }]}>{item.name}</Text>
         </View>
 
-        <View style={styles.imageContainer}>
+        <View style={[styles.imageContainer, { backgroundColor: C.background, borderColor: C.border }]}>
           {item.image ? (
             <Image source={{ uri: item.image }} style={styles.productImage} />
           ) : (
@@ -116,12 +114,12 @@ export default function ProductsScreen() {
       colors={[C.accent, C.background]}
       style={styles.screen}
     >
-      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
+      <View style={[styles.header(C), { paddingTop: topInset + 10 }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
           
           <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerSubtitle}>Produits finis</Text>
+            <Text style={[styles.headerSubtitle, { color: C.text }]}>Produits finis</Text>
             <TouchableOpacity 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -139,7 +137,7 @@ export default function ProductsScreen() {
 
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity 
-              style={styles.cartBtn} 
+              style={[styles.cartBtn, { backgroundColor: C.background, borderColor: C.border }]} 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsResetModalVisible(true);
@@ -149,14 +147,14 @@ export default function ProductsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.cartBtn} 
+              style={[styles.cartBtn, { backgroundColor: C.background, borderColor: C.border }]} 
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/pos/cart");
               }}
             >
                {cart.length > 0 && (
-                 <View style={styles.cartBadge}>
+                 <View style={[styles.cartBadge, { backgroundColor: C.danger, borderColor: C.surface }]}>
                     <Text style={styles.cartBadgeText}>{cart.length}</Text>
                  </View>
                )}
@@ -167,18 +165,18 @@ export default function ProductsScreen() {
 
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
-             <TouchableOpacity style={styles.actionIconBtn}>
+             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.background, borderColor: C.border }]}>
                 <Feather name="grid" size={18} color={C.gold} />
              </TouchableOpacity>
-             <TouchableOpacity style={styles.actionIconBtn}>
+             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.background, borderColor: C.border }]}>
                 <Feather name="list" size={18} color={C.textSecondary} />
              </TouchableOpacity>
           </View>
 
-          <View style={styles.searchContainer}>
+          <View style={[styles.searchContainer, { backgroundColor: C.background, borderColor: C.border }]}>
             <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: C.text }]}
               placeholder="Search..."
               placeholderTextColor={C.textMuted}
               value={search}
@@ -194,7 +192,7 @@ export default function ProductsScreen() {
       </View>
 
       {isSyncing && (
-        <View style={styles.syncIndicator}>
+        <View style={[styles.syncIndicator, { backgroundColor: C.gold }]}>
           <ActivityIndicator size="small" color="#fff" />
           <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
         </View>
@@ -211,7 +209,7 @@ export default function ProductsScreen() {
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Feather name="package" size={48} color={C.textMuted} />
-            <Text style={styles.emptyText}>No products found</Text>
+            <Text style={[styles.emptyText, { color: C.textMuted }]}>No products found</Text>
           </View>
         }
       />
@@ -223,12 +221,12 @@ export default function ProductsScreen() {
         onRequestClose={() => setIsResetModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Reset All Stock</Text>
-            <Text style={styles.modalSubtitle}>Enter your password to confirm resetting all product quantities to 0.</Text>
+          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <Text style={[styles.modalTitle, { color: C.text }]}>Reset All Stock</Text>
+            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>Enter your password to confirm resetting all product quantities to 0.</Text>
             
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: C.background, color: C.text, borderColor: C.border }]}
               placeholder="Password"
               placeholderTextColor={C.textMuted}
               secureTextEntry
@@ -275,7 +273,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.gold,
     paddingVertical: 8,
     paddingHorizontal: 16,
     gap: 8,
@@ -285,13 +282,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
   },
-  header: {
+  header: (C: any) => ({
     paddingHorizontal: 16,
     paddingBottom: 16,
     backgroundColor: C.surface,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
-  },
+  }),
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -299,23 +296,20 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerLeftPlaceholder: {
-    width: 44, // Space for the floating menu button in layout
+    width: 44,
   },
   cartBtn: {
     width: 44,
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: C.background,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: C.border,
   },
   cartBadge: {
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: C.danger,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -323,7 +317,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 1,
     borderWidth: 2,
-    borderColor: C.surface,
   },
   cartBadgeText: {
     color: "#fff",
@@ -337,7 +330,6 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 18,
-    color: C.text,
     fontFamily: "Inter_700Bold",
   },
   headerActions: {
@@ -353,31 +345,26 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: C.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: C.border,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.background,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
     borderWidth: 1,
-    borderColor: C.border,
   },
   searchInput: {
     flex: 1,
-    color: C.text,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
   },
   listContent: { padding: 12 },
-  productCard: {
+  productCard: (C: any) => ({
     backgroundColor: C.card,
     borderRadius: 16,
     padding: 12,
@@ -389,7 +376,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-  },
+  }),
   productCardDisabled: {
     opacity: 0.6,
   },
@@ -405,11 +392,9 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: C.primary,
     marginBottom: 4,
   },
   stockBadge: {
-    backgroundColor: C.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -429,7 +414,6 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: C.text,
     textAlign: "center",
   },
   imageContainer: {
@@ -437,11 +421,9 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: C.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: C.border,
   },
   productImage: {
     width: "100%",
@@ -461,7 +443,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    color: C.textMuted,
     fontSize: 16,
     fontFamily: "Inter_400Regular",
   },
@@ -473,7 +454,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: C.surface,
     borderRadius: 20,
     padding: 24,
     width: '100%',
@@ -483,26 +463,22 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    borderWidth: 1,
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: C.text,
     marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: C.textSecondary,
     marginBottom: 20,
     lineHeight: 20,
   },
   modalInput: {
-    backgroundColor: C.background,
     borderRadius: 12,
     padding: 12,
-    color: C.text,
     borderWidth: 1,
-    borderColor: C.border,
     marginBottom: 20,
   },
   modalActions: {
