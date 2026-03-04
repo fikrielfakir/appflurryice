@@ -11,6 +11,7 @@ import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -148,6 +149,7 @@ export default function SalesScreen() {
   const insets = useSafeAreaInsets();
   const { sales, deleteSale, totalSales, syncData, isSyncing, setIsSidebarOpen } = useApp();
   const C = Colors;
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
@@ -186,7 +188,7 @@ export default function SalesScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
       <AppHeader 
-        title="Historique des ventes"
+        title={t('sales.title')}
         dark
         showMenu
         onMenuPress={() => {

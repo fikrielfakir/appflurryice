@@ -1,7 +1,7 @@
 import React from 'react';
-import { StyleSheet, View, ViewStyle, Platform } from 'react-native';
+import { StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useApp } from '@/context/AppContext';
+import { Colors } from '@/constants/colors';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -9,8 +9,9 @@ interface ScreenContainerProps {
   useGradient?: boolean;
 }
 
+const C = Colors;
+
 const ScreenContainer = ({ children, style, useGradient = true }: ScreenContainerProps) => {
-  const { theme: C } = useApp();
 
   if (useGradient) {
     return (

@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Dimensions, Platform, Modal, Pressable, ScrollView, Share } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp, Transfer } from '@/context/AppContext';
@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants';
 import { router } from 'expo-router';
 import { AppHeader } from '@/components/common/AppHeader';
+import { useTranslation } from 'react-i18next';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const C = Colors;
 const { width } = Dimensions.get('window');
@@ -17,8 +19,11 @@ import Toast from 'react-native-root-toast';
 export default function TransfersScreen() {
   const insets = useSafeAreaInsets();
   const { transfers, addTransfer, products, setIsSidebarOpen } = useApp();
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
+  const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
+  const [showDetailSheet, setShowDetailSheet] = useState(false);
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -83,6 +88,24 @@ export default function TransfersScreen() {
   }
   };
 
+  const handlePrint = (item: Transfer) => {
+    Toast.show(t('printer.connecting'), { duration: 1500, backgroundColor: C.primary });
+  };
+
+  const handleView = (item: Transfer) => {
+    setSelectedTransfer(item);
+    setShowDetailSheet(true);
+  };
+
+  const handleShare = async (item: Transfer) => {
+    try {
+      const message = `Transfer #${item.ref}\nFrom: ${item.from}\nTo: ${item.to}\nItems: ${item.items.length}\nTotal: MAD ${item.total}\nDate: ${new Date(item.date).toLocaleDateString()}`;
+      await Share.share({ message });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   const renderItem = ({ item }: { item: Transfer }) => (
     <View style={styles.transferCard}>
       <View style={styles.transferHeader}>
@@ -95,13 +118,27 @@ export default function TransfersScreen() {
         <Text style={styles.transferLocation}>{item.to}</Text>
       </View>
       <Text style={styles.transferItemsCount}>{item.items.length} items · MAD {item.total}</Text>
+      <View style={styles.transferActions}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handlePrint(item)}>
+          <Feather name="printer" size={16} color={C.primary} />
+          <Text style={styles.actionText}>{t('common.print')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleView(item)}>
+          <Feather name="eye" size={16} color={C.primary} />
+          <Text style={styles.actionText}>{t('common.view')}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => handleShare(item)}>
+          <Feather name="share-2" size={16} color={C.primary} />
+          <Text style={styles.actionText}>{t('common.share')}</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
       <AppHeader 
-        title="Stock Transfers"
+        title={t('transfers.title')}
         dark
         showMenu
         onMenuPress={() => {
@@ -160,6 +197,79 @@ export default function TransfersScreen() {
           </CameraView>
         </View>
       )}
+
+      <Modal
+        visible={showDetailSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowDetailSheet(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowDetailSheet(false)}>
+          <Pressable style={styles.sheetContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            
+            {selectedTransfer && (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.invoiceHeader}>
+                  <Text style={styles.invoiceTitle}>{t('transfers.title')}</Text>
+                  <Text style={styles.invoiceRef}>#{selectedTransfer.ref}</Text>
+                </View>
+
+                <View style={styles.invoiceInfo}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{t('transfers.date')}:</Text>
+                    <Text style={styles.infoValue}>{new Date(selectedTransfer.date).toLocaleDateString()}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{t('transfers.from')}:</Text>
+                    <Text style={styles.infoValue}>{selectedTransfer.from}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>{t('transfers.to')}:</Text>
+                    <Text style={styles.infoValue}>{selectedTransfer.to}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.itemsSection}>
+                  <Text style={styles.sectionTitle}>{t('transfers.items')} ({selectedTransfer.items.length})</Text>
+                  {selectedTransfer.items.map((item, index) => (
+                    <View key={index} style={styles.itemRow}>
+                      <View style={styles.itemInfo}>
+                        <Text style={styles.itemName}>{item.name || `Item ${index + 1}`}</Text>
+                        <Text style={styles.itemQty}>x{item.qty}</Text>
+                      </View>
+                      <Text style={styles.itemPrice}>MAD {(item.qty * (item.unit ? parseFloat(item.unit) : 0)).toFixed(2)}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={styles.totalSection}>
+                  <Text style={styles.totalLabel}>{t('transfers.total')}</Text>
+                  <Text style={styles.totalValue}>MAD {selectedTransfer.total}</Text>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.printButton}
+                  onPress={() => {
+                    Toast.show(t('printer.connecting'), { duration: 1500, backgroundColor: C.primary });
+                    setShowDetailSheet(false);
+                  }}
+                >
+                  <Feather name="printer" size={20} color="#fff" />
+                  <Text style={styles.printButtonText}>{t('common.print')}</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => setShowDetailSheet(false)}
+            >
+              <Text style={styles.closeButtonText}>{t('common.close')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -207,6 +317,9 @@ const styles = StyleSheet.create({
   transferPath: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   transferLocation: { fontSize: 14, color: C.textSecondary, fontFamily: 'Inter_500Medium' },
   transferItemsCount: { fontSize: 13, color: C.accent, fontFamily: 'Inter_600SemiBold' },
+  transferActions: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.border },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8 },
+  actionText: { fontSize: 12, color: C.primary, fontFamily: 'Inter_500Medium' },
   emptyState: { alignItems: 'center', marginTop: 100 },
   emptyText: { color: C.textPrimary, fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 16 },
   emptySubtext: { color: C.textMuted, fontSize: 14, marginTop: 8 },
@@ -219,4 +332,28 @@ const styles = StyleSheet.create({
   focusedContainer: { width: width * 0.7, borderWidth: 2, borderColor: C.primary, borderRadius: 16 },
   cancelBtn: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
   cancelBtnText: { color: '#fff', fontFamily: 'Inter_600SemiBold' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheetContent: { backgroundColor: C.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 40, maxHeight: '80%' },
+  sheetHandle: { width: 40, height: 4, backgroundColor: C.border, borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  invoiceHeader: { alignItems: 'center', marginBottom: 20 },
+  invoiceTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C.textPrimary },
+  invoiceRef: { fontSize: 14, color: C.textMuted, marginTop: 4 },
+  invoiceInfo: { backgroundColor: C.card, borderRadius: 12, padding: 16, marginBottom: 16 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  infoLabel: { fontSize: 14, color: C.textSecondary },
+  infoValue: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
+  itemsSection: { marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: C.textPrimary, marginBottom: 12 },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.border },
+  itemInfo: { flex: 1 },
+  itemName: { fontSize: 14, color: C.textPrimary },
+  itemQty: { fontSize: 12, color: C.textMuted, marginTop: 2 },
+  itemPrice: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
+  totalSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: C.primary + '15', padding: 16, borderRadius: 12, marginBottom: 20 },
+  totalLabel: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C.textPrimary },
+  totalValue: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C.primary },
+  printButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.primary, padding: 16, borderRadius: 12, marginBottom: 12 },
+  printButtonText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  closeButton: { backgroundColor: C.card, padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
+  closeButtonText: { color: C.textPrimary, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
 });

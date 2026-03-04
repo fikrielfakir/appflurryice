@@ -3,32 +3,34 @@ import { Tabs, router } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { SymbolView } from "expo-symbols";
-import { Platform, StyleSheet, View, TouchableOpacity } from "react-native";
+import { Platform, StyleSheet, View, TouchableOpacity, I18nManager } from "react-native";
 import React from "react";
 import { Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Sidebar from "@/components/Sidebar";
 import { useApp } from "@/context/AppContext";
+import { useTranslation } from "react-i18next";
 
 function NativeTabLayout() {
+  const { t, i18n } = useTranslation();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>Dashboard</Label>
+        <Label>{t('tabs.dashboard')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="sales">
         <Icon sf={{ default: "creditcard", selected: "creditcard.fill" }} />
-        <Label>Sales</Label>
+        <Label>{t('tabs.sales')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="products">
         <Icon sf={{ default: "cart", selected: "cart.fill" }} />
-        <Label>Products</Label>
+        <Label>{t('tabs.products')}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="transfers">
         <Icon sf={{ default: "arrow.left.arrow.right", selected: "arrow.left.arrow.right" }} />
-        <Label>Transfers</Label>
+        <Label>{t('tabs.transfers')}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -36,6 +38,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout({ theme: C }: { theme: any }) {
   const insets = useSafeAreaInsets();
+  const { t, i18n } = useTranslation();
   return (
     <Tabs
       screenOptions={{
@@ -69,7 +72,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Dashboard",
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="house.fill" tintColor={color} size={size} />
@@ -80,7 +83,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
       <Tabs.Screen
         name="sales"
         options={{
-          title: "Sales",
+          title: t('tabs.sales'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
@@ -92,7 +95,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
       <Tabs.Screen
         name="products/index"
         options={{
-          title: "Products",
+          title: t('tabs.products'),
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="cart.fill" tintColor={color} size={size} />
@@ -103,7 +106,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
       <Tabs.Screen
         name="transfers/index"
         options={{
-          title: "Transfers",
+          title: t('tabs.transfers'),
           tabBarIcon: ({ color, size }) => (
             Platform.OS === "ios"
               ? <SymbolView name="arrow.left.arrow.right" tintColor={color} size={size} />

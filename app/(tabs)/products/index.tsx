@@ -21,6 +21,7 @@ import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
 
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
@@ -56,6 +57,7 @@ export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
   const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile, setIsSidebarOpen } = useApp();
   const C = Colors;
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
@@ -138,7 +140,7 @@ export default function ProductsScreen() {
   return (
     <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
       <AppHeader 
-        title="Produits finis"
+        title={t('products.title')}
         dark
         showMenu
         onMenuPress={() => {

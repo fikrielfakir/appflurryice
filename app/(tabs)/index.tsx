@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
+import { useTranslation } from "react-i18next";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -33,9 +34,10 @@ function StatCard({ label, value, icon, color, bg, isSmall, theme: C }: {
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
-  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout } = useApp();
+  const { user, sales, totalSales, totalExpenses, totalDue, netProfit, logout, setIsSidebarOpen } = useApp();
   const C = Colors;
   const [refreshing, setRefreshing] = useState(false);
+  const { t } = useTranslation();
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -43,10 +45,10 @@ export default function DashboardScreen() {
   const recentSales = sales.slice(0, 5);
 
   const QUICK_ACTIONS = [
-    { title: "New Sale", icon: "shopping-cart", color: C.primary, route: "/(tabs)/products" },
-    { title: "Add Expense", icon: "dollar-sign", color: C.accent, route: "/(tabs)/expenses" },
-    { title: "Contacts", icon: "users", color: C.success, route: "/(tabs)/contacts" },
-    { title: "Reports", icon: "bar-chart-2", color: C.warning, route: "/(tabs)/reports" },
+    { title: t('dashboard.newSale'), icon: "shopping-cart", color: C.primary, route: "/(tabs)/products" },
+    { title: t('dashboard.addExpense'), icon: "dollar-sign", color: C.accent, route: "/(tabs)/expenses" },
+    { title: t('tabs.contacts'), icon: "users", color: C.success, route: "/(tabs)/contacts" },
+    { title: t('tabs.reports'), icon: "bar-chart-2", color: C.warning, route: "/(tabs)/reports" },
   ];
 
   function onRefresh() {
@@ -55,7 +57,7 @@ export default function DashboardScreen() {
   }
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t('dashboard.goodMorning') : hour < 18 ? t('dashboard.goodAfternoon') : t('dashboard.goodEvening');
 
   function statusColor(status: string) {
     if (status === "paid") return C.success;
@@ -74,6 +76,15 @@ export default function DashboardScreen() {
           colors={[C.accent, C.surface]}
           style={[styles.header, { paddingTop: topInset + 12 }]}
         >
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              style={[styles.logoutBtn, { backgroundColor: C.surface, borderColor: C.border }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setIsSidebarOpen(true); }}
+            >
+              <Feather name="menu" size={18} color={C.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.headerTopCenter}>
             <Image
               source={require("../../assets/flurry-logo.png")}
@@ -100,23 +111,23 @@ export default function DashboardScreen() {
 
           <View style={styles.heroBadge}>
             <Feather name="trending-up" size={14} color={C.accent} />
-            <Text style={[styles.heroBadgeText, { color: C.accent }]}>Total Revenue</Text>
+            <Text style={[styles.heroBadgeText, { color: C.accent }]}>{t('dashboard.totalRevenue')}</Text>
           </View>
           <Text style={[styles.heroAmount, { color: C.textPrimary }]}>MAD {fmt(totalSales)}</Text>
         </LinearGradient>
 
         <View style={styles.statsContainer}>
           <View style={styles.statsRow}>
-            <StatCard theme={C} label="Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.accent} bg={C.accent + "18"} />
-            <StatCard theme={C} label="Due Amount" value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
+            <StatCard theme={C} label={t('dashboard.expenses')} value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.accent} bg={C.accent + "18"} />
+            <StatCard theme={C} label={t('dashboard.dueAmount')} value={`MAD ${fmt(totalDue)}`} icon="clock" color={C.danger} bg={C.danger + "18"} />
           </View>
           <View style={styles.statsRow}>
-            <StatCard theme={C} label="Net Profit" value={`MAD ${fmt(netProfit)}`} icon="award" color={C.success} bg={C.success + "18"} isSmall />
-            <StatCard theme={C} label="Sales Count" value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg={C.primary + "18"} isSmall />
+            <StatCard theme={C} label={t('dashboard.netProfit')} value={`MAD ${fmt(netProfit)}`} icon="award" color={C.success} bg={C.success + "18"} isSmall />
+            <StatCard theme={C} label={t('dashboard.salesCount')} value={`${sales.length}`} icon="shopping-bag" color={C.primary} bg={C.primary + "18"} isSmall />
           </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>Quick Actions</Text>
+        <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{t('dashboard.quickActions')}</Text>
         <View style={styles.actionsGrid}>
           {QUICK_ACTIONS.map(action => (
             <TouchableOpacity
@@ -134,16 +145,16 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.recentHeader}>
-          <Text style={[styles.sectionTitle, { color: C.textPrimary, marginHorizontal: 0 }]}>Recent Sales</Text>
+          <Text style={[styles.sectionTitle, { color: C.textPrimary, marginHorizontal: 0 }]}>{t('dashboard.recentSales')}</Text>
           <TouchableOpacity onPress={() => router.push("/(tabs)/sales")}>
-            <Text style={[styles.seeAll, { color: C.accent }]}>See all</Text>
+            <Text style={[styles.seeAll, { color: C.accent }]}>{t('dashboard.seeAll')}</Text>
           </TouchableOpacity>
         </View>
 
         {recentSales.length === 0 ? (
           <View style={styles.emptyState}>
             <Feather name="shopping-cart" size={32} color={C.textMuted} />
-            <Text style={[styles.emptyText, { color: C.textMuted }]}>No sales yet</Text>
+            <Text style={[styles.emptyText, { color: C.textMuted }]}>{t('dashboard.noSales')}</Text>
           </View>
         ) : (
           recentSales.map(sale => (
@@ -180,6 +191,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingBottom: 28 },
   headerTopCenter: { alignItems: "center", marginBottom: 16, width: '100%' },
   headerRight: { position: "absolute", right: 20, top: 50, zIndex: 10, alignItems: 'flex-end' },
+  headerLeft: { position: "absolute", left: 20, top: 50, zIndex: 10, alignItems: 'flex-start' },
   headerLogoSmall: { width: 100, height: 50 },
   logoutBtn: {
     width: 40, height: 40, borderRadius: 12,

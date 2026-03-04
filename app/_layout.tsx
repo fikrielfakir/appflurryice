@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -12,6 +12,8 @@ import {
 } from "@expo-google-fonts/inter";
 import { View, ActivityIndicator } from "react-native";
 import { Colors } from "@/constants";
+import { loadSavedLanguage } from "@/i18n";
+import "@/i18n";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -45,6 +47,9 @@ function RootLayoutNav() {
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="pos" options={{ presentation: "fullScreenModal" }} />
+      <Stack.Screen name="settings/printer" />
+      <Stack.Screen name="settings/sync" />
+      <Stack.Screen name="settings/screen" />
     </Stack>
   );
 }
@@ -53,12 +58,17 @@ import { RootSiblingParent } from 'react-native-root-siblings';
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [isI18nReady, setIsI18nReady] = useState(false);
+
+  useEffect(() => {
+    loadSavedLanguage().then(() => setIsI18nReady(true));
+  }, []);
 
   useEffect(() => {
     if (!fontsLoaded) SplashScreen.preventAutoHideAsync();
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !isI18nReady) return null;
 
   return (
     <ErrorBoundary>

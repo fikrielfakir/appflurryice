@@ -4,21 +4,22 @@ import { Feather } from '@expo/vector-icons';
 import { router, usePathname } from 'expo-router';
 import Colors from '@/constants/colors';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const C = Colors.dark;
-
-const MENU_ITEMS = [
-  { title: 'Expenses', icon: 'dollar-sign', route: '/(tabs)/expenses' },
-  { title: 'Reports', icon: 'bar-chart-2', route: '/(tabs)/reports' },
-  { title: 'Contacts', icon: 'users', route: '/(tabs)/contacts' },
-  { title: 'Ecran', icon: 'monitor', route: '/settings/screen' },
-  { title: 'Imprimante', icon: 'printer', route: '/settings/printer' },
-  { title: 'Synchronisation', icon: 'cloud', route: '/settings/sync' },
-];
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const { t } = useTranslation();
+
+  const MENU_ITEMS = [
+    { title: t('tabs.expenses'), icon: 'dollar-sign', route: '/(tabs)/expenses' },
+    { title: t('tabs.reports'), icon: 'bar-chart-2', route: '/(tabs)/reports' },
+    { title: t('tabs.contacts'), icon: 'users', route: '/(tabs)/contacts' },
+    { title: t('settings.screen'), icon: 'monitor', route: '/settings/screen' },
+    { title: t('settings.sync'), icon: 'cloud', route: '/settings/sync' },
+  ];
 
   if (!isOpen) return null;
 
