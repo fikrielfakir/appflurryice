@@ -53,7 +53,7 @@ export default function TransfersScreen() {
           items,
           id: transferData.id?.toString() || Date.now().toString(),
           date: transferData.date || new Date().toISOString(),
-          from: transferData.from || "Unknown",
+          from: transferData.from || "flurryice",
           to: transferData.to || "Unknown",
           total: transferData.total || 0,
           sig: transferData.sig || ""
