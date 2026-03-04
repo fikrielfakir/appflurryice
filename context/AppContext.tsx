@@ -96,6 +96,12 @@ export interface Expense {
 
 // ─── Context shape ──────────────────────────────────────────────────────────────
 
+interface AppConfig {
+  fullScreen: boolean;
+  keepScreenOn: boolean;
+  darkMode: boolean;
+}
+
 interface AppContextValue {
   user: string | null;
   userProfile: AppUser | null;
@@ -107,6 +113,8 @@ interface AppContextValue {
   products: Product[];
   transfers: Transfer[];
   cart: CartItem[];
+  config: AppConfig;
+  updateConfig: (updates: Partial<AppConfig>) => void;
   setupFromQR: (qrData: string) => Promise<{ success: boolean; data?: Partial<AppUser>; error?: string }>;
   completeSetup: (profile: AppUser) => Promise<void>;
   login: (username: string, password: string) => Promise<boolean>;
@@ -147,6 +155,7 @@ const KEYS = {
   products: "bizpos_products",
   initialDataLoaded: "bizpos_initial_data_loaded",
   themeMode: "bizpos_theme_mode",
+  config: "bizpos_app_config",
 };
 
 const SYNC_KEYS = {
@@ -207,6 +216,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
 
+  const [config, setConfig] = useState<AppConfig>({
+    fullScreen: false,
+    keepScreenOn: false,
+    darkMode: false,
+  });
+
   useEffect(() => { loadData(); }, []);
 
   // ── Bootstrap ────────────────────────────────────────────────────────────────
@@ -222,6 +237,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         savedTransfers,
         savedProducts,
         initialDataLoaded,
+        configRaw,
       ] = await Promise.all([
         AsyncStorage.getItem(KEYS.userProfile),
         AsyncStorage.getItem(KEYS.activeUser),
@@ -231,6 +247,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.transfers),
         AsyncStorage.getItem(KEYS.products),
         AsyncStorage.getItem(KEYS.initialDataLoaded),
+        AsyncStorage.getItem(KEYS.config),
       ]);
 
       // Restore user session
@@ -240,6 +257,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (activeUserRaw) setActiveUser(activeUserRaw);
       } else {
         setNeedsSetup(true);
+      }
+
+      // Restore config
+      if (configRaw) {
+        setConfig(JSON.parse(configRaw));
       }
 
       // ── Local data ─────────────────────────────────────────────────────────
@@ -274,6 +296,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }
+
+  const updateConfig = async (updates: Partial<AppConfig>) => {
+    const newConfig = { ...config, ...updates };
+    setConfig(newConfig);
+    await AsyncStorage.setItem(KEYS.config, JSON.stringify(newConfig));
+  };
 
   // ── QR Setup ─────────────────────────────────────────────────────────────────
 
@@ -490,7 +518,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, contacts, expenses, products, transfers, cart,
+    sales, contacts, expenses, products, transfers, cart, config, updateConfig,
     setupFromQR,
     completeSetup,
     login, logout,
@@ -508,7 +536,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isLoading, isSyncing, isSidebarOpen, setIsSidebarOpen, syncData, lastSyncTime,
   }), [
     activeUser, userProfile, needsSetup,
-    sales, contacts, expenses, products, transfers, cart,
+    sales, contacts, expenses, products, transfers, cart, config,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, isSidebarOpen, lastSyncTime,
   ]);

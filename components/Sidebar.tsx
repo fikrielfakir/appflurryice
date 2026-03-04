@@ -11,6 +11,7 @@ const MENU_ITEMS = [
   { title: 'Expenses', icon: 'dollar-sign', route: '/(tabs)/expenses' },
   { title: 'Reports', icon: 'bar-chart-2', route: '/(tabs)/reports' },
   { title: 'Contacts', icon: 'users', route: '/(tabs)/contacts' },
+  { title: 'Ecran', icon: 'monitor', route: '/settings/screen' },
   { title: 'Imprimante', icon: 'printer', route: '/settings/printer' },
   { title: 'Synchronisation', icon: 'cloud', route: '/settings/sync' },
 ];
