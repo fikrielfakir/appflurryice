@@ -32,14 +32,14 @@ function RootLayoutNav() {
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.dark.background, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color={Colors.dark.primary} size="large" />
+      <View style={{ flex: 1, backgroundColor: Colors.light.background, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={Colors.light.primary} size="large" />
       </View>
     );
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.dark.background } }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.light.background } }}>
       <Stack.Screen name="setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />

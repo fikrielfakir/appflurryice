@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
-const C = Colors.dark;
+const C = Colors.light;
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -1,4 +1,20 @@
 const Colors = {
+  light: {
+    background: "#F8F9FA",
+    surface: "#FFFFFF",
+    card: "#FFFFFF",
+    border: "#E9ECEF",
+    primary: "#1C439C",
+    secondary: "#E7B238",
+    accent: "#FEED9D",
+    success: "#28A745",
+    warning: "#FFC107",
+    danger: "#DC3545",
+    text: "#212529",
+    textSecondary: "#495057",
+    textMuted: "#ADB5BD",
+    gold: "#E7B238",
+  },
   dark: {
     background: "#060E24",
     card: "#0E1C3F",

@@ -11,7 +11,7 @@ import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
 
-const C = Colors.dark;
+const C = Colors.light;
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -69,10 +69,10 @@ export default function DashboardScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 + bottomInset }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.gold} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.secondary} />}
       >
         <LinearGradient
-          colors={["#0A1628", "#0E1C3F", C.background]}
+          colors={[C.accent, C.background]}
           style={[styles.header, { paddingTop: topInset + 12 }]}
         >
           <View style={styles.headerTopCenter}>

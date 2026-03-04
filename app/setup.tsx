@@ -99,7 +99,7 @@ export default function SetupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-        <LinearGradient colors={["#040C20", "#081430", "#0E1C3F"]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[Colors.light.accent, Colors.light.background]} style={StyleSheet.absoluteFill} />
         <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + 40, paddingBottom: 40 }]}>
           <View style={styles.logoArea}>
             <Image source={require("../assets/flurry-logo.png")} style={styles.logo} resizeMode="contain" />
@@ -263,28 +263,28 @@ const styles = StyleSheet.create({
   logoArea: { alignItems: "center", marginBottom: 40 },
   logo: { width: 220, height: 120 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#fff", marginTop: 20 },
-  subtitle: { fontSize: 16, fontFamily: "Inter_400Regular", color: Colors.dark.textSecondary, marginTop: 8, textAlign: "center" },
+  subtitle: { fontSize: 16, fontFamily: "Inter_400Regular", color: Colors.light.textSecondary, marginTop: 8, textAlign: "center" },
   card: {
-    backgroundColor: Colors.dark.card,
+    backgroundColor: Colors.light.card,
     borderRadius: 24, padding: 32,
-    borderWidth: 1.5, borderColor: "#D4AF3730",
+    borderWidth: 1.5, borderColor: Colors.light.border,
   },
   qrButton: { borderRadius: 16, overflow: "hidden" },
   buttonGradient: { height: 64, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12 },
   qrButtonText: { color: "#fff", fontSize: 18, fontFamily: "Inter_600SemiBold" },
   errorBox: {
     flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: "rgba(239,68,68,0.1)",
+    backgroundColor: "rgba(220,53,69,0.1)",
     borderRadius: 12, padding: 12, marginTop: 20,
   },
-  errorText: { color: Colors.dark.danger, fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
+  errorText: { color: Colors.light.danger, fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
   infoBox: {
     flexDirection: "row", gap: 12,
-    backgroundColor: "rgba(212,175,55,0.05)",
+    backgroundColor: "rgba(231,178,56,0.05)",
     borderRadius: 16, padding: 16, marginTop: 32,
-    borderWidth: 1, borderColor: "#D4AF3720",
+    borderWidth: 1, borderColor: "rgba(231,178,56,0.2)",
   },
-  infoText: { color: Colors.dark.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 },
+  infoText: { color: Colors.light.textSecondary, fontSize: 13, fontFamily: "Inter_400Regular", flex: 1, lineHeight: 20 },
   cameraContainer: { flex: 1, backgroundColor: "#000" },
   camera: { flex: 1 },
   closeCamera: { position: "absolute", top: 50, right: 20, zIndex: 10, padding: 10 },

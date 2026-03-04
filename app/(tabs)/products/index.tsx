@@ -10,7 +10,6 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -18,9 +17,10 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
-import { AlertModal } from "@/components/AlertModal";
+import CustomAlert from "@/components/common/CustomAlert";
+import { LinearGradient } from 'expo-linear-gradient';
 
-const C = Colors.dark;
+const C = Colors.light;
 
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
@@ -36,19 +36,20 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
+  
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
     title: string;
     message: string;
-    type: 'success' | 'error' | 'info' | 'warning';
+    type: 'success' | 'error' | 'info';
   }>({
     visible: false,
     title: "",
     message: "",
-    type: "info",
+    type: 'info'
   });
 
-  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setAlertConfig({ visible: true, title, message, type });
   };
 
@@ -57,9 +58,9 @@ export default function ProductsScreen() {
       resetAllStock();
       setIsResetModalVisible(false);
       setPassword("");
-      showAlert("Succès", "Tous les stocks ont été réinitialisés à 0.", "success");
+      showAlert("Success", "All stock has been reset to 0.", "success");
     } else {
-      showAlert("Erreur", "Mot de passe incorrect.", "error");
+      showAlert("Error", "Incorrect password.", "error");
     }
   };
 
@@ -77,7 +78,7 @@ export default function ProductsScreen() {
       style={[styles.productCard, item.stock <= 0 && styles.productCardDisabled]} 
       onPress={() => {
         if (item.stock <= 0) {
-          showAlert("Indisponible", "Ce produit est en rupture de stock.", "warning");
+          showAlert("Indisponible", "Ce produit est en rupture de stock.", "error");
           return;
         }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -111,7 +112,10 @@ export default function ProductsScreen() {
   );
 
   return (
-    <View style={styles.screen}>
+    <LinearGradient
+      colors={[C.accent, C.background]}
+      style={styles.screen}
+    >
       <View style={[styles.header, { paddingTop: topInset + 10 }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerLeftPlaceholder} />
@@ -234,13 +238,13 @@ export default function ProductsScreen() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.modalBtn, { backgroundColor: C.card }]}
+                style={[styles.modalBtn, { backgroundColor: C.border }]}
                 onPress={() => {
                   setIsResetModalVisible(false);
                   setPassword("");
                 }}
               >
-                <Text style={styles.modalBtnText}>Cancel</Text>
+                <Text style={[styles.modalBtnText, { color: C.text }]}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -254,19 +258,19 @@ export default function ProductsScreen() {
         </View>
       </Modal>
 
-      <AlertModal
+      <CustomAlert
         visible={alertConfig.visible}
         title={alertConfig.title}
         message={alertConfig.message}
         type={alertConfig.type}
         onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
+  screen: { flex: 1 },
   syncIndicator: {
     flexDirection: "row",
     alignItems: "center",
@@ -302,7 +306,7 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: C.card,
+    backgroundColor: C.background,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: C.border,
@@ -333,7 +337,7 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 18,
-    color: "#fff",
+    color: C.text,
     fontFamily: "Inter_700Bold",
   },
   headerActions: {
@@ -349,7 +353,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: C.card,
+    backgroundColor: C.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -359,7 +363,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: C.card,
+    backgroundColor: C.background,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 40,
@@ -368,7 +372,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "#fff",
+    color: C.text,
     fontSize: 15,
     fontFamily: "Inter_400Regular",
   },
@@ -380,6 +384,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: C.border,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   productCardDisabled: {
     opacity: 0.6,
@@ -396,11 +405,11 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: "#fff",
+    color: C.primary,
     marginBottom: 4,
   },
   stockBadge: {
-    backgroundColor: "#A01B5D",
+    backgroundColor: C.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -420,7 +429,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
-    color: "#fff",
+    color: C.text,
     textAlign: "center",
   },
   imageContainer: {
@@ -428,7 +437,7 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: C.surface,
+    backgroundColor: C.background,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -458,7 +467,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -469,13 +478,16 @@ const styles = StyleSheet.create({
     padding: 24,
     width: '100%',
     maxWidth: 400,
-    borderWidth: 1,
-    borderColor: C.border,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   modalTitle: {
     fontSize: 20,
     fontFamily: 'Inter_700Bold',
-    color: '#fff',
+    color: C.text,
     marginBottom: 8,
   },
   modalSubtitle: {
@@ -485,10 +497,10 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   modalInput: {
-    backgroundColor: C.card,
+    backgroundColor: C.background,
     borderRadius: 12,
     padding: 12,
-    color: '#fff',
+    color: C.text,
     borderWidth: 1,
     borderColor: C.border,
     marginBottom: 20,
@@ -510,4 +522,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

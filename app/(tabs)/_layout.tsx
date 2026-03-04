@@ -41,24 +41,24 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: C.gold,
+        tabBarActiveTintColor: C.primary,
         tabBarInactiveTintColor: C.textMuted,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: Platform.select({
             ios: "transparent",
-            android: C.card,
-            web: C.card,
+            android: C.surface,
+            web: C.surface,
           }),
           borderTopWidth: 1,
-          borderTopColor: "#D4AF3730",
+          borderTopColor: C.border,
           elevation: 0,
           height: Platform.OS === "web" ? 84 : 60 + insets.bottom,
           paddingBottom: Platform.OS === "web" ? 34 : insets.bottom,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
         tabBarLabelStyle: {
           fontSize: 10,
@@ -139,7 +139,7 @@ export default function TabLayout() {
         style={styles.menuButton} 
         onPress={() => setIsSidebarOpen(true)}
       >
-        <Feather name="menu" size={24} color="#fff" />
+        <Feather name="menu" size={24} color={C.primary} />
       </TouchableOpacity>
     </View>
   );
