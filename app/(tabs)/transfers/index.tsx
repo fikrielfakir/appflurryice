@@ -102,6 +102,12 @@ export default function TransfersScreen() {
       <AppHeader 
         title="Stock Transfers"
         dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // @ts-ignore
+          router.setParams({ showSidebar: 'true' });
+        }}
         rightActions={
           <TouchableOpacity 
             style={styles.scanBtnHeader} 

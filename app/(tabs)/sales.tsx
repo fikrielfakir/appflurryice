@@ -188,6 +188,12 @@ export default function SalesScreen() {
       <AppHeader 
         title="Historique des ventes"
         dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // @ts-ignore - Sidebar is usually controlled via navigation or global state
+          router.setParams({ showSidebar: 'true' });
+        }}
         rightActions={
           <>
             <TouchableOpacity 

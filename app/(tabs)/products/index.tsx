@@ -140,6 +140,12 @@ export default function ProductsScreen() {
       <AppHeader 
         title="Produits finis"
         dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          // @ts-ignore
+          router.setParams({ showSidebar: 'true' });
+        }}
         rightActions={
           <View style={{ flexDirection: "row", gap: 10 }}>
             <TouchableOpacity
