@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp, Sale } from '@/context/AppContext';
 
 const PRINTER_STORAGE_KEY = '@bizpos_saved_printer';
-const PAPER_WIDTH = 384;
+const PAPER_WIDTH = 576; // 80mm printer (8 dots/mm * 72mm printable width)
 
 export type PrintState = 'idle' | 'connecting' | 'printing' | 'success' | 'error';
 
@@ -29,12 +29,12 @@ export interface UsePrintInvoiceReturn {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  BT_OFF: 'Veuillez activer le Bluetooth',
-  NO_PRINTER: 'Aucune imprimante trouvée',
-  CONNECTION_FAILED: 'Échec de connexion à l\'imprimante',
-  PRINT_FAILED: 'Erreur lors de l\'impression',
-  PERMISSION_DENIED: 'Permission Bluetooth refusée',
-  BLE_NOT_AVAILABLE: 'Bluetooth non disponible',
+  BT_OFF: 'يرجى تفعيل البلوتوث',
+  NO_PRINTER: 'لم يتم العثور على طابعة',
+  CONNECTION_FAILED: 'فشل الاتصال بالطابعة',
+  PRINT_FAILED: 'خطأ أثناء الطباعة',
+  PERMISSION_DENIED: 'تم رفض إذن البلوتوث',
+  BLE_NOT_AVAILABLE: 'البلوتوث غير متوفر',
 };
 
 function fmt(n: number) {
@@ -43,18 +43,18 @@ function fmt(n: number) {
 
 function generateReceiptText(sale: Sale): string {
   const lines: string[] = [];
-  const width = 32;
+  const width = 48; // Standard for 80mm
   
   const center = (s: string) => s.padStart((width + s.length) / 2).padEnd(width);
   const leftRight = (l: string, r: string) => l.padEnd(width - r.length) + r;
   
-  lines.push(center('FACTURE'));
+  lines.push(center('فاتورة'));
   lines.push('-'.repeat(width));
-  lines.push(`Facture #: ${sale.invoiceNumber}`);
-  lines.push(`Date: ${new Date(sale.date).toLocaleString('fr-FR')}`);
-  lines.push(`Client: ${sale.customerName}`);
+  lines.push(`رقم الفاتورة: ${sale.invoiceNumber}`);
+  lines.push(`التاريخ: ${new Date(sale.date).toLocaleString('ar-MA')}`);
+  lines.push(`الزبون: ${sale.customerName}`);
   if (sale.customerPhone) {
-    lines.push(`Tel: ${sale.customerPhone}`);
+    lines.push(`الهاتف: ${sale.customerPhone}`);
   }
   lines.push('-'.repeat(width));
   
@@ -65,18 +65,18 @@ function generateReceiptText(sale: Sale): string {
   }
   
   lines.push('-'.repeat(width));
-  lines.push(leftRight('TOTAL', fmt(sale.amount) + ' MAD'));
-  lines.push(leftRight('PAID', fmt(sale.paid) + ' MAD'));
+  lines.push(leftRight('المجموع', fmt(sale.amount) + ' MAD'));
+  lines.push(leftRight('المدفوع', fmt(sale.paid) + ' MAD'));
   
   if (sale.amount - sale.paid > 0) {
-    lines.push(leftRight('DUE', fmt(sale.amount - sale.paid) + ' MAD'));
+    lines.push(leftRight('المتبقي', fmt(sale.amount - sale.paid) + ' MAD'));
   }
   
   lines.push('-'.repeat(width));
-  lines.push(leftRight('Status', sale.status.toUpperCase()));
-  lines.push(leftRight('Method', sale.paymentMethod));
+  lines.push(leftRight('الحالة', sale.status === 'paid' ? 'مدفوعة' : sale.status === 'partial' ? 'جزئية' : 'مستحقة'));
+  lines.push(leftRight('طريقة الدفع', sale.paymentMethod));
   lines.push('');
-  lines.push(center('Merci pour votre confiance!'));
+  lines.push(center('شكرا لثقتكم!'));
   lines.push('');
   
   return lines.join('\n');
@@ -337,7 +337,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       
       await Printer.current.printText(text, {
         encoding: 'UTF-8',
-        codepage: 0,
+        codepage: 21, // Arabic (Windows-1256) or similar depending on printer
         widthTimes: 0,
         heightTimes: 0,
         fontType: 0,

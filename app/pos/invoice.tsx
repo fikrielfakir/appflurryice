@@ -68,21 +68,21 @@ export default function InvoiceScreen() {
   async function handleShare() {
     try {
       const text = [
-        `INVOICE #${params.invoiceNumber}`,
-        `Date: ${dateStr}`,
-        `Customer: ${params.customerName} ${params.customerPhone ? `(${params.customerPhone})` : ""}`,
+        `فاتورة رقم #${params.invoiceNumber}`,
+        `التاريخ: ${dateStr}`,
+        `الزبون: ${params.customerName} ${params.customerPhone ? `(${params.customerPhone})` : ""}`,
         ``,
         ...items.map(i => `${i.name}  x${i.qty}  ${fmt(i.price)}  =  MAD ${fmt(i.qty * i.price)}`),
         ``,
-        `Subtotal: MAD ${fmt(subtotal)}`,
-        discountPct > 0 ? `Discount: ${discountPct}%` : null,
-        `TOTAL: MAD ${fmt(total)}`,
-        `Paid: MAD ${fmt(paid)}`,
+        `المجموع الفرعي: MAD ${fmt(subtotal)}`,
+        discountPct > 0 ? `الخصم: ${discountPct}%` : null,
+        `المجموع: MAD ${fmt(total)}`,
+        `المدفوع: MAD ${fmt(paid)}`,
       ].filter(Boolean).join("\n");
 
-      await Share.share({ message: text, title: `Invoice #${params.invoiceNumber}` });
+      await Share.share({ message: text, title: `فاتورة #${params.invoiceNumber}` });
     } catch (e) {
-      Toast.show("Could not share invoice.", {
+      Toast.show("تعذر مشاركة الفاتورة", {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: POS.danger,
@@ -100,9 +100,9 @@ export default function InvoiceScreen() {
       <View style={[styles.header, { paddingTop: topInset }]}>
         <View style={styles.headerRow}>
           <View style={{ width: 36 }} />
-          <Text style={styles.headerTitle}>Invoice</Text>
+          <Text style={styles.headerTitle}>الفاتورة</Text>
           <TouchableOpacity onPress={handleDone} style={styles.doneBtn}>
-            <Text style={styles.doneBtnText}>Done</Text>
+            <Text style={styles.doneBtnText}>تم</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -115,20 +115,20 @@ export default function InvoiceScreen() {
               style={styles.invoiceLogo}
               resizeMode="contain"
             />
-            <Text style={styles.businessAddress}>Business Management Suite</Text>
+            <Text style={styles.businessAddress}>نظام إدارة الأعمال</Text>
           </View>
 
           <View style={styles.invoiceTitleRow}>
-            <Text style={styles.invoiceTitle}>FACTURE #{params.invoiceNumber}</Text>
+            <Text style={styles.invoiceTitle}>فاتورة #{params.invoiceNumber}</Text>
           </View>
 
           <View style={styles.invoiceMeta}>
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Date:</Text>
+              <Text style={styles.metaLabel}>التاريخ:</Text>
               <Text style={styles.metaValue}>{dateStr}</Text>
             </View>
             <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Amount Due:</Text>
+              <Text style={styles.metaLabel}>المبلغ المستحق:</Text>
               <Text style={styles.metaValue}>MAD {fmt(total)}</Text>
             </View>
           </View>
@@ -136,7 +136,7 @@ export default function InvoiceScreen() {
           <View style={styles.divider} />
 
           <View style={styles.billTo}>
-            <Text style={styles.billToLabel}>Facturer à:</Text>
+            <Text style={styles.billToLabel}>موجهة إلى:</Text>
             <Text style={styles.billToName}>{params.customerName}</Text>
             {params.customerPhone ? (
               <Text style={styles.billToPhone}>{params.customerPhone}</Text>
@@ -146,16 +146,16 @@ export default function InvoiceScreen() {
           <View style={styles.divider} />
 
           <View style={styles.tableHeader}>
-            <Text style={[styles.th, { flex: 2 }]}>Article</Text>
-            <Text style={styles.th}>Qté</Text>
-            <Text style={styles.th}>PU</Text>
-            <Text style={styles.th}>Total</Text>
+            <Text style={[styles.th, { flex: 2, textAlign: 'right' }]}>المنتج</Text>
+            <Text style={styles.th}>الكمية</Text>
+            <Text style={styles.th}>الثمن</Text>
+            <Text style={styles.th}>المجموع</Text>
           </View>
           <View style={styles.tableDivider} />
 
           {items.map((item, i) => (
             <View key={i} style={styles.tableRow}>
-              <Text style={[styles.td, { flex: 2, fontFamily: "Inter_500Medium" }]}>{item.name}</Text>
+              <Text style={[styles.td, { flex: 2, fontFamily: "Inter_500Medium", textAlign: 'right' }]}>{item.name}</Text>
               <Text style={styles.td}>{item.qty}</Text>
               <Text style={styles.td}>{fmt(item.price)}</Text>
               <Text style={styles.td}>{fmt(item.qty * item.price)}</Text>
@@ -165,13 +165,13 @@ export default function InvoiceScreen() {
           <View style={styles.tableDivider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Sous-total:</Text>
+            <Text style={styles.summaryLabel}>المجموع الفرعي:</Text>
             <Text style={styles.summaryValue}>MAD {fmt(subtotal)}</Text>
           </View>
 
           {discountPct > 0 && (
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Discount ({discountPct}%):</Text>
+              <Text style={styles.summaryLabel}>الخصم ({discountPct}%):</Text>
               <Text style={[styles.summaryValue, { color: POS.success }]}>- MAD {fmt(subtotal * discountPct / 100)}</Text>
             </View>
           )}
@@ -179,12 +179,12 @@ export default function InvoiceScreen() {
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>TOTAL:</Text>
+            <Text style={styles.totalLabel}>المجموع:</Text>
             <Text style={styles.totalValue}>MAD {fmt(total)}</Text>
           </View>
 
           <View style={styles.paidRow}>
-            <Text style={styles.paidLabel}>Montant payé:</Text>
+            <Text style={styles.paidLabel}>المبلغ المدفوع:</Text>
             <Text style={styles.paidValue}>MAD {fmt(paid)}</Text>
           </View>
 
@@ -197,7 +197,7 @@ export default function InvoiceScreen() {
               color="#000"
               backgroundColor="#fff"
             />
-            <Text style={styles.qrText}>Scannez pour vérifier la facture</Text>
+            <Text style={styles.qrText}>امسح للتحقق من الفاتورة</Text>
           </View>
         </View>
       </ScrollView>
@@ -226,7 +226,7 @@ export default function InvoiceScreen() {
             <Feather name="printer" size={18} color="#fff" />
           )}
           <Text style={styles.printBtnText}>
-            {isConnecting ? "Connexion..." : isPrinting ? "Impression..." : isSuccess ? "Imprimé!" : error ? "Erreur" : "Imprimer"}
+            {isConnecting ? "جاري الاتصال..." : isPrinting ? "جاري الطباعة..." : isSuccess ? "تمت الطباعة!" : error ? "خطأ" : "طبع الفاتورة"}
           </Text>
         </TouchableOpacity>
         
@@ -239,13 +239,13 @@ export default function InvoiceScreen() {
             }}
           >
             <Feather name="refresh-cw" size={18} color={POS.danger} />
-            <Text style={styles.retryBtnText}>Réessayer</Text>
+            <Text style={styles.retryBtnText}>إعادة المحاولة</Text>
           </TouchableOpacity>
         )}
         
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Feather name="share-2" size={18} color={POS.primary} />
-          <Text style={styles.shareBtnText}>Share</Text>
+          <Text style={styles.shareBtnText}>مشاركة</Text>
         </TouchableOpacity>
       </View>
       
