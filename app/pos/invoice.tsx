@@ -24,10 +24,12 @@ export default function InvoiceScreen() {
     invoiceNumber: string; customerName: string; customerPhone: string;
     total: string; paid: string; remaining: string; change: string;
     status: string; paymentMethod: string; date: string;
-    discount: string; itemsJson: string;
+    discount: string; itemsJson: string; isPreview?: string;
   }>();
 
   const { print, isConnecting, isPrinting, isSuccess, error, retry, currentPrinter } = usePrintInvoice();
+
+  const isPreview = params.isPreview === "true";
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -99,8 +101,10 @@ export default function InvoiceScreen() {
     <View style={styles.screen}>
       <View style={[styles.header, { paddingTop: topInset }]}>
         <View style={styles.headerRow}>
-          <View style={{ width: 36 }} />
-          <Text style={styles.headerTitle}>الفاتورة</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Feather name="chevron-left" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{isPreview ? "معاينة الفاتورة" : "الفاتورة"}</Text>
           <TouchableOpacity onPress={handleDone} style={styles.doneBtn}>
             <Text style={styles.doneBtnText}>تم</Text>
           </TouchableOpacity>
@@ -272,6 +276,7 @@ const styles = StyleSheet.create({
   businessAddress: { fontSize: 11, fontFamily: "Inter_400Regular", color: POS.textSecondary, textAlign: "center" },
   invoiceTitleRow: { alignItems: "center", marginVertical: 12 },
   invoiceTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: POS.text, letterSpacing: 0.5 },
+  backBtn: { width: 36, height: 36, justifyContent: "center", alignItems: "center" },
   invoiceMeta: { gap: 6, marginBottom: 12 },
   metaRow: { flexDirection: "row", justifyContent: "space-between" },
   metaLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: POS.textSecondary },

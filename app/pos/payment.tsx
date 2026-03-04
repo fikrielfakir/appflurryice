@@ -94,6 +94,7 @@ export default function PaymentScreen() {
         date: sale.date,
         discount: fmt(discountPct),
         itemsJson: JSON.stringify(sale.items),
+        isPreview: "true",
       },
     });
   }
