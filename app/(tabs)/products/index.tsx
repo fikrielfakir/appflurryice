@@ -20,6 +20,7 @@ import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
 import { LinearGradient } from "expo-linear-gradient";
+import { AppHeader } from "@/components/common/AppHeader";
 
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
@@ -136,30 +137,28 @@ export default function ProductsScreen() {
 
   return (
     <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
-      <View style={[headerStyle(C), { paddingTop: topInset + 10 }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeftPlaceholder} />
-
-          <View style={styles.headerTitleContainer}>
-            <Text style={[styles.headerSubtitle, { color: C.textPrimary }]}>Produits finis</Text>
+      <AppHeader 
+        title="Produits finis"
+        dark
+        rightActions={
+          <View style={{ flexDirection: "row", gap: 10 }}>
             <TouchableOpacity
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 syncData();
               }}
               disabled={isSyncing}
+              style={styles.cartBtnHeader}
             >
               {isSyncing ? (
-                <ActivityIndicator size="small" color={C.textSecondary} />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Feather name="cloud" size={18} color={C.textSecondary} />
+                <Feather name="cloud" size={18} color="#fff" />
               )}
             </TouchableOpacity>
-          </View>
 
-          <View style={{ flexDirection: "row", gap: 10 }}>
             <TouchableOpacity
-              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]}
+              style={styles.cartBtnHeader}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsResetModalVisible(true);
@@ -169,7 +168,7 @@ export default function ProductsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.cartBtn, { backgroundColor: C.surface, borderColor: C.border }]}
+              style={styles.cartBtnHeader}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/pos/cart");
@@ -180,11 +179,13 @@ export default function ProductsScreen() {
                   <Text style={styles.cartBadgeText}>{cart.length}</Text>
                 </View>
               )}
-              <Feather name="shopping-cart" size={24} color={C.accent} />
+              <Feather name="shopping-cart" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
+        }
+      />
 
+      <View style={[styles.headerActionsWrapper, { backgroundColor: C.primary }]}>
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
             <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -290,6 +291,16 @@ export default function ProductsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  headerActionsWrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  cartBtnHeader: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   syncIndicator: {
     flexDirection: "row",
     alignItems: "center",

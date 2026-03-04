@@ -6,6 +6,7 @@ import { useApp, Transfer } from '@/context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants';
 import { router } from 'expo-router';
+import { AppHeader } from '@/components/common/AppHeader';
 
 const C = Colors;
 const { width } = Dimensions.get('window');
@@ -97,17 +98,19 @@ export default function TransfersScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Stock Transfers</Text>
-        <TouchableOpacity 
-          style={styles.scanBtn} 
-          onPress={() => setScanning(true)}
-        >
-          <Feather name="maximize" size={20} color="#fff" />
-          <Text style={styles.scanBtnText}>Scan QR</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <AppHeader 
+        title="Stock Transfers"
+        dark
+        rightActions={
+          <TouchableOpacity 
+            style={styles.scanBtnHeader} 
+            onPress={() => setScanning(true)}
+          >
+            <Feather name="maximize" size={20} color="#fff" />
+          </TouchableOpacity>
+        }
+      />
 
       <FlatList
         data={transfers}
@@ -157,6 +160,12 @@ export default function TransfersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: C.surface },
+  scanBtnHeader: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   header: { 
     flexDirection: 'row', 
     justifyContent: 'space-between', 

@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import { Colors } from "@/constants";
+import { AppHeader } from "@/components/common/AppHeader";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -184,11 +185,11 @@ export default function SalesScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.background }]}>
-      <View style={[styles.header, { paddingTop: topInset, backgroundColor: C.primary }]}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerLeftPlaceholder} />
-          <Text style={styles.headerTitle}>Historique des ventes</Text>
-          <View style={styles.headerActions}>
+      <AppHeader 
+        title="Historique des ventes"
+        dark
+        rightActions={
+          <>
             <TouchableOpacity 
               style={[styles.cartBtn, isSyncing && styles.cartBtnDisabled]} 
               onPress={() => {
@@ -211,9 +212,11 @@ export default function SalesScreen() {
             >
                <Feather name="printer" size={22} color="#fff" />
             </TouchableOpacity>
-          </View>
-        </View>
+          </>
+        }
+      />
 
+      <View style={[styles.searchBarWrapper, { backgroundColor: C.primary }]}>
         <View style={[styles.searchRow, { backgroundColor: C.surface }]}>
           <Feather name="search" size={16} color={C.textMuted} style={{ marginRight: 8 }} />
           <TextInput
@@ -301,6 +304,10 @@ export default function SalesScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  searchBarWrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
   syncIndicator: {
     flexDirection: "row",
     alignItems: "center",
