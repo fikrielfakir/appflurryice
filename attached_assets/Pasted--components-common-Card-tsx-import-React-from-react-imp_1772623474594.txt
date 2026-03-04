@@ -1,0 +1,263 @@
+// components/common/Card.tsx
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Colors } from '@/constants/colors';
+import { Radius, Shadow, CardPadding } from '@/constants/layout';
+
+type CardVariant = 'default' | 'highlighted' | 'flat';
+type CardPaddingSize = 'sm' | 'md' | 'lg';
+
+interface CardProps {
+  children: React.ReactNode;
+  variant?: CardVariant;
+  padding?: CardPaddingSize;
+  style?: ViewStyle;
+}
+
+export function Card({ children, variant = 'default', padding = 'md', style }: CardProps) {
+  return (
+    <View
+      style={[
+        styles.base,
+        { padding: CardPadding[padding] },
+        variant === 'highlighted' && styles.highlighted,
+        variant === 'flat'        && styles.flat,
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  base: {
+    backgroundColor: Colors.card,
+    borderRadius:    Radius.lg,
+    borderWidth:     1,
+    borderColor:     Colors.border,
+    ...Shadow.card,
+  },
+  highlighted: {
+    borderLeftWidth:  3,
+    borderLeftColor:  Colors.accent,
+  },
+  flat: {
+    ...Shadow.none,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// components/common/StatusBadge.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+import { Text } from 'react-native';
+import { StatusColors } from '@/constants/colors';
+import { FontWeight, FontSize } from '@/constants/typography';
+import { Radius, Spacing } from '@/constants/layout';
+
+type StatusType = 'paid' | 'partial' | 'due' | 'draft';
+
+interface StatusBadgeProps {
+  status: StatusType;
+  label?: string; // optional override label
+}
+
+export function StatusBadge({ status, label }: StatusBadgeProps) {
+  const sc = StatusColors[status];
+  const displayLabel = label ?? status.toUpperCase();
+
+  return (
+    <View
+      style={{
+        backgroundColor:  sc.bg,
+        borderRadius:     Radius.full,
+        paddingHorizontal: Spacing.md,
+        paddingVertical:   4,
+        alignSelf:        'flex-start',
+        borderWidth:       1,
+        borderColor:       sc.border + '40', // 25% opacity border
+      }}
+    >
+      <Text
+        style={{
+          color:          sc.text,
+          fontSize:       FontSize.xs,
+          fontWeight:     FontWeight.bold,
+          letterSpacing:  0.6,
+          textTransform:  'uppercase',
+        }}
+      >
+        {displayLabel}
+      </Text>
+    </View>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// components/common/SearchBar.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+import { TextInput, ViewStyle } from 'react-native';
+import { Search } from 'lucide-react-native';
+import { InputHeight } from '@/constants/layout';
+
+interface SearchBarProps {
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder?: string;
+  style?: ViewStyle;
+}
+
+export function SearchBar({ value, onChangeText, placeholder = 'Search...', style }: SearchBarProps) {
+  return (
+    <View
+      style={[
+        {
+          flexDirection:    'row',
+          alignItems:       'center',
+          backgroundColor:  Colors.inputBg,
+          borderRadius:     Radius.md,
+          paddingHorizontal: Spacing.md,
+          height:           InputHeight.md,
+          borderWidth:      1,
+          borderColor:      Colors.borderLight,
+        },
+        style,
+      ]}
+    >
+      <Search size={18} color={Colors.textMuted} strokeWidth={2} />
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={Colors.textMuted}
+        style={{
+          flex:       1,
+          marginLeft: Spacing.sm,
+          fontSize:   FontSize.base,
+          color:      Colors.textPrimary,
+          paddingVertical: 0, // Android fix
+        }}
+      />
+    </View>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// components/common/FilterChips.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+import { ScrollView, TouchableOpacity } from 'react-native';
+
+interface FilterChip {
+  key:   string;
+  label: string;
+}
+
+interface FilterChipsProps {
+  chips:    FilterChip[];
+  selected: string;
+  onSelect: (key: string) => void;
+  style?:   ViewStyle;
+}
+
+export function FilterChips({ chips, selected, onSelect, style }: FilterChipsProps) {
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: Spacing.sm, paddingHorizontal: Spacing.xs }}
+      style={style}
+    >
+      {chips.map((chip) => {
+        const isActive = chip.key === selected;
+        return (
+          <TouchableOpacity
+            key={chip.key}
+            onPress={() => onSelect(chip.key)}
+            activeOpacity={0.75}
+            style={{
+              height:            36,
+              paddingHorizontal: Spacing.lg,
+              borderRadius:      Radius.full,
+              alignItems:        'center',
+              justifyContent:    'center',
+              backgroundColor:   isActive ? Colors.primary   : 'transparent',
+              borderWidth:       1.5,
+              borderColor:       isActive ? Colors.primary   : Colors.border,
+            }}
+          >
+            <Text
+              style={{
+                fontSize:   FontSize.sm,
+                fontWeight: FontWeight.semibold,
+                color:      isActive ? Colors.white : Colors.textSecondary,
+              }}
+            >
+              {chip.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// components/common/SectionTitle.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+interface SectionTitleProps {
+  title: string;
+  action?: string;
+  onAction?: () => void;
+  style?: ViewStyle;
+}
+
+export function SectionTitle({ title, action, onAction, style }: SectionTitleProps) {
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, style]}>
+      <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.textPrimary }}>
+        {title}
+      </Text>
+      {action && (
+        <TouchableOpacity onPress={onAction}>
+          <Text style={{ fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.accent }}>
+            {action}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// components/common/EmptyState.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+interface EmptyStateProps {
+  icon?: React.ReactNode;
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}
+
+export function EmptyState({ icon, title, subtitle, action }: EmptyStateProps) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xxxl }}>
+      {icon && <View style={{ marginBottom: Spacing.lg, opacity: 0.4 }}>{icon}</View>}
+      <Text style={{ fontSize: FontSize.lg, fontWeight: FontWeight.semibold, color: Colors.textPrimary, textAlign: 'center', marginBottom: Spacing.sm }}>
+        {title}
+      </Text>
+      {subtitle && (
+        <Text style={{ fontSize: FontSize.base, color: Colors.textSecondary, textAlign: 'center', marginBottom: Spacing.xl }}>
+          {subtitle}
+        </Text>
+      )}
+      {action}
+    </View>
+  );
+}

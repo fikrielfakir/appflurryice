@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlurryIce — New Design System Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --primary:       #0A2463;
+    --primary-light: #1B3FA0;
+    --primary-dark:  #061540;
+    --accent:        #00B4D8;
+    --accent-soft:   #E0F7FC;
+    --white:         #FFFFFF;
+    --surface:       #F8FAFC;
+    --card:          #FFFFFF;
+    --border:        #E2E8F0;
+    --input-bg:      #F1F5F9;
+    --text-primary:  #0F172A;
+    --text-secondary:#64748B;
+    --text-muted:    #94A3B8;
+    --success:       #10B981;
+    --success-bg:    #ECFDF5;
+    --success-text:  #065F46;
+    --warning:       #F59E0B;
+    --warning-bg:    #FFFBEB;
+    --warning-text:  #92400E;
+    --danger:        #EF4444;
+    --danger-bg:     #FEF2F2;
+    --danger-text:   #991B1B;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: #F0F4F8;
+    padding: 32px 24px;
+    color: var(--text-primary);
+  }
+
+  h1 { font-size: 28px; font-weight: 800; color: var(--primary); margin-bottom: 8px; }
+  .subtitle { color: var(--text-secondary); font-size: 15px; margin-bottom: 40px; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    margin-top: 40px;
+  }
+
+  /* Phone frame */
+  .phone-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+  }
+  .phone {
+    width: 280px;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(10,36,99,0.18), 0 4px 16px rgba(0,0,0,0.08);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .phone-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 12px;
+    letter-spacing: 0.5px;
+  }
+
+  /* Header — Dark */
+  .header-dark {
+    background: linear-gradient(135deg, #0A2463 0%, #1B3FA0 100%);
+    padding: 16px 16px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .header-white {
+    background: var(--white);
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .header-icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    background: rgba(255,255,255,0.12);
+  }
+  .header-icon-btn.light { background: var(--input-bg); }
+  .header-title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .header-title.dark { color: white; }
+  .logo-badge {
+    background: var(--primary); color: white;
+    border-radius: 8px; padding: 4px 10px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+  }
+  .header-right { display: flex; gap: 8px; }
+
+  /* Dashboard body */
+  .dashboard-body {
+    background: linear-gradient(180deg, #1B3FA0 0%, #0A2463 60%, var(--surface) 60%);
+    padding: 0;
+  }
+  .revenue-zone {
+    padding: 20px 16px 28px;
+  }
+  .greeting { color: rgba(255,255,255,0.75); font-size: 14px; margin-bottom: 2px; }
+  .user-name { color: white; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+  .revenue-label { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.65); font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .revenue-amount { color: white; font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+
+  .cards-zone { padding: 0 12px; margin-top: -8px; }
+  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metric-card {
+    background: white; border-radius: 16px;
+    padding: 14px; border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(10,36,99,0.07);
+  }
+  .metric-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px; font-size: 16px;
+  }
+  .metric-value { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 2px; }
+  .metric-label { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+
+  .quick-actions-zone { padding: 16px; }
+  .section-heading { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+  .quick-actions-row { display: flex; gap: 8px; }
+  .quick-action-card {
+    flex: 1; background: white; border-radius: 16px;
+    padding: 12px 8px; text-align: center;
+    border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(10,36,99,0.06);
+  }
+  .qa-icon {
+    width: 44px; height: 44px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin: 0 auto 8px;
+  }
+  .qa-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+
+  /* Sales screen */
+  .screen-body { background: var(--surface); padding: 12px; }
+  .search-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--input-bg); border-radius: 12px;
+    padding: 0 12px; height: 44px; border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .search-bar span { font-size: 14px; color: var(--text-muted); }
+  .chips-row { display: flex; gap: 8px; margin-bottom: 14px; overflow: hidden; }
+  .chip {
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid var(--border); color: var(--text-secondary); cursor: pointer;
+    white-space: nowrap;
+  }
+  .chip.active { background: var(--primary); border-color: var(--primary); color: white; }
+  .summary-pills { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 14px; }
+  .pill {
+    border-radius: 999px; padding: 4px 10px;
+    font-size: 11px; font-weight: 700; display: flex; gap: 5px; align-items: center;
+  }
+  .pill.green { background: var(--success-bg); color: var(--success-text); }
+  .pill.amber { background: var(--warning-bg); color: var(--warning-text); }
+  .sale-card {
+    background: white; border-radius: 16px; padding: 14px;
+    border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(10,36,99,0.06);
+    margin-bottom: 10px;
+  }
+  .sale-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .badge-paid {
+    background: var(--success-bg); color: var(--success-text);
+    border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.5px; text-transform: uppercase; border: 1px solid rgba(16,185,129,0.2);
+  }
+  .invoice-num { font-size: 14px; font-weight: 700; color: var(--text-primary); }
+  .invoice-date { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .sale-amounts { display: flex; gap: 16px; align-items: baseline; margin-bottom: 10px; }
+  .sale-total { font-size: 18px; font-weight: 800; color: var(--accent); }
+  .sale-paid { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+  .sale-divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+  .sale-meta { font-size: 12px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 3px; }
+  .sale-meta span b { color: var(--text-primary); }
+  .sale-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+  .sale-action-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--input-bg); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; }
+
+  /* Transfers */
+  .screen-body-dark { background: #0F1B3D; padding: 12px; }
+  .transfer-card {
+    background: #162040; border-radius: 16px; padding: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 10px;
+  }
+  .transfer-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .transfer-id { font-size: 16px; font-weight: 700; color: white; }
+  .transfer-date { font-size: 12px; color: rgba(255,255,255,0.45); }
+  .transfer-route { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .transfer-loc { font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500; }
+  .transfer-arrow { color: var(--accent); font-size: 14px; }
+  .transfer-meta { font-size: 12px; font-weight: 600; color: var(--warning); }
+
+  /* Products */
+  .product-card {
+    background: white; border-radius: 16px; padding: 14px 16px;
+    border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(10,36,99,0.06);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 12px;
+  }
+  .product-img { width: 44px; height: 44px; border-radius: 12px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .product-info { flex: 1; }
+  .product-name { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+  .product-price { font-size: 14px; font-weight: 700; color: var(--primary); }
+  .stock-badge {
+    border-radius: 8px; padding: 4px 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .stock-badge.in { background: var(--accent-soft); color: #0077A8; }
+  .stock-badge.out { background: var(--input-bg); color: var(--text-muted); opacity: 0.6; }
+
+  /* Design tokens showcase */
+  .tokens-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .token-swatch { border-radius: 12px; padding: 12px; border: 1px solid var(--border); }
+  .swatch-color { width: 100%; height: 40px; border-radius: 8px; margin-bottom: 8px; }
+  .swatch-name { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+  .swatch-hex { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+  /* Tab bar */
+  .tab-bar {
+    display: flex; background: white; border-top: 1px solid var(--border);
+    padding: 8px 0 4px;
+  }
+  .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+  .tab-icon { font-size: 20px; }
+  .tab-label { font-size: 10px; font-weight: 600; color: var(--text-muted); }
+  .tab-item.active .tab-label { color: var(--primary); }
+  .tab-item.active .tab-icon { filter: none; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--primary); padding: 20px 0;
+    border-radius: 0 24px 24px 0; width: 240px; min-height: 400px;
+  }
+  .sidebar-header { padding: 0 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .sidebar-title { color: white; font-size: 18px; font-weight: 700; }
+  .sidebar-close { width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: white; cursor: pointer; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; cursor: pointer;
+    color: rgba(255,255,255,0.75); font-size: 15px; font-weight: 500;
+    transition: background 0.15s;
+  }
+  .sidebar-item:hover, .sidebar-item.active {
+    background: rgba(0,180,216,0.15);
+    color: white;
+  }
+  .sidebar-item-icon { font-size: 18px; }
+
+  .compare-row { display: flex; gap: 32px; flex-wrap: wrap; }
+  .compare-col { flex: 1; min-width: 240px; }
+  .compare-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .badge-old { background: #fee2e2; color: #991b1b; border-radius: 4px; padding: 2px 6px; font-size: 10px; }
+  .badge-new { background: var(--success-bg); color: var(--success-text); border-radius: 4px; padding: 2px 6px; font-size: 10px; }
+</style>
+</head>
+<body>
+
+<h1>🧊 FlurryIce — New Design System</h1>
+<p class="subtitle">Arctic Luxury POS · Unified UI/UX · React Native</p>
+
+<!-- BEFORE / AFTER ISSUES -->
+<div class="section-title">⚠ Issues Fixed</div>
+<div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; max-width:700px; margin-bottom:8px;">
+  <div style="background:white;border-radius:12px;padding:14px;border:1px solid var(--border);">
+    <div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:8px;">❌ Before</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+      • 3 different header heights<br>
+      • Yellow/Navy/White bg inconsistency<br>
+      • Hardcoded colors in every file<br>
+      • Mixed card padding/radius<br>
+      • Inconsistent badge styles<br>
+      • No shared button component
+    </div>
+  </div>
+  <div style="background:white;border-radius:12px;padding:14px;border:1px solid var(--border);">
+    <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px;">✅ After</div>
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+      • Always 56px header height<br>
+      • Unified navy+white theme system<br>
+      • All values from constants/<br>
+      • Card component reused everywhere<br>
+      • StatusBadge component<br>
+      • Button with 4 variants + 3 sizes
+    </div>
+  </div>
+</div>
+
+<!-- SCREEN PREVIEWS -->
+<div class="section-title">📱 Screen Previews</div>
+<div class="phone-row">
+
+  <!-- DASHBOARD -->
+  <div>
+    <div class="phone">
+      <div class="header-dark">
+        <div class="header-icon-btn">☰</div>
+        <div class="logo-badge">Flurry ice</div>
+        <div class="header-right">
+          <div class="header-icon-btn">🌙</div>
+          <div class="header-icon-btn">→</div>
+        </div>
+      </div>
+      <div class="dashboard-body">
+        <div class="revenue-zone">
+          <div class="greeting">Good morning,</div>
+          <div class="user-name">ABDALAH BASIRI</div>
+          <div class="revenue-label">↗ Total Revenue</div>
+          <div class="revenue-amount">MAD 364.00</div>
+        </div>
+        <div class="cards-zone">
+          <div class="metric-grid">
+            <div class="metric-card">
+              <div class="metric-icon" style="background:#FEF3C7;">📉</div>
+              <div class="metric-value">MAD 0.00</div>
+              <div class="metric-label">Expenses</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background:var(--danger-bg);">⏰</div>
+              <div class="metric-value">MAD 0.00</div>
+              <div class="metric-label">Due Amount</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background:var(--success-bg);">🏅</div>
+              <div class="metric-value">MAD 364.00</div>
+              <div class="metric-label">Net Profit</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-icon" style="background:var(--accent-soft);">🛒</div>
+              <div class="metric-value">1</div>
+              <div class="metric-label">Sales Count</div>
+            </div>
+          </div>
+        </div>
+        <div class="quick-actions-zone">
+          <div class="section-heading">Quick Actions</div>
+          <div class="quick-actions-row">
+            <div class="quick-action-card">
+              <div class="qa-icon" style="background:var(--accent-soft);">🛒</div>
+              <div class="qa-label">New Sale</div>
+            </div>
+            <div class="quick-action-card">
+              <div class="qa-icon" style="background:#FFFBEB;">💵</div>
+              <div class="qa-label">Add Expense</div>
+            </div>
+            <div class="quick-action-card">
+              <div class="qa-icon" style="background:var(--success-bg);">👥</div>
+              <div class="qa-label">Contacts</div>
+            </div>
+            <div class="quick-action-card">
+              <div class="qa-icon" style="background:#EFF6FF;">📊</div>
+              <div class="qa-label">Reports</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item active"><div class="tab-icon">🏠</div><div class="tab-label" style="color:var(--primary);">Dashboard</div></div>
+        <div class="tab-item"><div class="tab-icon">🛒</div><div class="tab-label">Sales</div></div>
+        <div class="tab-item"><div class="tab-icon">📦</div><div class="tab-label">Products</div></div>
+        <div class="tab-item"><div class="tab-icon">🔄</div><div class="tab-label">Transfers</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Dashboard</div>
+  </div>
+
+  <!-- SALES -->
+  <div>
+    <div class="phone">
+      <div class="header-white">
+        <div class="header-icon-btn light">☰</div>
+        <div class="header-title">Sales History</div>
+        <div class="header-right">
+          <div class="header-icon-btn light">☁</div>
+          <div class="header-icon-btn light">🖨</div>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="search-bar"><span>🔍</span><span>Search...</span></div>
+        <div class="chips-row">
+          <div class="chip active">All</div>
+          <div class="chip">Paid</div>
+          <div class="chip">Partial</div>
+          <div class="chip">Due</div>
+        </div>
+        <div class="summary-pills">
+          <div class="pill green">✓ 1 Paid</div>
+          <div class="pill amber">⚡ 0 Unpaid</div>
+        </div>
+        <div class="sale-card">
+          <div class="sale-card-top">
+            <span class="badge-paid">PAID</span>
+            <span style="font-size:12px;color:var(--text-muted);">04/03/2026, 11:05</span>
+          </div>
+          <div class="invoice-num">Invoice #.1_202603041105</div>
+          <div class="sale-amounts">
+            <span class="sale-total">MAD 364.00</span>
+            <span class="sale-paid">MAD 364.00 paid</span>
+          </div>
+          <hr class="sale-divider">
+          <div class="sale-meta">
+            <span>Customer: <b>Walk-in Customer</b></span>
+            <span>Due: <b style="color:var(--success);">MAD 0.00</b></span>
+            <span>Method: <b>Cash</b></span>
+          </div>
+          <div class="sale-actions">
+            <div class="sale-action-btn">↩</div>
+            <div class="sale-action-btn">↗</div>
+            <div class="sale-action-btn">🖨</div>
+            <div class="sale-action-btn" style="background:var(--danger-bg);">🗑</div>
+            <div class="sale-action-btn">✏</div>
+          </div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Dashboard</div></div>
+        <div class="tab-item active"><div class="tab-icon">🛒</div><div class="tab-label" style="color:var(--primary);">Sales</div></div>
+        <div class="tab-item"><div class="tab-icon">📦</div><div class="tab-label">Products</div></div>
+        <div class="tab-item"><div class="tab-icon">🔄</div><div class="tab-label">Transfers</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Sales History</div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div>
+    <div class="phone">
+      <div class="header-white">
+        <div class="header-icon-btn light">☰</div>
+        <div class="header-title">Products</div>
+        <div class="header-right">
+          <div class="header-icon-btn light">🔄</div>
+          <div class="header-icon-btn light">🛒</div>
+        </div>
+      </div>
+      <div class="screen-body">
+        <div class="search-bar"><span>🔍</span><span>Search...</span></div>
+        <div class="product-card">
+          <div class="product-img">🍫</div>
+          <div class="product-info">
+            <div class="product-name">kitkat</div>
+            <div class="product-price">52.00 MAD</div>
+          </div>
+          <div class="stock-badge in">50 📦</div>
+        </div>
+        <div class="product-card">
+          <div class="product-img">🍪</div>
+          <div class="product-info">
+            <div class="product-name">oreo</div>
+            <div class="product-price">52.00 MAD</div>
+          </div>
+          <div class="stock-badge in">45 📦</div>
+        </div>
+        <div class="product-card" style="opacity:0.5;">
+          <div class="product-img" style="background:var(--input-bg);">📦</div>
+          <div class="product-info">
+            <div class="product-name">kaitkat</div>
+            <div class="product-price">10.00 MAD</div>
+          </div>
+          <div class="stock-badge out">0 📦</div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Dashboard</div></div>
+        <div class="tab-item"><div class="tab-icon">🛒</div><div class="tab-label">Sales</div></div>
+        <div class="tab-item active"><div class="tab-icon">📦</div><div class="tab-label" style="color:var(--primary);">Products</div></div>
+        <div class="tab-item"><div class="tab-icon">🔄</div><div class="tab-label">Transfers</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Products</div>
+  </div>
+
+  <!-- TRANSFERS — WHITE HEADER (fixed) -->
+  <div>
+    <div class="phone">
+      <div class="header-white">
+        <div class="header-icon-btn light">☰</div>
+        <div class="header-title">Stock Transfers</div>
+        <div style="background:var(--primary);color:white;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;">⊡ Scan QR</div>
+      </div>
+      <div class="screen-body-dark">
+        <div class="transfer-card">
+          <div class="transfer-top">
+            <span class="transfer-id">ST2026/0014</span>
+            <span class="transfer-date">3/4/2026</span>
+          </div>
+          <div class="transfer-route">
+            <span class="transfer-loc">flurryice</span>
+            <span class="transfer-arrow">→</span>
+            <span class="transfer-loc">CAM 01 - 0199-A-44</span>
+          </div>
+          <div class="transfer-meta">2 items · MAD 0</div>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-top">
+            <span class="transfer-id">ST2026/0013</span>
+            <span class="transfer-date">3/3/2026</span>
+          </div>
+          <div class="transfer-route">
+            <span class="transfer-loc">Unknown</span>
+            <span class="transfer-arrow">→</span>
+            <span class="transfer-loc">CAM 01 - 0199-A-44</span>
+          </div>
+          <div class="transfer-meta">1 item · MAD 0</div>
+        </div>
+        <div class="transfer-card">
+          <div class="transfer-top">
+            <span class="transfer-id">ST2026/0010</span>
+            <span class="transfer-date">2/21/2026</span>
+          </div>
+          <div class="transfer-route">
+            <span class="transfer-loc">Produits finis</span>
+            <span class="transfer-arrow">→</span>
+            <span class="transfer-loc">CAM 01 - 0199-A-44</span>
+          </div>
+          <div class="transfer-meta" style="color:var(--accent);">2 items · MAD 104</div>
+        </div>
+      </div>
+      <div class="tab-bar">
+        <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Dashboard</div></div>
+        <div class="tab-item"><div class="tab-icon">🛒</div><div class="tab-label">Sales</div></div>
+        <div class="tab-item"><div class="tab-icon">📦</div><div class="tab-label">Products</div></div>
+        <div class="tab-item active"><div class="tab-icon">🔄</div><div class="tab-label" style="color:var(--primary);">Transfers</div></div>
+      </div>
+    </div>
+    <div class="phone-label">Stock Transfers (fixed header)</div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div>
+    <div class="phone" style="min-height:480px;background:rgba(10,36,99,0.3);display:flex;">
+      <div class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">Menu</div>
+          <div class="sidebar-close">✕</div>
+        </div>
+        <div class="sidebar-item active">
+          <span class="sidebar-item-icon">💵</span> Expenses
+        </div>
+        <div class="sidebar-item">
+          <span class="sidebar-item-icon">📊</span> Reports
+        </div>
+        <div class="sidebar-item">
+          <span class="sidebar-item-icon">👥</span> Contacts
+        </div>
+        <div class="sidebar-item">
+          <span class="sidebar-item-icon">🖨</span> Imprimante
+        </div>
+        <div class="sidebar-item">
+          <span class="sidebar-item-icon">☁</span> Synchronisation
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Sidebar Menu</div>
+  </div>
+
+</div>
+
+<!-- COLOR PALETTE -->
+<div class="section-title">🎨 Color Tokens</div>
+<div class="tokens-grid" style="max-width:900px;">
+  <div class="token-swatch"><div class="swatch-color" style="background:#0A2463;"></div><div class="swatch-name">primary</div><div class="swatch-hex">#0A2463</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#1B3FA0;"></div><div class="swatch-name">primaryLight</div><div class="swatch-hex">#1B3FA0</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#00B4D8;"></div><div class="swatch-name">accent</div><div class="swatch-hex">#00B4D8</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#E0F7FC; border:1px solid #E2E8F0;"></div><div class="swatch-name">accentSoft</div><div class="swatch-hex">#E0F7FC</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#F8FAFC; border:1px solid #E2E8F0;"></div><div class="swatch-name">surface</div><div class="swatch-hex">#F8FAFC</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#10B981;"></div><div class="swatch-name">success</div><div class="swatch-hex">#10B981</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#F59E0B;"></div><div class="swatch-name">warning</div><div class="swatch-hex">#F59E0B</div></div>
+  <div class="token-swatch"><div class="swatch-color" style="background:#EF4444;"></div><div class="swatch-name">danger</div><div class="swatch-hex">#EF4444</div></div>
+</div>
+
+<!-- FILES OVERVIEW -->
+<div class="section-title">📁 New Files Created</div>
+<div style="background:white;border-radius:16px;border:1px solid var(--border);padding:20px;max-width:700px;font-family:monospace;font-size:13px;line-height:2;color:var(--text-secondary);">
+  <span style="color:var(--accent);font-weight:700;">constants/</span><br>
+  &nbsp;&nbsp;<span style="color:var(--success);">colors.ts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← Full palette + semantic tokens<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">typography.ts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← FontSize, FontWeight, TextStyle<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">layout.ts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← Spacing, Radius, Shadow, HeaderHeight<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">index.ts</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← Barrel export<br>
+  <br>
+  <span style="color:var(--accent);font-weight:700;">components/common/</span><br>
+  &nbsp;&nbsp;<span style="color:var(--success);">AppHeader.tsx</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← Unified 56px header, all screens<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">Button.tsx</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← primary/secondary/ghost/danger/success<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">Card.tsx</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← default/highlighted/flat variants<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">StatusBadge.tsx</span> &nbsp;&nbsp;&nbsp;← paid/partial/due/draft<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">SearchBar.tsx</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← Reusable search input<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">FilterChips.tsx</span> &nbsp;&nbsp;&nbsp;← Active/inactive chip row<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">SectionTitle.tsx</span> &nbsp;&nbsp;← Section heading + optional action<br>
+  &nbsp;&nbsp;<span style="color:var(--success);">EmptyState.tsx</span> &nbsp;&nbsp;&nbsp;&nbsp;← Empty list placeholder
+</div>
+
+</body>
+</html>

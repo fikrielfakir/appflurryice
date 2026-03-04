@@ -1,0 +1,304 @@
+# FlurryIce App — UI/UX Redesign Prompt & Design System
+
+## 🎯 Design Direction: "Arctic Luxury POS"
+**Aesthetic**: Refined minimalism meets premium retail — clean whites, deep navy, and crisp ice-blue accents. 
+Inspired by premium ice cream brands: cold, fresh, premium, trustworthy.
+
+---
+
+## 🔴 Current UI Issues (from screenshots)
+
+1. **Inconsistent header heights & button positions** — burger menu floats at different sizes across screens
+2. **Mixed color themes** — yellow/cream on Dashboard, dark navy on Transfers, white on Products/Sales (3 different feels = 1 broken app)
+3. **Inconsistent button sizes** — Quick Action cards vary in padding/icon size
+4. **Typography weight chaos** — some labels bold, some not, no clear hierarchy
+5. **Card styles differ per screen** — rounded corners, shadows, and padding not standardized
+6. **Status badges inconsistent** — PAID badge style doesn't match filter chips
+7. **Bottom tab bar icons misaligned** with labels on some screens
+8. **Dark/Light mode toggle** exists only on Dashboard header
+
+---
+
+## ✅ New Design System
+
+### Color Palette (`constants/colors.ts`)
+
+```typescript
+export const Colors = {
+  // === Brand Core ===
+  primary:     '#0A2463',   // Deep Navy — trust, premium
+  primaryLight:'#1B3FA0',   // Medium Navy — buttons, active states
+  accent:      '#00B4D8',   // Ice Blue — highlights, badges, links
+  accentSoft:  '#E0F7FC',   // Ice Blue tint — chip backgrounds, selected states
+
+  // === Neutrals ===
+  white:       '#FFFFFF',
+  surface:     '#F8FAFC',   // App background
+  card:        '#FFFFFF',   // Card background
+  border:      '#E2E8F0',   // Dividers and card borders
+  inputBg:     '#F1F5F9',   // Input fields
+
+  // === Text ===
+  textPrimary:  '#0F172A',  // Headlines
+  textSecondary:'#64748B',  // Labels, captions
+  textMuted:    '#94A3B8',  // Placeholders, disabled
+  textOnDark:   '#FFFFFF',  // Text on primary/dark backgrounds
+
+  // === Semantic ===
+  success:     '#10B981',   // Paid, positive
+  successBg:   '#ECFDF5',
+  warning:     '#F59E0B',   // Partial, pending
+  warningBg:   '#FFFBEB',
+  danger:      '#EF4444',   // Due, error
+  dangerBg:    '#FEF2F2',
+  info:        '#3B82F6',
+  infoBg:      '#EFF6FF',
+
+  // === Revenue Header Gradient ===
+  gradientStart: '#0A2463',
+  gradientEnd:   '#1B3FA0',
+
+  // === Shadows ===
+  shadowColor:   '#0A2463',
+  shadowOpacity:  0.08,
+};
+```
+
+---
+
+### Typography (`constants/typography.ts`) — NEW FILE
+
+```typescript
+import { Platform } from 'react-native';
+
+export const FontFamily = {
+  // Use system fonts with fallback — add custom font (e.g. "Nunito") via expo-font if desired
+  regular:   Platform.OS === 'ios' ? 'SF Pro Text'    : 'Roboto',
+  medium:    Platform.OS === 'ios' ? 'SF Pro Text'    : 'Roboto-Medium',
+  semibold:  Platform.OS === 'ios' ? 'SF Pro Display' : 'Roboto-Medium',
+  bold:      Platform.OS === 'ios' ? 'SF Pro Display' : 'Roboto-Bold',
+};
+
+export const FontSize = {
+  xs:   11,
+  sm:   13,
+  base: 15,
+  md:   17,
+  lg:   20,
+  xl:   24,
+  xxl:  30,
+  hero: 38,
+};
+
+export const LineHeight = {
+  tight:  1.2,
+  normal: 1.5,
+  relaxed:1.75,
+};
+```
+
+---
+
+### Spacing & Radius (`constants/layout.ts`) — NEW FILE
+
+```typescript
+export const Spacing = {
+  xs:  4,
+  sm:  8,
+  md:  12,
+  lg:  16,
+  xl:  20,
+  xxl: 24,
+  xxxl:32,
+};
+
+export const Radius = {
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   20,
+  full: 999,
+};
+
+export const IconSize = {
+  sm:  18,
+  md:  22,
+  lg:  26,
+};
+
+export const Shadow = {
+  card: {
+    shadowColor:   '#0A2463',
+    shadowOffset:  { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius:  8,
+    elevation:     3,
+  },
+  header: {
+    shadowColor:   '#000',
+    shadowOffset:  { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius:  4,
+    elevation:     2,
+  },
+};
+```
+
+---
+
+### Header Component — UNIFIED (`components/common/AppHeader.tsx`)
+
+```typescript
+/**
+ * Single unified header used on ALL screens.
+ * Props control which elements appear.
+ */
+interface AppHeaderProps {
+  title?: string;                    // screen title (undefined = show logo)
+  showLogo?: boolean;                // show Flurry logo instead of title
+  showMenu?: boolean;                // show hamburger
+  showBack?: boolean;                // show back arrow
+  rightActions?: React.ReactNode;    // custom right-side icons
+  dark?: boolean;                    // dark (navy) header vs white
+}
+```
+
+**Header Rules:**
+- Height: always **56px** (STATUS_BAR + 56)
+- Left zone: 44×44 tap target (menu OR back)
+- Center: title (semibold, 17px) OR logo (max 120px wide)
+- Right zone: up to 2 icon buttons, each 44×44
+- Dark header = white icons/text (used on Dashboard)
+- White header = navy icons/text (used on Sales, Products, Transfers)
+
+---
+
+### Button System (`components/common/Button.tsx`) — NEW FILE
+
+```typescript
+// Variants
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+type ButtonSize    = 'sm' | 'md' | 'lg';
+
+// primary  → navy background, white text
+// secondary→ ice-blue background, navy text  
+// ghost    → transparent, navy border, navy text
+// danger   → red background, white text
+
+// Sizes:
+// sm  → height 36, fontSize 13, paddingH 12
+// md  → height 44, fontSize 15, paddingH 16  (default)
+// lg  → height 52, fontSize 17, paddingH 20
+```
+
+---
+
+### Card Component (`components/common/Card.tsx`) — NEW FILE
+
+```typescript
+// Single card style across ALL screens
+// white background, border: 1px #E2E8F0, borderRadius: 16, shadow: card
+// Variants: default | highlighted (ice-blue left border accent)
+```
+
+---
+
+### Status Badge (`components/common/StatusBadge.tsx`) — NEW FILE
+
+```typescript
+// paid     → green bg (#ECFDF5) + green text (#10B981)
+// partial  → amber bg (#FFFBEB) + amber text (#F59E0B)  
+// due      → red bg   (#FEF2F2) + red text   (#EF4444)
+// Always: borderRadius: full, paddingH: 10, paddingV: 4, fontSize: 12, fontWeight: semibold
+```
+
+---
+
+## 📐 Screen-by-Screen Redesign Specs
+
+### 1. Dashboard (`app/(tabs)/index.tsx`)
+- **Header**: Dark navy gradient, show logo centered, menu left, logout right
+- **Greeting**: white, regular weight, 15px | name bold 20px
+- **Revenue section**: large white number (38px hero), stays in gradient zone
+- **Metric Cards**: 2×2 grid, white cards with shadow, icon in soft-tinted circle (24px icon)
+- **Quick Actions**: horizontal scroll row, each card 80px wide, icon 28px in colored circle, label 12px centered below
+- **Section titles**: 17px semibold, textPrimary
+
+### 2. Sales (`app/(tabs)/sales.tsx`)
+- **Header**: white header, title "Sales History" in navy, menu left, print+cloud right
+- **Search bar**: inputBg, radius 12, 44px tall, magnifier icon left
+- **Filter chips**: all=navy filled, others=ghost outline; same height 36px, all same font
+- **Summary pills** (Payé/Impayé): colored background pills, right-aligned row
+- **Sale cards**: unified Card component, PAID badge top-left with StatusBadge, amount in accent color
+
+### 3. Products (`app/(tabs)/products/index.tsx`)
+- **Header**: white, title "Products" navy, menu left, refresh+cart right (same size)
+- **View toggle** (grid/list): ghost button group, 36px height each
+- **Product cards (list)**: Card component — price bold navy left, stock badge (blue pill), name right, image placeholder circle
+- In-stock items: full color; out-of-stock: muted (opacity 0.5)
+
+### 4. Transfers (`app/(tabs)/transfers/index.tsx`)
+- **Header**: white header (NOT dark), title "Stock Transfers", Scan QR button = primary button sm variant
+- **Transfer cards**: Card component with white background (not dark navy!)
+- Arrow between locations: accent color icon
+- Item count + value: secondary text, same style as Sales
+
+### 5. Sidebar/Menu
+- Overlay from left, 75% screen width
+- White background, navy header "Menu"
+- Each menu item: 56px tall, icon (22px) + label (17px medium), navy icon, navy text
+- Active item: accentSoft background, accent icon
+- Divider between groups
+
+---
+
+## 🗂️ Optimized Project Structure
+
+```
+constants/
+  colors.ts        ← existing, expand with full palette above
+  typography.ts    ← NEW: FontFamily, FontSize, LineHeight
+  layout.ts        ← NEW: Spacing, Radius, IconSize, Shadow
+  index.ts         ← NEW: barrel export (export * from './colors', etc.)
+
+components/
+  common/
+    AppHeader.tsx        ← NEW: unified header (replaces per-screen headers)
+    Button.tsx           ← NEW: primary/secondary/ghost/danger variants
+    Card.tsx             ← NEW: unified card with shadow/border
+    StatusBadge.tsx      ← NEW: paid/partial/due badge
+    SearchBar.tsx        ← NEW: reusable search input
+    FilterChips.tsx      ← NEW: reusable chip row
+    SectionTitle.tsx     ← NEW: consistent section heading
+    EmptyState.tsx       ← NEW: empty list placeholder
+    LoadingSpinner.tsx   ← NEW: consistent loading indicator
+    ScreenContainer.tsx  ← existing, keep
+    CustomAlert.tsx      ← existing, keep
+  AlertModal.tsx
+  ErrorBoundary.tsx
+  ErrorFallback.tsx
+  KeyboardAwareScrollViewCompat.tsx
+  Sidebar.tsx            ← refactor to use new colors/spacing
+```
+
+---
+
+## 🚀 Implementation Priority
+
+1. **`constants/colors.ts`** — update with full palette (breaks nothing, unblocks all)
+2. **`constants/typography.ts`** + **`constants/layout.ts`** — create new files
+3. **`constants/index.ts`** — barrel export
+4. **`components/common/AppHeader.tsx`** — unified header
+5. **`components/common/Button.tsx`** + **`Card.tsx`** + **`StatusBadge.tsx`**
+6. Refactor screens one-by-one using new components
+
+---
+
+## 💡 Key Principles
+
+- **One source of truth**: every color, size, spacing comes from `constants/`
+- **Never hardcode** hex colors or pixel values in screen files
+- **Shared components** for anything used on 2+ screens
+- **Consistent 44px tap targets** for all interactive elements (accessibility)
+- **All headers = 56px** — no exceptions
+- **All cards** use the Card component — no custom card styles inline

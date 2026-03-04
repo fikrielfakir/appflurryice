@@ -1,0 +1,107 @@
+// constants/typography.ts
+// FlurryIce — Typography system
+
+import { Platform } from 'react-native';
+
+export const FontFamily = {
+  regular:  Platform.OS === 'ios' ? 'System'  : 'Roboto',
+  medium:   Platform.OS === 'ios' ? 'System'  : 'Roboto-Medium',
+  semibold: Platform.OS === 'ios' ? 'System'  : 'Roboto-Medium',
+  bold:     Platform.OS === 'ios' ? 'System'  : 'Roboto-Bold',
+};
+
+export const FontWeight = {
+  regular:  '400' as const,
+  medium:   '500' as const,
+  semibold: '600' as const,
+  bold:     '700' as const,
+  heavy:    '800' as const,
+};
+
+export const FontSize = {
+  xs:   11,
+  sm:   12,
+  base: 14,
+  md:   15,
+  lg:   17,
+  xl:   20,
+  xxl:  24,
+  xxxl: 30,
+  hero: 38,
+};
+
+export const LineHeight = {
+  tight:   1.2,
+  snug:    1.35,
+  normal:  1.5,
+  relaxed: 1.65,
+};
+
+// Pre-composed text styles for common use
+export const TextStyle = {
+  heroNumber: {
+    fontSize: FontSize.hero,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -1,
+  },
+  heading1: {
+    fontSize: FontSize.xxl,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -0.5,
+  },
+  heading2: {
+    fontSize: FontSize.xl,
+    fontWeight: FontWeight.bold,
+  },
+  screenTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: -0.2,
+  },
+  cardTitle: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+  },
+  body: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.regular,
+  },
+  bodyMedium: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
+  },
+  label: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.medium,
+    letterSpacing: 0.2,
+  },
+  caption: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.regular,
+    letterSpacing: 0.1,
+  },
+  badge: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.bold,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase' as const,
+  },
+  buttonLg: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    letterSpacing: 0.1,
+  },
+  buttonMd: {
+    fontSize: FontSize.md,
+    fontWeight: FontWeight.semibold,
+  },
+  buttonSm: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+  },
+  amount: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    letterSpacing: -0.3,
+  },
+};

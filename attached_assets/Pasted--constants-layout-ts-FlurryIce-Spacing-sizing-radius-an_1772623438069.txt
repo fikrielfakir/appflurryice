@@ -1,0 +1,111 @@
+// constants/layout.ts
+// FlurryIce — Spacing, sizing, radius, and shadow system
+
+import { Platform, Dimensions } from 'react-native';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+export { SCREEN_WIDTH, SCREEN_HEIGHT };
+
+export const Spacing = {
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   20,
+  xxl:  24,
+  xxxl: 32,
+  huge: 40,
+};
+
+export const Radius = {
+  xs:   4,
+  sm:   8,
+  md:   12,
+  lg:   16,
+  xl:   20,
+  xxl:  24,
+  full: 9999,
+};
+
+export const IconSize = {
+  xs:  14,
+  sm:  18,
+  md:  22,
+  lg:  26,
+  xl:  32,
+};
+
+// All interactive touch targets must be at least 44px (Apple HIG / WCAG)
+export const TouchTarget = {
+  min:    44,
+  normal: 44,
+  large:  52,
+};
+
+export const HeaderHeight = {
+  // Consistent across ALL screens — no exceptions
+  bar: 56,
+};
+
+export const ButtonHeight = {
+  sm: 36,
+  md: 44,
+  lg: 52,
+};
+
+export const InputHeight = {
+  sm: 40,
+  md: 48,
+  lg: 54,
+};
+
+export const CardPadding = {
+  sm: Spacing.md,
+  md: Spacing.lg,
+  lg: Spacing.xl,
+};
+
+// Cross-platform shadows
+export const Shadow = {
+  none: Platform.select({
+    ios:     {},
+    android: { elevation: 0 },
+  }),
+  sm: Platform.select({
+    ios: {
+      shadowColor:   '#0A2463',
+      shadowOffset:  { width: 0, height: 1 },
+      shadowOpacity: 0.06,
+      shadowRadius:  4,
+    },
+    android: { elevation: 2 },
+  }),
+  card: Platform.select({
+    ios: {
+      shadowColor:   '#0A2463',
+      shadowOffset:  { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius:  8,
+    },
+    android: { elevation: 3 },
+  }),
+  header: Platform.select({
+    ios: {
+      shadowColor:   '#000000',
+      shadowOffset:  { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius:  4,
+    },
+    android: { elevation: 4 },
+  }),
+  modal: Platform.select({
+    ios: {
+      shadowColor:   '#000000',
+      shadowOffset:  { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius:  24,
+    },
+    android: { elevation: 16 },
+  }),
+};
