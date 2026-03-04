@@ -8,7 +8,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp } from "@/context/AppContext";
-import POS from "@/constants/pos-colors";
+import { Colors as POS } from "@/constants";
 
 const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Cheque", "Other"];
 

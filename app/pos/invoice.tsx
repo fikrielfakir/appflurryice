@@ -8,7 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
-import POS from "@/constants/pos-colors";
+import { Colors as POS } from "@/constants";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 import { Sale } from "@/context/AppContext";
 

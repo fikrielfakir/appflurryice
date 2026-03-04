@@ -8,7 +8,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp, Contact } from "@/context/AppContext";
-import POS from "@/constants/pos-colors";
+import { Colors as POS } from "@/constants";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
