@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import Colors from "@/constants/colors";
+import { AlertModal } from "@/components/AlertModal";
 
 const C = Colors.dark;
 
@@ -35,15 +36,30 @@ export default function ProductsScreen() {
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    visible: false,
+    title: "",
+    message: "",
+    type: "info",
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    setAlertConfig({ visible: true, title, message, type });
+  };
 
   const handleResetStock = () => {
     if (password === userProfile?.password) {
       resetAllStock();
       setIsResetModalVisible(false);
       setPassword("");
-      Alert.alert("Success", "All stock has been reset to 0.");
+      showAlert("Succès", "Tous les stocks ont été réinitialisés à 0.", "success");
     } else {
-      Alert.alert("Error", "Incorrect password.");
+      showAlert("Erreur", "Mot de passe incorrect.", "error");
     }
   };
 
@@ -61,7 +77,7 @@ export default function ProductsScreen() {
       style={[styles.productCard, item.stock <= 0 && styles.productCardDisabled]} 
       onPress={() => {
         if (item.stock <= 0) {
-          Alert.alert("Indisponible", "Ce produit est en rupture de stock.");
+          showAlert("Indisponible", "Ce produit est en rupture de stock.", "warning");
           return;
         }
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -237,6 +253,14 @@ export default function ProductsScreen() {
           </View>
         </View>
       </Modal>
+
+      <AlertModal
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
+      />
     </View>
   );
 }
