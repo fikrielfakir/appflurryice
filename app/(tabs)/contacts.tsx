@@ -9,8 +9,10 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp, Contact } from "@/context/AppContext";
 import { Colors } from "@/constants";
-
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
+import { router } from "expo-router";
+import Toast from 'react-native-root-toast';
 
 const C = Colors;
 
@@ -69,11 +71,10 @@ function ContactCard({ contact, onDelete }: { contact: Contact; onDelete: () => 
   );
 }
 
-import Toast from 'react-native-root-toast';
-
 export default function ContactsScreen() {
   const insets = useSafeAreaInsets();
   const { contacts, addContact, deleteContact, setIsSidebarOpen } = useApp();
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [modalVisible, setModalVisible] = useState(false);
@@ -116,17 +117,19 @@ export default function ContactsScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.surface }]}>
+    <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
       <AppHeader
-        title="Contacts"
+        title={t('contacts.title')}
         dark
+        showBack
+        onBackPress={() => router.back()}
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setIsSidebarOpen(true);
         }}
       />
-      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
+      <LinearGradient colors={[C.transparent, C.transparent]} style={[styles.header, { paddingTop: 16 }]}>
         <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{contacts.length} contacts</Text>
         <View style={styles.searchRow}>
           <View style={[styles.searchBox, { backgroundColor: C.card, borderColor: C.border }]}>
@@ -232,7 +235,7 @@ export default function ContactsScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 }
 

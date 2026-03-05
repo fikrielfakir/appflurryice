@@ -9,8 +9,10 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
-
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
+import { router } from "expo-router";
+import Toast from 'react-native-root-toast';
 
 const C = Colors;
 
@@ -36,11 +38,10 @@ function catColor(cat: string) {
   return CATEGORY_COLORS[cat] || C.primary;
 }
 
-import Toast from 'react-native-root-toast';
-
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
   const { expenses, addExpense, deleteExpense, totalExpenses, setIsSidebarOpen } = useApp();
+  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [amount, setAmount] = useState("");
@@ -87,22 +88,24 @@ export default function ExpensesScreen() {
   }
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.surface }]}>
-      <AppHeader
-        title="Expenses"
+    <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
+      <AppHeader 
+        title={t('expenses.title')}
         dark
+        showBack
+        onBackPress={() => router.back()}
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           setIsSidebarOpen(true);
         }}
       />
-      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
+      <LinearGradient colors={[C.transparent, C.transparent]} style={[styles.header, { paddingTop: 16 }]}>
         <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{expenses.length} records</Text>
         <View style={[styles.totalCard, { backgroundColor: C.accentSoft + "40", borderColor: C.accent + "33" }]}>
           <View>
-            <Text style={[styles.totalLabel, { color: C.textSecondary }]}>Total Expenses</Text>
-            <Text style={[styles.totalValue, { color: C.accent }]}>MAD {fmt(totalExpenses)}</Text>
+            <Text style={[styles.totalLabel, { color: C.white }]}>Total Expenses</Text>
+            <Text style={[styles.totalValue, { color: C.white }]}>MAD {fmt(totalExpenses)}</Text>
           </View>
           <View style={styles.catSummary}>
             {byCat.map(([cat, amt]) => (
@@ -236,7 +239,7 @@ export default function ExpensesScreen() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </View>
+    </LinearGradient>
   );
 }
 

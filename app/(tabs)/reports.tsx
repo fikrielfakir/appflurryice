@@ -2,13 +2,15 @@ import React, { useMemo } from "react";
 import {
   View, Text, ScrollView, StyleSheet, Platform, TouchableOpacity,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
-
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
+import { router } from "expo-router";
 
 const C = Colors;
 
@@ -56,6 +58,7 @@ function BarChart({ items, max }: { items: { label: string; value: number; color
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { sales, expenses, totalSales, totalExpenses, totalDue, netProfit, contacts, setIsSidebarOpen } = useApp();
+  const { t } = useTranslation();
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -88,10 +91,12 @@ export default function ReportsScreen() {
   const marginPct = totalSales > 0 ? ((netProfit / totalSales) * 100).toFixed(1) : "0.0";
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.surface }]}>
+    <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
       <AppHeader
-        title="Reports"
+        title={t('reports.title')}
         dark
+        showBack
+        onBackPress={() => router.back()}
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -99,8 +104,7 @@ export default function ReportsScreen() {
         }}
       />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
-        <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
-          <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>Business performance overview</Text>
+        <LinearGradient colors={[C.transparent, C.transparent]} style={[styles.header, { paddingTop: 16 }]}>
         </LinearGradient>
         <View style={styles.metricsGrid}>
           <MetricCard label="Total Revenue" value={`MAD ${fmt(totalSales)}`} icon="trending-up" color={C.primaryLight} sub={`${sales.length} sales`} />
@@ -213,7 +217,7 @@ export default function ReportsScreen() {
           </View>
         </View>
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 

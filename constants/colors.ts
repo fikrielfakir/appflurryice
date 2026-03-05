@@ -10,6 +10,7 @@ export const Colors = {
   accent:       '#00B4D8',  // Ice Blue — highlights, badges, links
   accentLight:  '#38C9E8',  // Lighter ice blue
   accentSoft:   '#E0F7FC',  // Ice Blue tint — chips, selected bg
+  transparent:   '#ffffff00',
 
   // ── Neutrals ─────────────────────────────────
   white:        '#FFFFFF',
