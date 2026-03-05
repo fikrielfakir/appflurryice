@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   side: {
-    width:          44,
+    minWidth: 80,
     alignItems:     'center',
     justifyContent: 'center',
   },

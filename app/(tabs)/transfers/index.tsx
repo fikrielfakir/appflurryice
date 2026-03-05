@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Dimensions, Platform, Modal, Pressable, ScrollView, Share } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Dimensions, Platform, Modal, Pressable, ScrollView, Share, ActivityIndicator } from 'react-native';
 import { Camera, CameraView, useCameraPermissions } from 'expo-camera';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp, Transfer } from '@/context/AppContext';
@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 import { AppHeader } from '@/components/common/AppHeader';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
+import { usePrintInvoice } from '@/hooks/usePrintInvoice';
 
 const C = Colors;
 const { width } = Dimensions.get('window');
@@ -24,6 +25,20 @@ export default function TransfersScreen() {
   const [scanning, setScanning] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
+  const [showPrintOverlay, setShowPrintOverlay] = useState(false);
+  const { printTransfer, isConnecting, isPrinting, isSuccess, error: printError, currentPrinter } = usePrintInvoice();
+
+  useEffect(() => {
+    if (isConnecting || isPrinting) {
+      setShowPrintOverlay(true);
+    } else if (isSuccess) {
+      setShowPrintOverlay(false);
+      Toast.show(t('printer.success'), { duration: 2000, backgroundColor: C.success });
+    } else if (printError) {
+      setShowPrintOverlay(false);
+      Toast.show(printError, { duration: 2000, backgroundColor: C.danger });
+    }
+  }, [isConnecting, isPrinting, isSuccess, printError]);
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -89,7 +104,8 @@ export default function TransfersScreen() {
   };
 
   const handlePrint = (item: Transfer) => {
-    Toast.show(t('printer.connecting'), { duration: 1500, backgroundColor: C.primary });
+    setSelectedTransfer(item);
+    setShowDetailSheet(true);
   };
 
   const handleView = (item: Transfer) => {
@@ -249,14 +265,26 @@ export default function TransfersScreen() {
                 </View>
 
                 <TouchableOpacity 
-                  style={styles.printButton}
-                  onPress={() => {
-                    Toast.show(t('printer.connecting'), { duration: 1500, backgroundColor: C.primary });
-                    setShowDetailSheet(false);
+                  style={[styles.printButton, (isConnecting || isPrinting) && styles.printButtonDisabled]}
+                  onPress={async () => {
+                    if (!currentPrinter) {
+                      Toast.show(t('printer.notConnected'), { duration: 2000, backgroundColor: C.danger });
+                      return;
+                    }
+                    await printTransfer(selectedTransfer);
                   }}
+                  disabled={isConnecting || isPrinting}
                 >
-                  <Feather name="printer" size={20} color="#fff" />
-                  <Text style={styles.printButtonText}>{t('common.print')}</Text>
+                  {isConnecting || isPrinting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Feather name="printer" size={20} color="#fff" />
+                      <Text style={styles.printButtonText}>
+                        {isConnecting ? t('printer.connecting') : isPrinting ? t('printer.printing') : t('common.print')}
+                      </Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </ScrollView>
             )}
@@ -269,6 +297,22 @@ export default function TransfersScreen() {
             </TouchableOpacity>
           </Pressable>
         </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showPrintOverlay}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}
+      >
+        <View style={styles.printOverlay}>
+          <View style={styles.printOverlayContent}>
+            <ActivityIndicator size="large" color={C.primary} />
+            <Text style={styles.printOverlayText}>
+              {isConnecting ? t('printer.connecting') : t('printer.printing')}
+            </Text>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -353,7 +397,11 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 16, fontFamily: 'Inter_700Bold', color: C.textPrimary },
   totalValue: { fontSize: 18, fontFamily: 'Inter_700Bold', color: C.primary },
   printButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: C.primary, padding: 16, borderRadius: 12, marginBottom: 12 },
+  printButtonDisabled: { opacity: 0.6 },
   printButtonText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   closeButton: { backgroundColor: C.card, padding: 16, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: C.border },
   closeButtonText: { color: C.textPrimary, fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  printOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  printOverlayContent: { backgroundColor: C.surface, padding: 32, borderRadius: 16, alignItems: 'center', minWidth: 200 },
+  printOverlayText: { marginTop: 16, fontSize: 16, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
 });

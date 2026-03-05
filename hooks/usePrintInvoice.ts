@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Platform, PermissionsAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useApp, Sale } from '@/context/AppContext';
+import { useApp, Sale, Transfer } from '@/context/AppContext';
 
 const PRINTER_STORAGE_KEY = '@bizpos_saved_printer';
 const PAPER_WIDTH = 576; // 80mm printer (8 dots/mm * 72mm printable width)
@@ -15,6 +15,7 @@ export interface PrinterDevice {
 
 export interface UsePrintInvoiceReturn {
   print: (sale: Sale) => Promise<void>;
+  printTransfer: (transfer: Transfer) => Promise<void>;
   isConnecting: boolean;
   isPrinting: boolean;
   isSuccess: boolean;
@@ -77,6 +78,38 @@ function generateReceiptText(sale: Sale): string {
   lines.push(leftRight('طريقة الدفع', sale.paymentMethod));
   lines.push('');
   lines.push(center('شكرا لثقتكم!'));
+  lines.push('');
+  
+  return lines.join('\n');
+}
+
+function generateTransferText(transfer: Transfer): string {
+  const lines: string[] = [];
+  const width = 48;
+  
+  const center = (s: string) => s.padStart((width + s.length) / 2).padEnd(width);
+  const leftRight = (l: string, r: string) => l.padEnd(width - r.length) + r;
+  
+  lines.push(center('تحويل مخزون'));
+  lines.push('-'.repeat(width));
+  lines.push(`رقم المرجع: ${transfer.ref}`);
+  lines.push(`التاريخ: ${new Date(transfer.date).toLocaleString('ar-MA')}`);
+  lines.push('-'.repeat(width));
+  lines.push(leftRight('من', transfer.from));
+  lines.push(leftRight('إلى', transfer.to));
+  lines.push('-'.repeat(width));
+  
+  for (const item of transfer.items) {
+    const line = `${item.name} x${item.qty}`;
+    const price = fmt(item.qty * (parseFloat(item.unit) || 0));
+    lines.push(leftRight(line, price + ' MAD'));
+  }
+  
+  lines.push('-'.repeat(width));
+  lines.push(leftRight('المجموع', fmt(transfer.total) + ' MAD'));
+  lines.push('-'.repeat(width));
+  lines.push('');
+  lines.push(center('شكرا لاستخدامكم BizPOS!'));
   lines.push('');
   
   return lines.join('\n');
@@ -366,6 +399,69 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     }
   }, [currentPrinter]);
 
+  const printTransfer = useCallback(async (transfer: Transfer) => {
+    if (!Printer.current || !BleManager.current) {
+      setError(ERROR_MESSAGES.NO_PRINTER);
+      setState('error');
+      return;
+    }
+
+    if (!currentPrinter) {
+      setError(ERROR_MESSAGES.NO_PRINTER);
+      setState('error');
+      return;
+    }
+
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) {
+      setState('error');
+      return;
+    }
+
+    setState('connecting');
+    setError(null);
+
+    try {
+      await Printer.current.init({
+        width: PAPER_WIDTH,
+        deviceId: currentPrinter.id,
+      });
+
+      setState('printing');
+
+      const text = generateTransferText(transfer);
+      
+      await Printer.current.printText(text, {
+        encoding: 'UTF-8',
+        codepage: 21,
+        widthTimes: 0,
+        heightTimes: 0,
+        fontType: 0,
+      });
+
+      await Printer.current.cut();
+      
+      setState('success');
+      
+      setTimeout(() => {
+        setState('idle');
+      }, 2000);
+      
+    } catch (err: any) {
+      console.error('Print error:', err);
+      
+      const errMsg = err.message?.toLowerCase() || '';
+      if (errMsg.includes('bluetooth')) {
+        setError(ERROR_MESSAGES.BT_OFF);
+      } else if (errMsg.includes('connect') || errMsg.includes('connection')) {
+        setError(ERROR_MESSAGES.CONNECTION_FAILED);
+      } else {
+        setError(ERROR_MESSAGES.PRINT_FAILED);
+      }
+      setState('error');
+    }
+  }, [currentPrinter]);
+
   const retry = useCallback(() => {
     setState('idle');
     setError(null);
@@ -375,6 +471,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
 
   return {
     print,
+    printTransfer,
     isConnecting: state === 'connecting',
     isPrinting: state === 'printing',
     isSuccess: state === 'success',

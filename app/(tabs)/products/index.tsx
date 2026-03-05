@@ -155,17 +155,17 @@ export default function ProductsScreen() {
                 syncData();
               }}
               disabled={isSyncing}
-              style={styles.cartBtnHeader}
+              style={[styles.cartBtnHeader, { backgroundColor: 'transparent' }]}
             >
               {isSyncing ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Feather name="cloud" size={18} color="#fff" />
+                <Feather name="cloud" size={20} color="#fff" />
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.cartBtnHeader}
+              style={[styles.cartBtnHeader, { backgroundColor: C.surface }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 setIsResetModalVisible(true);
@@ -175,7 +175,7 @@ export default function ProductsScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.cartBtnHeader}
+              style={[styles.cartBtnHeader, { backgroundColor: C.surface }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/pos/cart");
@@ -186,7 +186,7 @@ export default function ProductsScreen() {
                   <Text style={styles.cartBadgeText}>{cart.length}</Text>
                 </View>
               )}
-              <Feather name="shopping-cart" size={24} color="#fff" />
+              <Feather name="shopping-cart" size={20} color={C.primary} />
             </TouchableOpacity>
           </View>
         }
@@ -448,6 +448,29 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
     resizeMode: "cover",
+  },
+  cartBtnHeader: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  cartBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
   },
   placeholderImage: {
     width: "100%",
