@@ -58,6 +58,7 @@ export default function ReportsScreen() {
   const { sales, expenses, totalSales, totalExpenses, totalDue, netProfit, contacts, setIsSidebarOpen } = useApp();
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const paidSales = useMemo(() => sales.filter(s => s.status === "paid").length, [sales]);
   const dueSales = useMemo(() => sales.filter(s => s.status === "due").length, [sales]);

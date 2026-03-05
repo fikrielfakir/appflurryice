@@ -48,6 +48,7 @@ export default function ExpensesScreen() {
   const [note, setNote] = useState("");
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const byCat = useMemo(() => {
     const m: Record<string, number> = {};

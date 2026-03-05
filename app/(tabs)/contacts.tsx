@@ -83,6 +83,7 @@ export default function ContactsScreen() {
   const [type, setType] = useState<Contact["type"]>("customer");
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const filtered = useMemo(() => {
     return contacts.filter(c => {
