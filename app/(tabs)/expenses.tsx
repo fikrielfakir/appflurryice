@@ -10,6 +10,8 @@ import * as Haptics from "expo-haptics";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 
+import { AppHeader } from "@/components/common/AppHeader";
+
 const C = Colors;
 
 const CATEGORIES = ["Office Rent", "Utilities", "Salaries", "Marketing", "Supplies", "Travel", "Equipment", "Other"];
@@ -38,15 +40,14 @@ import Toast from 'react-native-root-toast';
 
 export default function ExpensesScreen() {
   const insets = useSafeAreaInsets();
-  const { expenses, addExpense, deleteExpense, totalExpenses } = useApp();
+  const { expenses, addExpense, deleteExpense, totalExpenses, setIsSidebarOpen } = useApp();
   const [modalVisible, setModalVisible] = useState(false);
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [note, setNote] = useState("");
 
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const topInset = Platform.OS === "web" ? 20 : insets.top;
 
   const byCat = useMemo(() => {
     const m: Record<string, number> = {};
@@ -86,8 +87,16 @@ export default function ExpensesScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.surface }]}>
-      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Expenses</Text>
+      <AppHeader
+        title="Expenses"
+        dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setIsSidebarOpen(true);
+        }}
+      />
+      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
         <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{expenses.length} records</Text>
         <View style={[styles.totalCard, { backgroundColor: C.accentSoft + "40", borderColor: C.accent + "33" }]}>
           <View>

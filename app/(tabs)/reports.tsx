@@ -8,6 +8,8 @@ import { Feather } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 
+import { AppHeader } from "@/components/common/AppHeader";
+
 const C = Colors;
 
 function fmt(n: number) {
@@ -53,10 +55,9 @@ function BarChart({ items, max }: { items: { label: string; value: number; color
 
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, expenses, totalSales, totalExpenses, totalDue, netProfit, contacts } = useApp();
+  const { sales, expenses, totalSales, totalExpenses, totalDue, netProfit, contacts, setIsSidebarOpen } = useApp();
 
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const topInset = Platform.OS === "web" ? 20 : insets.top;
 
   const paidSales = useMemo(() => sales.filter(s => s.status === "paid").length, [sales]);
   const dueSales = useMemo(() => sales.filter(s => s.status === "due").length, [sales]);
@@ -87,12 +88,19 @@ export default function ReportsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.surface }]}>
-      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Reports</Text>
-        <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>Business performance overview</Text>
-      </LinearGradient>
-
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + bottomInset }}>
+      <AppHeader
+        title="Reports"
+        dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setIsSidebarOpen(true);
+        }}
+      />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
+        <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
+          <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>Business performance overview</Text>
+        </LinearGradient>
         <View style={styles.metricsGrid}>
           <MetricCard label="Total Revenue" value={`MAD ${fmt(totalSales)}`} icon="trending-up" color={C.primaryLight} sub={`${sales.length} sales`} />
           <MetricCard label="Total Expenses" value={`MAD ${fmt(totalExpenses)}`} icon="trending-down" color={C.accent} sub={`${expenses.length} records`} />

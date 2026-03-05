@@ -10,6 +10,8 @@ import * as Haptics from "expo-haptics";
 import { useApp, Contact } from "@/context/AppContext";
 import { Colors } from "@/constants";
 
+import { AppHeader } from "@/components/common/AppHeader";
+
 const C = Colors;
 
 const TYPES = ["customer", "lead", "supplier"] as const;
@@ -71,7 +73,7 @@ import Toast from 'react-native-root-toast';
 
 export default function ContactsScreen() {
   const insets = useSafeAreaInsets();
-  const { contacts, addContact, deleteContact } = useApp();
+  const { contacts, addContact, deleteContact, setIsSidebarOpen } = useApp();
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [modalVisible, setModalVisible] = useState(false);
@@ -80,8 +82,7 @@ export default function ContactsScreen() {
   const [email, setEmail] = useState("");
   const [type, setType] = useState<Contact["type"]>("customer");
 
-  const topInset = Platform.OS === "web" ? 67 : insets.top;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+  const topInset = Platform.OS === "web" ? 20 : insets.top;
 
   const filtered = useMemo(() => {
     return contacts.filter(c => {
@@ -115,8 +116,16 @@ export default function ContactsScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: C.surface }]}>
-      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: topInset + 16 }]}>
-        <Text style={[styles.headerTitle, { color: C.textOnDark }]}>Contacts</Text>
+      <AppHeader
+        title="Contacts"
+        dark
+        showMenu
+        onMenuPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          setIsSidebarOpen(true);
+        }}
+      />
+      <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
         <Text style={[styles.headerSub, { color: C.textOnDark + "CC" }]}>{contacts.length} contacts</Text>
         <View style={styles.searchRow}>
           <View style={[styles.searchBox, { backgroundColor: C.card, borderColor: C.border }]}>
