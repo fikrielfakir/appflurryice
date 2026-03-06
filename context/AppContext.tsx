@@ -76,16 +76,19 @@ export interface SaleItem {
   productId?: string;
 }
 
-export interface LogSale {
+export interface Transaction {
   id: string;
+  date: string;
+  referenceNo: string;
+  type: "sell" | "transfer_in" | "transfer_out" | "adjustment";
   productId: string;
   productName: string;
-  quantitySold: number;
-  quantityRemaining: number;
-  dateSold: string;
-  saleId: string;
+  quantity: number;
+  sellId?: string;
+  transferId?: string;
 }
 
+// ... existing interfaces ...
 export interface Contact {
   id: string;
   name: string;
@@ -119,7 +122,7 @@ interface AppContextValue {
   isLoggedIn: boolean;
   needsSetup: boolean;
   sales: Sale[];
-  logSales: LogSale[];
+  transactions: Transaction[];
   contacts: Contact[];
   expenses: Expense[];
   products: Product[];
@@ -161,7 +164,7 @@ const KEYS = {
   userProfile: "bizpos_user_profile",
   activeUser: "bizpos_active_user",
   sales: "bizpos_sales",
-  logsSales: "bizpos_logs_sales",
+  transactions: "bizpos_transactions",
   contacts: "bizpos_contacts",
   expenses: "bizpos_expenses",
   transfers: "bizpos_transfers",
@@ -218,7 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [needsSetup, setNeedsSetup] = useState(false);
 
   const [sales, setSales] = useState<Sale[]>([]);
-  const [logSales, setLogSales] = useState<LogSale[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -246,7 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         profileRaw,
         activeUserRaw,
         savedSales,
-        savedLogsSales,
+        savedTransactions,
         savedContacts,
         savedExpenses,
         savedTransfers,
@@ -257,7 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.userProfile),
         AsyncStorage.getItem(KEYS.activeUser),
         AsyncStorage.getItem(KEYS.sales),
-        AsyncStorage.getItem(KEYS.logsSales),
+        AsyncStorage.getItem(KEYS.transactions),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
         AsyncStorage.getItem(KEYS.transfers),
@@ -282,7 +285,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // ── Local data ─────────────────────────────────────────────────────────
       setSales(savedSales ? JSON.parse(savedSales) : []);
-      setLogSales(savedLogsSales ? JSON.parse(savedLogsSales) : []);
+      setTransactions(savedTransactions ? JSON.parse(savedTransactions) : []);
       setContacts(savedContacts ? JSON.parse(savedContacts) : []);
       setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
       setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
@@ -436,23 +439,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       date: now,
     };
     
-    const newLogs: LogSale[] = sale.items.map(item => {
+    const newTransactions: Transaction[] = sale.items.map(item => {
       const product = products.find(p => p.name === item.name);
-      const remainingStock = product ? (product.stock || 0) : 0;
       return {
         id: genId(),
+        date: now,
+        referenceNo: newSale.invoiceNumber,
+        type: "sell",
         productId: product?.id || '',
         productName: item.name,
-        quantitySold: item.qty,
-        quantityRemaining: remainingStock,
-        dateSold: now,
-        saleId: newSale.id,
+        quantity: -item.qty,
+        sellId: newSale.id,
       };
     });
     
-    const updatedLogs = [...newLogs, ...logSales];
-    setLogSales(updatedLogs);
-    AsyncStorage.setItem(KEYS.logsSales, JSON.stringify(updatedLogs));
+    const updatedTransactions = [...newTransactions, ...transactions];
+    setTransactions(updatedTransactions);
+    AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
     
     const updated = [newSale, ...sales];
     setSales(updated);
@@ -493,6 +496,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function addTransfer(transfer: Transfer) {
+    const transferTransactions: Transaction[] = transfer.items.map(item => {
+      const product = products.find(p => p.sku === item.sku);
+      return {
+        id: genId(),
+        date: transfer.date,
+        referenceNo: transfer.ref,
+        type: "transfer_out", // Defaulting to out for stock reduction
+        productId: product?.id || '',
+        productName: item.name,
+        quantity: -item.qty,
+        transferId: transfer.id,
+      };
+    });
+    const updatedTransactions = [...transferTransactions, ...transactions];
+    setTransactions(updatedTransactions);
+    AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
+
     const updatedTransfers = [transfer, ...transfers];
     setTransfers(updatedTransfers);
     await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
@@ -555,7 +575,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, logSales, contacts, expenses, products, transfers, cart, config, updateConfig,
+    sales, transactions, contacts, expenses, products, transfers, cart, config, updateConfig,
     setupFromQR,
     completeSetup,
     login, logout,
@@ -573,7 +593,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isLoading, isSyncing, isSidebarOpen, setIsSidebarOpen, syncData, lastSyncTime,
   }), [
     activeUser, userProfile, needsSetup,
-    sales, contacts, expenses, products, transfers, cart, config,
+    sales, transactions, contacts, expenses, products, transfers, cart, config,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, isSidebarOpen, lastSyncTime,
   ]);
