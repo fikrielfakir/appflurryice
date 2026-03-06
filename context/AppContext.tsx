@@ -73,6 +73,17 @@ export interface SaleItem {
   name: string;
   qty: number;
   price: number;
+  productId?: string;
+}
+
+export interface LogSale {
+  id: string;
+  productId: string;
+  productName: string;
+  quantitySold: number;
+  quantityRemaining: number;
+  dateSold: string;
+  saleId: string;
 }
 
 export interface Contact {
@@ -108,6 +119,7 @@ interface AppContextValue {
   isLoggedIn: boolean;
   needsSetup: boolean;
   sales: Sale[];
+  logSales: LogSale[];
   contacts: Contact[];
   expenses: Expense[];
   products: Product[];
@@ -149,6 +161,7 @@ const KEYS = {
   userProfile: "bizpos_user_profile",
   activeUser: "bizpos_active_user",
   sales: "bizpos_sales",
+  logsSales: "bizpos_logs_sales",
   contacts: "bizpos_contacts",
   expenses: "bizpos_expenses",
   transfers: "bizpos_transfers",
@@ -205,6 +218,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [needsSetup, setNeedsSetup] = useState(false);
 
   const [sales, setSales] = useState<Sale[]>([]);
+  const [logSales, setLogSales] = useState<LogSale[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -232,6 +246,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         profileRaw,
         activeUserRaw,
         savedSales,
+        savedLogsSales,
         savedContacts,
         savedExpenses,
         savedTransfers,
@@ -242,6 +257,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.userProfile),
         AsyncStorage.getItem(KEYS.activeUser),
         AsyncStorage.getItem(KEYS.sales),
+        AsyncStorage.getItem(KEYS.logsSales),
         AsyncStorage.getItem(KEYS.contacts),
         AsyncStorage.getItem(KEYS.expenses),
         AsyncStorage.getItem(KEYS.transfers),
@@ -266,6 +282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // ── Local data ─────────────────────────────────────────────────────────
       setSales(savedSales ? JSON.parse(savedSales) : []);
+      setLogSales(savedLogsSales ? JSON.parse(savedLogsSales) : []);
       setContacts(savedContacts ? JSON.parse(savedContacts) : []);
       setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
       setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
@@ -411,12 +428,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── CRUD ──────────────────────────────────────────────────────────────────────
 
   function addSale(sale: Omit<Sale, "id" | "date" | "invoiceNumber">): Sale {
+    const now = new Date().toISOString();
     const newSale: Sale = {
       ...sale,
       id: genId(),
       invoiceNumber: genInvoiceNumber(sales.length),
-      date: new Date().toISOString(),
+      date: now,
     };
+    
+    const newLogs: LogSale[] = sale.items.map(item => {
+      const product = products.find(p => p.name === item.name);
+      const remainingStock = product ? (product.stock || 0) : 0;
+      return {
+        id: genId(),
+        productId: product?.id || '',
+        productName: item.name,
+        quantitySold: item.qty,
+        quantityRemaining: remainingStock,
+        dateSold: now,
+        saleId: newSale.id,
+      };
+    });
+    
+    const updatedLogs = [...newLogs, ...logSales];
+    setLogSales(updatedLogs);
+    AsyncStorage.setItem(KEYS.logsSales, JSON.stringify(updatedLogs));
+    
     const updated = [newSale, ...sales];
     setSales(updated);
     AsyncStorage.setItem(KEYS.sales, JSON.stringify(updated));
@@ -518,7 +555,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, contacts, expenses, products, transfers, cart, config, updateConfig,
+    sales, logSales, contacts, expenses, products, transfers, cart, config, updateConfig,
     setupFromQR,
     completeSetup,
     login, logout,

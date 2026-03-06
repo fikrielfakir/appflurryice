@@ -8,7 +8,9 @@ import { Feather } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { AppHeader } from "@/components/common/AppHeader";
+import { useTranslation } from "react-i18next";
 
 const C = Colors;
 
@@ -36,23 +38,27 @@ function MetricCard({ label, value, icon, color, sub, arLabel }: { label: string
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { sales, expenses, products, setIsSidebarOpen } = useApp();
-  const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('all');
+  const { t, i18n } = useTranslation();
+  const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('daily');
 
   const filteredSales = useMemo(() => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     return sales.filter(s => {
-      const d = new Date(s.date);
-      d.setHours(0, 0, 0, 0);
-      if (filter === 'daily') return d.getTime() === now.getTime();
+      const saleDate = new Date(s.date);
+      const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
+      
+      if (filter === 'daily') {
+        return saleDay.getTime() === today.getTime();
+      }
       if (filter === 'weekly') {
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        weekAgo.setHours(0, 0, 0, 0);
-        return d >= weekAgo;
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        return saleDay >= weekAgo;
       }
       if (filter === 'monthly') {
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return saleDay.getMonth() === today.getMonth() && saleDay.getFullYear() === today.getFullYear();
       }
       return true;
     });
@@ -60,19 +66,22 @@ export default function ReportsScreen() {
 
   const filteredExpenses = useMemo(() => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
     return expenses.filter(e => {
-      const d = new Date(e.date);
-      d.setHours(0, 0, 0, 0);
-      if (filter === 'daily') return d.getTime() === now.getTime();
+      const expDate = new Date(e.date);
+      const expDay = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+      
+      if (filter === 'daily') {
+        return expDay.getTime() === today.getTime();
+      }
       if (filter === 'weekly') {
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        weekAgo.setHours(0, 0, 0, 0);
-        return d >= weekAgo;
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        return expDay >= weekAgo;
       }
       if (filter === 'monthly') {
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return expDay.getMonth() === today.getMonth() && expDay.getFullYear() === today.getFullYear();
       }
       return true;
     });
@@ -87,8 +96,9 @@ export default function ReportsScreen() {
   }, [filteredSales, filteredExpenses]);
 
   const truckStats = useMemo(() => {
-    const count = products.length;
-    const value = products.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0);
+    const inStockProducts = products.filter(p => (p.stock || 0) > 0);
+    const count = inStockProducts.length;
+    const value = inStockProducts.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0);
     return { count, value };
   }, [products]);
 
@@ -111,8 +121,10 @@ export default function ReportsScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: C.surface }]}>
       <AppHeader
-        title="Reports"
+        title={t('reports.title')}
         dark
+        showBack
+        onBackPress={() => router.back()}
         showMenu
         onMenuPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -122,59 +134,102 @@ export default function ReportsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
           <View style={styles.filterRow}>
-            {(['daily', 'weekly', 'monthly', 'all'] as const).map(f => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
-                onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-              >
-                <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive]}>
-                  {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {(['daily', 'weekly', 'monthly', 'all'] as const).map(f => {
+              const getLabel = () => {
+                const lang = i18n.language;
+                if (f === 'daily') return lang === 'ar' ? 'اليوم' : lang === 'fr' ? "Aujourd'hui" : 'Today';
+                if (f === 'weekly') return lang === 'ar' ? 'أسبوع' : lang === 'fr' ? 'Semaine' : 'Weekly';
+                if (f === 'monthly') return lang === 'ar' ? 'شهر' : lang === 'fr' ? 'Mois' : 'Monthly';
+                return lang === 'ar' ? 'الكل' : lang === 'fr' ? 'Tout' : 'All';
+              };
+              return (
+                <TouchableOpacity
+                  key={f}
+                  style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+                  onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
+                >
+                  <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive]}>
+                    {getLabel()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </LinearGradient>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>Truck Inventory | المخزون المتبقي</Text>
+          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'المخزون المتبقي في الشاحنة' : i18n.language === 'fr' ? 'Stock restant du camion' : 'Truck Remaining Stock'}</Text>
           <View style={styles.metricsGrid}>
-            <MetricCard label="Products" arLabel="عدد المنتجات" value={`${truckStats.count}`} icon="package" color={C.primaryLight} />
-            <MetricCard label="Value" arLabel="القيمة المتبقية" value={`MAD ${fmt(truckStats.value)}`} icon="truck" color={C.accent} />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'عدد المنتجات' : i18n.language === 'fr' ? 'Nombre de produits' : 'Products Count'} 
+              value={`${truckStats.count}`} 
+              icon="package" 
+              color={C.primaryLight} 
+            />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'القيمة المتبقية' : i18n.language === 'fr' ? 'Valeur restante' : 'Remaining Value'} 
+              value={`MAD ${fmt(truckStats.value)}`} 
+              icon="truck" 
+              color={C.accent} 
+            />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>Financial Summary</Text>
+          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'الملخص المالي' : i18n.language === 'fr' ? 'Résumé financier' : 'Financial Summary'}</Text>
           <View style={styles.metricsGrid}>
-            <MetricCard label="Revenue" value={`MAD ${fmt(stats.rev)}`} icon="trending-up" color={C.primaryLight} sub={`${filteredSales.length} sales`} />
-            <MetricCard label="Expenses" value={`MAD ${fmt(stats.exp)}`} icon="trending-down" color={C.accent} sub={`${filteredExpenses.length} records`} />
-            <MetricCard label="Net Profit" value={`MAD ${fmt(stats.profit)}`} icon="award" color={stats.profit >= 0 ? C.success : C.danger} sub={`${marginPct}% margin`} />
-            <MetricCard label="Amount Due" value={`MAD ${fmt(stats.due)}`} icon="clock" color={C.warning} sub={`${dueSalesCount} unpaid`} />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'الإيرادات' : i18n.language === 'fr' ? 'Revenus' : 'Revenue'} 
+              value={`MAD ${fmt(stats.rev)}`} 
+              icon="trending-up" 
+              color={C.primaryLight} 
+              sub={`${filteredSales.length} ${i18n.language === 'ar' ? 'مبيعات' : i18n.language === 'fr' ? 'ventes' : 'sales'}`} 
+            />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'المصروفات' : i18n.language === 'fr' ? 'Dépenses' : 'Expenses'} 
+              value={`MAD ${fmt(stats.exp)}`} 
+              icon="trending-down" 
+              color={C.accent} 
+              sub={`${filteredExpenses.length} ${i18n.language === 'ar' ? 'سجلات' : i18n.language === 'fr' ? 'enregistrements' : 'records'}`} 
+            />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'صافي الربح' : i18n.language === 'fr' ? 'Bénéfice net' : 'Net Profit'} 
+              value={`MAD ${fmt(stats.profit)}`} 
+              icon="award" 
+              color={stats.profit >= 0 ? C.success : C.danger} 
+              sub={`${marginPct}% ${i18n.language === 'ar' ? 'هامش' : i18n.language === 'fr' ? 'marge' : 'margin'}`} 
+            />
+            <MetricCard 
+              label={i18n.language === 'ar' ? 'المبلغ المستحق' : i18n.language === 'fr' ? 'Montant dû' : 'Amount Due'} 
+              value={`MAD ${fmt(stats.due)}`} 
+              icon="clock" 
+              color={C.warning} 
+              sub={`${dueSalesCount} ${i18n.language === 'ar' ? 'غير مدفوع' : i18n.language === 'fr' ? 'impayé' : 'unpaid'}`} 
+            />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sales by Status</Text>
+          <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'المبيعات حسب الحالة' : i18n.language === 'fr' ? 'Ventes par statut' : 'Sales by Status'}</Text>
           <View style={styles.statusRow}>
             <View style={[styles.statusCard, { borderColor: C.success + "30" }]}>
               <Text style={[styles.statusCount, { color: C.success }]}>{paidSalesCount}</Text>
-              <Text style={styles.statusLabel}>Paid</Text>
+              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مدفوعة' : i18n.language === 'fr' ? 'Payée' : 'Paid'}</Text>
             </View>
             <View style={[styles.statusCard, { borderColor: C.warning + "30" }]}>
               <Text style={[styles.statusCount, { color: C.warning }]}>{partialSalesCount}</Text>
-              <Text style={styles.statusLabel}>Partial</Text>
+              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'جزئية' : i18n.language === 'fr' ? 'Partielle' : 'Partial'}</Text>
             </View>
             <View style={[styles.statusCard, { borderColor: C.danger + "30" }]}>
               <Text style={[styles.statusCount, { color: C.danger }]}>{dueSalesCount}</Text>
-              <Text style={styles.statusLabel}>Due</Text>
+              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مستحقة' : i18n.language === 'fr' ? 'Due' : 'Due'}</Text>
             </View>
           </View>
         </View>
 
         {expByCat.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Expense Breakdown</Text>
+            <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'تفاصيل المصروفات' : i18n.language === 'fr' ? 'Répartition des dépenses' : 'Expense Breakdown'}</Text>
             <View style={styles.chartCard}>
               <BarChart items={expByCat} max={maxExp} />
             </View>
