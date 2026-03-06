@@ -37,7 +37,7 @@ function MetricCard({ label, value, icon, color, sub, arLabel }: { label: string
 
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, expenses, products, setIsSidebarOpen } = useApp();
+  const { sales, products, setIsSidebarOpen } = useApp();
   const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('daily');
 
@@ -64,36 +64,11 @@ export default function ReportsScreen() {
     });
   }, [sales, filter]);
 
-  const filteredExpenses = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    return expenses.filter(e => {
-      const expDate = new Date(e.date);
-      const expDay = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
-      
-      if (filter === 'daily') {
-        return expDay.getTime() === today.getTime();
-      }
-      if (filter === 'weekly') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        return expDay >= weekAgo;
-      }
-      if (filter === 'monthly') {
-        return expDay.getMonth() === today.getMonth() && expDay.getFullYear() === today.getFullYear();
-      }
-      return true;
-    });
-  }, [expenses, filter]);
-
   const stats = useMemo(() => {
     const rev = filteredSales.reduce((s, x) => s + x.amount, 0);
-    const exp = filteredExpenses.reduce((s, x) => s + x.amount, 0);
     const due = filteredSales.reduce((s, x) => s + (x.amount - x.paid), 0);
-    const profit = rev - exp;
-    return { rev, exp, due, profit };
-  }, [filteredSales, filteredExpenses]);
+    return { rev, due };
+  }, [filteredSales]);
 
   const truckStats = useMemo(() => {
     const inStockProducts = products.filter(p => (p.stock || 0) > 0);
@@ -105,18 +80,6 @@ export default function ReportsScreen() {
   const paidSalesCount = filteredSales.filter(s => s.status === "paid").length;
   const dueSalesCount = filteredSales.filter(s => s.status === "due").length;
   const partialSalesCount = filteredSales.filter(s => s.status === "partial").length;
-
-  const expByCat = useMemo(() => {
-    const m: Record<string, number> = {};
-    filteredExpenses.forEach(e => { m[e.category] = (m[e.category] || 0) + e.amount; });
-    return Object.entries(m)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cat, amt]) => ({ label: cat, value: amt, color: catColor(cat) }));
-  }, [filteredExpenses]);
-
-  const maxExp = useMemo(() => Math.max(...expByCat.map(e => e.value), 1), [expByCat]);
-
-  const marginPct = stats.rev > 0 ? ((stats.profit / stats.rev) * 100).toFixed(1) : "0.0";
 
   return (
     <View style={[styles.screen, { backgroundColor: C.surface }]}>
@@ -186,20 +149,6 @@ export default function ReportsScreen() {
               sub={`${filteredSales.length} ${i18n.language === 'ar' ? 'مبيعات' : i18n.language === 'fr' ? 'ventes' : 'sales'}`} 
             />
             <MetricCard 
-              label={i18n.language === 'ar' ? 'المصروفات' : i18n.language === 'fr' ? 'Dépenses' : 'Expenses'} 
-              value={`MAD ${fmt(stats.exp)}`} 
-              icon="trending-down" 
-              color={C.accent} 
-              sub={`${filteredExpenses.length} ${i18n.language === 'ar' ? 'سجلات' : i18n.language === 'fr' ? 'enregistrements' : 'records'}`} 
-            />
-            <MetricCard 
-              label={i18n.language === 'ar' ? 'صافي الربح' : i18n.language === 'fr' ? 'Bénéfice net' : 'Net Profit'} 
-              value={`MAD ${fmt(stats.profit)}`} 
-              icon="award" 
-              color={stats.profit >= 0 ? C.success : C.danger} 
-              sub={`${marginPct}% ${i18n.language === 'ar' ? 'هامش' : i18n.language === 'fr' ? 'marge' : 'margin'}`} 
-            />
-            <MetricCard 
               label={i18n.language === 'ar' ? 'المبلغ المستحق' : i18n.language === 'fr' ? 'Montant dû' : 'Amount Due'} 
               value={`MAD ${fmt(stats.due)}`} 
               icon="clock" 
@@ -226,57 +175,9 @@ export default function ReportsScreen() {
             </View>
           </View>
         </View>
-
-        {expByCat.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'تفاصيل المصروفات' : i18n.language === 'fr' ? 'Répartition des dépenses' : 'Expense Breakdown'}</Text>
-            <View style={styles.chartCard}>
-              <BarChart items={expByCat} max={maxExp} />
-            </View>
-          </View>
-        )}
       </ScrollView>
     </View>
   );
-}
-
-function BarChart({ items, max }: { items: { label: string; value: number; color: string }[]; max: number }) {
-  return (
-    <View style={styles.barChart}>
-      {items.map((item) => (
-        <View key={item.label} style={styles.barRow}>
-          <Text style={styles.barLabel} numberOfLines={1}>{item.label}</Text>
-          <View style={styles.barTrack}>
-            <View
-              style={[
-                styles.barFill,
-                {
-                  width: max > 0 ? `${Math.max(4, (item.value / max) * 100)}%` as any : "4%",
-                  backgroundColor: item.color,
-                },
-              ]}
-            />
-          </View>
-          <Text style={styles.barValue}>MAD {fmt(item.value)}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-const CAT_COLORS: Record<string, string> = {
-  "Office Rent": "#6E62B6",
-  "Utilities": Colors.dark.warning,
-  "Salaries": Colors.dark.primary,
-  "Marketing": Colors.dark.secondary,
-  "Supplies": Colors.dark.success,
-  "Travel": "#41C4D3",
-  "Equipment": "#FF6B9D",
-  "Other": Colors.dark.textSecondary,
-};
-
-function catColor(cat: string) {
-  return CAT_COLORS[cat] || Colors.dark.primary;
 }
 
 const styles = StyleSheet.create({
@@ -298,13 +199,6 @@ const styles = StyleSheet.create({
   metricSub: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
   section: { marginTop: 24, paddingHorizontal: 16 },
   sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff", marginBottom: 12 },
-  compCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border, gap: 16 },
-  compRow: { flexDirection: "row", alignItems: "center" },
-  compItem: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
-  compDot: { width: 10, height: 10, borderRadius: 5 },
-  compLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  compValue: { fontSize: 16, fontFamily: "Inter_700Bold", marginTop: 2 },
-  compDivider: { width: 1, height: 36, backgroundColor: C.border, marginHorizontal: 16 },
   statusRow: { flexDirection: "row", gap: 10 },
   statusCard: {
     flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 16,
@@ -312,11 +206,4 @@ const styles = StyleSheet.create({
   },
   statusCount: { fontSize: 28, fontFamily: "Inter_700Bold" },
   statusLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  chartCard: { backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: C.border },
-  barChart: { gap: 14 },
-  barRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  barLabel: { width: 90, fontSize: 12, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  barTrack: { flex: 1, height: 8, backgroundColor: C.surface, borderRadius: 4, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: 4 },
-  barValue: { width: 100, fontSize: 11, fontFamily: "Inter_600SemiBold", color: "#fff", textAlign: "right" },
 });

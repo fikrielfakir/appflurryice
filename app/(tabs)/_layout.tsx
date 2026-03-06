@@ -119,10 +119,6 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         options={{ href: null }}
       />
       <Tabs.Screen
-        name="expenses"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
         name="reports"
         options={{ href: null }}
       />

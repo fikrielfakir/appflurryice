@@ -14,7 +14,6 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const { t } = useTranslation();
 
   const MENU_ITEMS = [
-    { title: t('tabs.expenses'), icon: 'dollar-sign', route: '/(tabs)/expenses' },
     { title: t('tabs.reports'), icon: 'bar-chart-2', route: '/(tabs)/reports' },
     { title: t('tabs.contacts'), icon: 'users', route: '/(tabs)/contacts' },
     { title: t('settings.screen'), icon: 'monitor', route: '/settings/screen' },
