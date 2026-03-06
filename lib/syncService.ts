@@ -102,6 +102,7 @@ class SyncService {
         category: p.category || 'General',
         unit: p.unit || 'pcs',
         image: p.image_url || null,
+        stock: Number(p.stock_quantity || 0),
         active: true, // You can add this field to Supabase if needed
         updatedAt: p.updated_at,
       }));
