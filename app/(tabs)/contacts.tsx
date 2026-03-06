@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Modal, TextInput, Platform, Alert, KeyboardAvoidingView, ScrollView,
+  Modal, TextInput, Platform, KeyboardAvoidingView, ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -10,6 +10,7 @@ import * as Haptics from "expo-haptics";
 import { useApp, Contact } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import { AppHeader } from "@/components/common/AppHeader";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
 import Toast from 'react-native-root-toast';
@@ -29,45 +30,61 @@ function typeLabel(t: string) {
 }
 
 function ContactCard({ contact, onDelete }: { contact: Contact; onDelete: () => void }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+  const { t } = useTranslation();
   const col = typeColor(contact.type);
+  
   return (
-    <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
-      <View style={[styles.avatar, { backgroundColor: col + "20" }]}>
-        <Text style={[styles.avatarText, { color: col }]}>
-          {contact.name.charAt(0).toUpperCase()}
-        </Text>
-      </View>
-      <View style={styles.info}>
-        <Text style={[styles.name, { color: C.textPrimary }]}>{contact.name}</Text>
-        <View style={styles.row}>
-          <Feather name="phone" size={11} color={C.textMuted} />
-          <Text style={[styles.phone, { color: C.textSecondary }]}>{contact.phone}</Text>
+    <>
+      <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
+        <View style={[styles.avatar, { backgroundColor: col + "20" }]}>
+          <Text style={[styles.avatarText, { color: col }]}>
+            {contact.name.charAt(0).toUpperCase()}
+          </Text>
         </View>
-        {contact.email ? (
+        <View style={styles.info}>
+          <Text style={[styles.name, { color: C.textPrimary }]}>{contact.name}</Text>
           <View style={styles.row}>
-            <Feather name="mail" size={11} color={C.textMuted} />
-            <Text style={[styles.email, { color: C.textSecondary }]} numberOfLines={1}>{contact.email}</Text>
+            <Feather name="phone" size={11} color={C.textMuted} />
+            <Text style={[styles.phone, { color: C.textSecondary }]}>{contact.phone}</Text>
           </View>
-        ) : null}
-      </View>
-      <View style={styles.right}>
-        <View style={[styles.typeBadge, { backgroundColor: col + "20" }]}>
-          <Text style={[styles.typeText, { color: col }]}>{typeLabel(contact.type)}</Text>
+          {contact.email ? (
+            <View style={styles.row}>
+              <Feather name="mail" size={11} color={C.textMuted} />
+              <Text style={[styles.email, { color: C.textSecondary }]} numberOfLines={1}>{contact.email}</Text>
+            </View>
+          ) : null}
         </View>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            Alert.alert("Delete Contact", `Remove ${contact.name}?`, [
-              { text: "Cancel", style: "cancel" },
-              { text: "Delete", style: "destructive", onPress: onDelete },
-            ]);
-          }}
-          style={styles.deleteBtn}
-        >
-          <Feather name="trash-2" size={14} color={C.danger} />
-        </TouchableOpacity>
+        <View style={styles.right}>
+          <View style={[styles.typeBadge, { backgroundColor: col + "20" }]}>
+            <Text style={[styles.typeText, { color: col }]}>{typeLabel(contact.type)}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setShowConfirm(true);
+            }}
+            style={styles.deleteBtn}
+          >
+            <Feather name="trash-2" size={14} color={C.danger} />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+      <ConfirmModal
+        visible={showConfirm}
+        title={t('contacts.deleteContact')}
+        message={`${t('common.delete')} ${contact.name}?`}
+        confirmText={t('common.delete')}
+        cancelText={t('common.cancel')}
+        type="danger"
+        icon="trash-2"
+        onConfirm={() => {
+          setShowConfirm(false);
+          onDelete();
+        }}
+        onCancel={() => setShowConfirm(false)}
+      />
+    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  Platform, Alert, Share, Image, TextInput, ActivityIndicator,
+  Platform, Share, Image, TextInput, ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -11,16 +11,18 @@ import { router } from "expo-router";
 import { useApp, Sale } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import { AppHeader } from "@/components/common/AppHeader";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTranslation } from "react-i18next";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function SaleCard({ sale, onDelete, onShare, theme: C }: {
+function SaleCard({ sale, onDelete, onShare, onReturn, theme: C }: {
   sale: Sale;
   onDelete: () => void;
   onShare: () => void;
+  onReturn: () => void;
   theme: any;
 }) {
   const due = sale.amount - sale.paid;
@@ -87,7 +89,7 @@ function SaleCard({ sale, onDelete, onShare, theme: C }: {
       </View>
 
       <View style={[styles.cardActions, { borderTopColor: C.border }]}>
-        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={() => Alert.alert("Return", "Return flow coming soon.")}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: C.surface }]} onPress={onReturn}>
           <Feather name="corner-up-left" size={16} color={C.warning} />
         </TouchableOpacity>
         {sale.customerPhone ? (
@@ -151,6 +153,9 @@ export default function SalesScreen() {
   const C = Colors;
   const { t } = useTranslation();
   const [filter, setFilter] = useState<"all" | "paid" | "partial" | "due">("all");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReturnConfirm, setShowReturnConfirm] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState<string | null>(null);
 
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
@@ -286,15 +291,14 @@ export default function SalesScreen() {
             sale={item}
             onDelete={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              Alert.alert("Delete Sale", "Remove this invoice?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete", style: "destructive", onPress: () => {
-                  deleteSale(item.id);
-                  Toast.show("Vente supprimée", { duration: Toast.durations.SHORT });
-                }},
-              ]);
+              setSaleToDelete(item.id);
+              setShowDeleteConfirm(true);
             }}
             onShare={() => handleShare(item)}
+            onReturn={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setShowReturnConfirm(true);
+            }}
           />
         )}
         ListEmptyComponent={
@@ -304,6 +308,38 @@ export default function SalesScreen() {
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+      />
+
+      <ConfirmModal
+        visible={showDeleteConfirm}
+        title={t('sales.deleteSale') || "Delete Sale"}
+        message={t('sales.removeInvoice') || "Remove this invoice?"}
+        confirmText={t('common.delete') || "Delete"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="danger"
+        onConfirm={() => {
+          if (saleToDelete) {
+            deleteSale(saleToDelete);
+            Toast.show(t('pos.saleDeleted') || "Vente supprimée", { duration: Toast.durations.SHORT });
+          }
+          setShowDeleteConfirm(false);
+          setSaleToDelete(null);
+        }}
+        onCancel={() => {
+          setShowDeleteConfirm(false);
+          setSaleToDelete(null);
+        }}
+      />
+
+      <ConfirmModal
+        visible={showReturnConfirm}
+        title={t('sales.return') || "Return"}
+        message={t('sales.returnComingSoon') || "Return flow coming soon."}
+        confirmText={t('common.ok') || "OK"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="info"
+        onConfirm={() => setShowReturnConfirm(false)}
+        onCancel={() => setShowReturnConfirm(false)}
       />
     </View>
   );

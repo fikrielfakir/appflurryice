@@ -84,6 +84,7 @@ export interface Transaction {
   productId: string;
   productName: string;
   quantity: number;
+  remainingStock: number;
   sellId?: string;
   transferId?: string;
 }
@@ -126,6 +127,7 @@ interface AppContextValue {
   contacts: Contact[];
   expenses: Expense[];
   products: Product[];
+  setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   transfers: Transfer[];
   cart: CartItem[];
   config: AppConfig;
@@ -439,8 +441,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       date: now,
     };
     
+    const updatedProducts = products.map(p => {
+      const saleItem = sale.items.find(item => item.name === p.name);
+      if (saleItem) {
+        return { ...p, stock: Math.max(0, (p.stock || 0) - saleItem.qty) };
+      }
+      return p;
+    });
+    
     const newTransactions: Transaction[] = sale.items.map(item => {
       const product = products.find(p => p.name === item.name);
+      const updatedProduct = updatedProducts.find(p => p.name === item.name);
       return {
         id: genId(),
         date: now,
@@ -449,6 +460,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         productId: product?.id || '',
         productName: item.name,
         quantity: -item.qty,
+        remainingStock: updatedProduct?.stock || 0,
         sellId: newSale.id,
       };
     });
@@ -456,6 +468,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const updatedTransactions = [...newTransactions, ...transactions];
     setTransactions(updatedTransactions);
     AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
+    
+    setProducts(updatedProducts);
+    AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
     
     const updated = [newSale, ...sales];
     setSales(updated);
@@ -496,27 +511,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function addTransfer(transfer: Transfer) {
-    const transferTransactions: Transaction[] = transfer.items.map(item => {
-      const product = products.find(p => p.sku === item.sku);
-      return {
-        id: genId(),
-        date: transfer.date,
-        referenceNo: transfer.ref,
-        type: "transfer_out", // Defaulting to out for stock reduction
-        productId: product?.id || '',
-        productName: item.name,
-        quantity: -item.qty,
-        transferId: transfer.id,
-      };
-    });
-    const updatedTransactions = [...transferTransactions, ...transactions];
-    setTransactions(updatedTransactions);
-    AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
-
-    const updatedTransfers = [transfer, ...transfers];
-    setTransfers(updatedTransfers);
-    await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
-
     const updatedProducts = products.map(p => {
       const item = transfer.items.find(it => it.sku === p.sku);
       if (!item) return p;
@@ -540,6 +534,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       return { ...p, stock: newStock };
     });
+
+    const transferTransactions: Transaction[] = transfer.items.map(item => {
+      const product = products.find(p => p.sku === item.sku);
+      const updatedProduct = updatedProducts.find(p => p.sku === item.sku);
+      return {
+        id: genId(),
+        date: transfer.date,
+        referenceNo: transfer.ref,
+        type: "transfer_out",
+        productId: product?.id || '',
+        productName: item.name,
+        quantity: -item.qty,
+        remainingStock: updatedProduct?.stock || 0,
+        transferId: transfer.id,
+      };
+    });
+    const updatedTransactions = [...transferTransactions, ...transactions];
+    setTransactions(updatedTransactions);
+    AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
+
+    const updatedTransfers = [transfer, ...transfers];
+    setTransfers(updatedTransfers);
+    await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
+
     setProducts(updatedProducts);
     await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
   }
@@ -575,7 +593,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, transactions, contacts, expenses, products, transfers, cart, config, updateConfig,
+    sales, transactions, contacts, expenses, products, transfers, cart, config, updateConfig, setProducts,
     setupFromQR,
     completeSetup,
     login, logout,

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -14,6 +13,8 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { usePrintInvoice, PrinterDevice } from '@/hooks/usePrintInvoice';
 import Colors from '@/constants/colors';
+import { ConfirmModal } from '@/components/ConfirmModal';
+import { useTranslation } from 'react-i18next';
 
 const C = Colors.dark;
 
@@ -21,6 +22,7 @@ import Toast from 'react-native-root-toast';
 
 export default function PrinterSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const {
     currentPrinter,
     isScanning,
@@ -33,6 +35,7 @@ export default function PrinterSettingsScreen() {
   } = usePrintInvoice();
 
   const [selectedPrinter, setSelectedPrinter] = useState<PrinterDevice | null>(null);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   useEffect(() => {
     if (currentPrinter) {
@@ -53,22 +56,14 @@ export default function PrinterSettingsScreen() {
 
   const handleDisconnect = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      'Déconnecter',
-      'Voulez-vous déconnecter l\'imprimante?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Déconnecter',
-          style: 'destructive',
-          onPress: async () => {
-            await disconnectPrinter();
-            setSelectedPrinter(null);
-            Toast.show("Imprimante déconnectée", { duration: Toast.durations.SHORT });
-          },
-        },
-      ]
-    );
+    setShowDisconnectConfirm(true);
+  };
+
+  const confirmDisconnect = async () => {
+    await disconnectPrinter();
+    setSelectedPrinter(null);
+    Toast.show("Imprimante déconnectée", { duration: Toast.durations.SHORT });
+    setShowDisconnectConfirm(false);
   };
 
   const renderPrinter = ({ item }: { item: PrinterDevice }) => (
@@ -202,6 +197,17 @@ export default function PrinterSettingsScreen() {
           <Text style={styles.loadingText}>Connexion...</Text>
         </View>
       )}
+
+      <ConfirmModal
+        visible={showDisconnectConfirm}
+        title={t('printer.disconnect') || 'Déconnecter'}
+        message={t('printer.disconnectConfirm') || 'Voulez-vous déconnecter l\'imprimante?'}
+        confirmText={t('printer.disconnect') || 'Déconnecter'}
+        cancelText={t('common.cancel') || 'Annuler'}
+        type="danger"
+        onConfirm={confirmDisconnect}
+        onCancel={() => setShowDisconnectConfirm(false)}
+      />
     </View>
   );
 }

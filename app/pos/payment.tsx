@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  Platform, ScrollView, Alert,
+  Platform, ScrollView, FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,6 +9,8 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { Colors as POS } from "@/constants";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { useTranslation } from "react-i18next";
 
 const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Cheque", "Other"];
 
@@ -20,35 +22,53 @@ import Toast from 'react-native-root-toast';
 
 export default function PaymentScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{
     discount: string; subtotal: string; total: string;
     customerName: string; customerPhone: string;
   }>();
-  const { cart, addSale, clearCart } = useApp();
+  const { cart, updateCartQty, removeFromCart, addSale, clearCart, user } = useApp();
 
   const totalAmount = parseFloat(params.total?.replace(/,/g, "") || "0");
   const discountPct = parseFloat(params.discount || "0");
 
   const [paymentMethod, setPaymentMethod] = useState("Cash");
   const [paidAmount, setPaidAmount] = useState(fmt(totalAmount));
-  const [shippingFee, setShippingFee] = useState("");
-  const [shippingNote, setShippingNote] = useState("");
+  const [returnAmount, setReturnAmount] = useState("");
   const [invoiceNote, setInvoiceNote] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showRemoveItemConfirm, setShowRemoveItemConfirm] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<{id: string, name: string} | null>(null);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const paidNum = parseFloat(paidAmount.replace(/,/g, "") || "0");
-  const shippingNum = parseFloat(shippingFee || "0");
-  const totalWithShipping = totalAmount + shippingNum;
-  const remaining = Math.max(0, totalWithShipping - paidNum);
-  const change = Math.max(0, paidNum - totalWithShipping);
+  const returnNum = parseFloat(returnAmount || "0");
+  const totalWithReturn = totalAmount - returnNum;
+  const remaining = Math.max(0, totalWithReturn - paidNum);
+  const change = Math.max(0, paidNum - totalWithReturn);
 
-  const saleStatus = paidNum >= totalWithShipping ? "paid" : paidNum > 0 ? "partial" : "due";
+  const saleStatus = paidNum >= totalWithReturn ? "paid" : paidNum > 0 ? "partial" : "due";
 
   const now = new Date();
   const dateStr = now.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
   const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+  function handleRemoveItem(productId: string, productName: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setItemToRemove({ id: productId, name: productName });
+    setShowRemoveItemConfirm(true);
+  }
+
+  function confirmRemoveItem() {
+    if (itemToRemove) {
+      removeFromCart(itemToRemove.id);
+      Toast.show("Article supprimé", { duration: Toast.durations.SHORT });
+    }
+    setShowRemoveItemConfirm(false);
+    setItemToRemove(null);
+  }
 
   function handleComplete() {
     if (cart.length === 0) {
@@ -65,10 +85,10 @@ export default function PaymentScreen() {
     const sale = addSale({
       customerName: params.customerName || "Walk-in Customer",
       customerPhone: params.customerPhone,
-      amount: totalWithShipping,
-      paid: Math.min(paidNum, totalWithShipping),
+      amount: totalWithReturn,
+      paid: Math.min(paidNum, totalWithReturn),
       discount: discountPct,
-      shippingFee: shippingNum,
+      shippingFee: returnNum,
       status: saleStatus,
       items: cart.map(ci => ({ name: ci.product.name, qty: ci.qty, price: ci.product.price })),
       paymentMethod,
@@ -85,19 +105,75 @@ export default function PaymentScreen() {
         invoiceNumber: sale.invoiceNumber,
         customerName: sale.customerName,
         customerPhone: sale.customerPhone || "",
-        total: fmt(totalWithShipping),
+        total: fmt(totalWithReturn),
         paid: fmt(sale.paid),
         remaining: fmt(remaining),
         change: fmt(change),
+        returnAmount: fmt(returnNum),
         status: sale.status,
         paymentMethod,
         date: sale.date,
         discount: fmt(discountPct),
         itemsJson: JSON.stringify(sale.items),
         isPreview: "true",
+        vendeur: user || "Vendeur",
       },
     });
   }
+
+  const renderCartItem = ({ item: ci }: { item: typeof cart[0] }) => (
+    <View style={styles.productRow}>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={1}>{ci.product.name}</Text>
+        <Text style={styles.productPrice}>MAD {fmt(ci.product.price)} × {ci.qty}</Text>
+      </View>
+      <View style={styles.productActions}>
+        <View style={styles.qtyControlsMini}>
+          <TouchableOpacity
+            style={[styles.qtyBtnMini, ci.qty <= 1 && styles.qtyBtnMiniDisabled]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              if (ci.qty > 1) {
+                updateCartQty(ci.product.id, ci.qty - 1);
+              } else {
+                handleRemoveItem(ci.product.id, ci.product.name);
+              }
+            }}
+          >
+            <Text style={styles.qtyBtnMiniText}>−</Text>
+          </TouchableOpacity>
+          <Text style={styles.qtyValueMini}>{ci.qty}</Text>
+          <TouchableOpacity
+            style={[styles.qtyBtnMini, ci.qty >= ci.product.stock && styles.qtyBtnMiniDisabled]}
+            onPress={() => {
+              Haptics.selectionAsync();
+              if (ci.qty < ci.product.stock) {
+                updateCartQty(ci.product.id, ci.qty + 1);
+              } else {
+                Toast.show(`Stock maximum: ${ci.product.stock}`, { duration: Toast.durations.SHORT });
+              }
+            }}
+          >
+            <Text style={styles.qtyBtnMiniText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ConfirmModal
+        visible={showRemoveItemConfirm}
+        title={t('pos.removeItem') || "Remove Item"}
+        message={itemToRemove ? `${t('pos.removeConfirmItem') || `Remove ${itemToRemove.name} from invoice?`}` : ""}
+        confirmText={t('common.remove') || "Remove"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="danger"
+        onConfirm={confirmRemoveItem}
+        onCancel={() => {
+          setShowRemoveItemConfirm(false);
+          setItemToRemove(null);
+        }}
+      />
+    </View>
+    </View>
+  );
 
   return (
     <View style={styles.screen}>
@@ -107,8 +183,8 @@ export default function PaymentScreen() {
             <Feather name="chevron-left" size={24} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Payment</Text>
-            <Text style={styles.headerSub}>Complete your transaction</Text>
+            <Text style={styles.headerTitle}>{t('pos.payment')}</Text>
+            <Text style={styles.headerSub}>{t('pos.completeTransaction')}</Text>
           </View>
           <View style={{ width: 36 }} />
         </View>
@@ -116,18 +192,50 @@ export default function PaymentScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, gap: 14, paddingBottom: 100 }}>
         <View style={styles.card}>
-          <View style={styles.locationRow}>
-            <View style={styles.locationVerified}>
-              <Feather name="map-pin" size={14} color={POS.success} />
-              <Text style={styles.locationText}>Location Verified</Text>
+          <View style={styles.cardRowBetween}>
+            <View style={styles.cardRow}>
+              <Feather name="shopping-cart" size={16} color={POS.textSecondary} />
+              <Text style={styles.cardLabel}>{t('pos.productsInCart')} ({cart.length})</Text>
             </View>
+            <TouchableOpacity 
+              style={styles.addMoreBtn}
+              onPress={() => router.back()}
+            >
+              <Feather name="plus" size={14} color={POS.primary} />
+              <Text style={styles.addMoreBtnText}>{t('pos.addMore')}</Text>
+            </TouchableOpacity>
           </View>
+          
+          <View style={styles.productsList}>
+            <FlatList
+              data={cart}
+              keyExtractor={ci => ci.product.id}
+              renderItem={renderCartItem}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.emptyCart}>
+                  <Text style={styles.emptyCartText}>No products</Text>
+                </View>
+              }
+            />
+          </View>
+          
+          <View style={styles.subtotalRow}>
+            <Text style={styles.subtotalLabel}>{t('pos.subtotal')}</Text>
+            <Text style={styles.subtotalValue}>MAD {fmt(totalAmount)}</Text>
+          </View>
+          {discountPct > 0 && (
+            <View style={styles.subtotalRow}>
+              <Text style={styles.subtotalLabel}>{t('pos.discount')} ({discountPct}%)</Text>
+              <Text style={[styles.subtotalValue, { color: POS.danger }]}>-MAD {fmt(totalAmount * discountPct / 100)}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardRow}>
             <Feather name="clock" size={16} color={POS.textSecondary} />
-            <Text style={styles.cardLabel}>Date & Time</Text>
+            <Text style={styles.cardLabel}>{t('pos.dateTime')}</Text>
           </View>
           <View style={styles.dateBox}>
             <Feather name="calendar" size={14} color={POS.textSecondary} />
@@ -138,7 +246,7 @@ export default function PaymentScreen() {
         <View style={styles.card}>
           <View style={styles.cardRow}>
             <Feather name="credit-card" size={16} color={POS.textSecondary} />
-            <Text style={styles.cardLabel}>Payment Method</Text>
+            <Text style={styles.cardLabel}>{t('pos.paymentMethod')}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.methodRow}>
@@ -155,7 +263,7 @@ export default function PaymentScreen() {
           </ScrollView>
 
           <View style={styles.amountBlock}>
-            <Text style={styles.amountLabel}>Amount Paid (MAD)</Text>
+            <Text style={styles.amountLabel}>{t('pos.amountPaid')} (MAD)</Text>
             <View style={styles.amountInputRow}>
               <Text style={styles.currencyTag}>MAD</Text>
               <TextInput
@@ -171,89 +279,66 @@ export default function PaymentScreen() {
             style={styles.noteInput}
             value={invoiceNote}
             onChangeText={setInvoiceNote}
-            placeholder="Payment notes (optional)"
+            placeholder={t('pos.paymentNotes')}
             placeholderTextColor={POS.textMuted}
           />
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardRow}>
-            <MaterialCommunityIcons name="truck-delivery-outline" size={16} color={POS.textSecondary} />
-            <Text style={styles.cardLabel}>Additional Details</Text>
+            <MaterialCommunityIcons name="rotate-left" size={16} color={POS.textSecondary} />
+            <Text style={styles.cardLabel}>{t('pos.additionalDetails')}</Text>
           </View>
-          <View style={styles.extraRow}>
-            <View style={styles.extraField}>
-              <View style={styles.extraLabelRow}>
-                <MaterialCommunityIcons name="truck-outline" size={12} color={POS.textSecondary} />
-                <Text style={styles.extraLabel}>Shipping Fee</Text>
-              </View>
-              <TextInput
-                style={styles.extraInput}
-                value={shippingFee}
-                onChangeText={setShippingFee}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                placeholderTextColor={POS.textMuted}
-              />
+          <View style={styles.extraField}>
+            <View style={styles.extraLabelRow}>
+              <MaterialCommunityIcons name="rotate-left" size={12} color={POS.warning} />
+              <Text style={[styles.extraLabel, { color: POS.warning }]}>{t('pos.returnRefund')}</Text>
             </View>
-            <View style={styles.extraField}>
-              <View style={styles.extraLabelRow}>
-                <Feather name="refresh-ccw" size={12} color={POS.textSecondary} />
-                <Text style={styles.extraLabel}>Return Amount</Text>
-              </View>
-              <TextInput
-                style={styles.extraInput}
-                value=""
-                placeholder="0.00"
-                placeholderTextColor={POS.textMuted}
-                keyboardType="decimal-pad"
-              />
-            </View>
+            <TextInput
+              style={[styles.extraInput, { borderColor: POS.warning + "50" }]}
+              value={returnAmount}
+              onChangeText={setReturnAmount}
+              keyboardType="decimal-pad"
+              placeholder={t('pos.returnPlaceholder')}
+              placeholderTextColor={POS.textMuted}
+            />
           </View>
-          <TextInput
-            style={[styles.extraInput, { marginTop: 8 }]}
-            value={shippingNote}
-            onChangeText={setShippingNote}
-            placeholder="Enter shipping notes or special instructions..."
-            placeholderTextColor={POS.textMuted}
-            multiline
-          />
         </View>
 
         <View style={styles.summaryCard}>
           <View style={styles.cardRow}>
             <Feather name="file-text" size={16} color={POS.textSecondary} />
-            <Text style={styles.summaryTitle}>Payment Summary</Text>
+            <Text style={styles.summaryTitle}>{t('pos.paymentSummary')}</Text>
             {saleStatus === "paid" && (
               <View style={styles.verifiedTag}>
                 <Feather name="check-circle" size={12} color={POS.success} />
-                <Text style={styles.verifiedTagText}>Verified</Text>
+                <Text style={styles.verifiedTagText}>{t('pos.verified')}</Text>
               </View>
             )}
           </View>
 
           <View style={styles.summaryBlock}>
-            <Text style={styles.summaryBlockLabel}>Total Amount Due</Text>
-            <Text style={styles.summaryBlockValue}>{fmt(totalWithShipping)}</Text>
+            <Text style={styles.summaryBlockLabel}>{t('pos.total')}</Text>
+            <Text style={styles.summaryBlockValue}>{fmt(totalWithReturn)}</Text>
             <Text style={styles.summaryCurrency}>MAD</Text>
           </View>
 
           <View style={styles.summaryBlock}>
-            <Text style={styles.summaryBlockLabel}>Total Amount Paid</Text>
-            <Text style={styles.summaryBlockValue}>{fmt(Math.min(paidNum, totalWithShipping))}</Text>
+            <Text style={styles.summaryBlockLabel}>{t('pos.paid')}</Text>
+            <Text style={styles.summaryBlockValue}>{fmt(Math.min(paidNum, totalWithReturn))}</Text>
             <Text style={styles.summaryCurrency}>MAD</Text>
           </View>
 
           <View style={styles.summarySmallRow}>
             <View style={styles.summarySmallBlock}>
-              <Text style={styles.summarySmallLabel}>Remaining</Text>
+              <Text style={styles.summarySmallLabel}>{t('pos.remaining')}</Text>
               <Text style={[styles.summarySmallValue, { color: remaining > 0 ? POS.danger : POS.success }]}>
                 {fmt(remaining)}
               </Text>
               <Text style={styles.summarySmallCurrency}>MAD</Text>
             </View>
             <View style={styles.summarySmallBlock}>
-              <Text style={styles.summarySmallLabel}>Change</Text>
+              <Text style={styles.summarySmallLabel}>{t('pos.change')}</Text>
               <Text style={[styles.summarySmallValue, { color: POS.success }]}>{fmt(change)}</Text>
               <Text style={styles.summarySmallCurrency}>MAD</Text>
             </View>
@@ -268,11 +353,11 @@ export default function PaymentScreen() {
           disabled={processing}
         >
           <Feather name="printer" size={18} color="#fff" />
-          <Text style={styles.completeBtnText}>Complete & Print</Text>
+          <Text style={styles.completeBtnText}>{t('pos.completeSale')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.shareBtn} onPress={handleComplete}>
           <Feather name="share-2" size={18} color={POS.primary} />
-          <Text style={styles.shareBtnText}>Share</Text>
+          <Text style={styles.shareBtnText}>{t('pos.shareInvoice')}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -289,7 +374,28 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.8)" },
   card: { backgroundColor: POS.card, borderRadius: 14, padding: 14, gap: 10, elevation: 1, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
   cardRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  cardRowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   cardLabel: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.text },
+  addMoreBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: POS.primary + "15", borderRadius: 8 },
+  addMoreBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: POS.primary },
+  productsList: { backgroundColor: POS.background, borderRadius: 10, padding: 8, maxHeight: 200 },
+  productRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: POS.border + "40" },
+  productInfo: { flex: 1 },
+  productName: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: POS.text },
+  productPrice: { fontSize: 11, fontFamily: "Inter_400Regular", color: POS.textSecondary, marginTop: 2 },
+  productActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  productTotal: { fontSize: 13, fontFamily: "Inter_700Bold", color: POS.primary, minWidth: 60, textAlign: "right" },
+  removeBtn: { width: 28, height: 28, justifyContent: "center", alignItems: "center" },
+  qtyControlsMini: { flexDirection: "row", alignItems: "center", backgroundColor: POS.card, borderRadius: 6, overflow: "hidden" },
+  qtyBtnMini: { width: 24, height: 24, backgroundColor: POS.primary, justifyContent: "center", alignItems: "center" },
+  qtyBtnMiniDisabled: { backgroundColor: POS.textMuted },
+  qtyBtnMiniText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+  qtyValueMini: { width: 24, textAlign: "center", fontSize: 12, fontFamily: "Inter_600SemiBold", color: POS.text },
+  subtotalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTopWidth: 1, borderTopColor: POS.border + "40", marginTop: 4 },
+  subtotalLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: POS.textSecondary },
+  subtotalValue: { fontSize: 14, fontFamily: "Inter_700Bold", color: POS.text },
+  emptyCart: { padding: 20, alignItems: "center" },
+  emptyCartText: { fontSize: 13, color: POS.textMuted },
   locationRow: { flexDirection: "row", alignItems: "center" },
   locationVerified: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: POS.successBg, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8 },
   locationText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: POS.success },
@@ -297,7 +403,7 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 14, fontFamily: "Inter_500Medium", color: POS.text },
   methodRow: { flexDirection: "row", gap: 8, paddingVertical: 4 },
   methodChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: POS.background, borderWidth: 1.5, borderColor: POS.border },
-  methodChipActive: { backgroundColor: POS.primaryBg, borderColor: POS.primary },
+  methodChipActive: { backgroundColor: POS.primary + "15", borderColor: POS.primary },
   methodChipText: { fontSize: 12, fontFamily: "Inter_500Medium", color: POS.textSecondary },
   methodChipTextActive: { color: POS.primary },
   amountBlock: { gap: 6 },
@@ -307,11 +413,11 @@ const styles = StyleSheet.create({
   amountInput: { flex: 1, paddingHorizontal: 14, fontSize: 20, fontFamily: "Inter_700Bold", color: POS.text },
   noteInput: { backgroundColor: POS.background, borderRadius: 10, borderWidth: 1, borderColor: POS.border, padding: 10, color: POS.text, fontFamily: "Inter_400Regular", fontSize: 13 },
   extraRow: { flexDirection: "row", gap: 10 },
-  extraField: { flex: 1, gap: 4 },
+  extraField: { gap: 4 },
   extraLabelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   extraLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: POS.textSecondary },
   extraInput: { backgroundColor: POS.background, borderRadius: 10, borderWidth: 1, borderColor: POS.border, padding: 10, color: POS.text, fontFamily: "Inter_400Regular", fontSize: 14 },
-  summaryCard: { backgroundColor: POS.primaryBg, borderRadius: 16, padding: 16, gap: 12, borderWidth: 1.5, borderColor: POS.primary + "40" },
+  summaryCard: { backgroundColor: POS.primary + "15", borderRadius: 16, padding: 16, gap: 12, borderWidth: 1.5, borderColor: POS.primary + "40" },
   summaryTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.text },
   verifiedTag: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: POS.successBg, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginLeft: "auto" },
   verifiedTagText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: POS.success },
@@ -327,6 +433,6 @@ const styles = StyleSheet.create({
   bottomBar: { backgroundColor: POS.card, borderTopWidth: 1, borderTopColor: POS.border, paddingHorizontal: 16, paddingTop: 12, flexDirection: "row", gap: 10 },
   completeBtn: { flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primary, borderRadius: 12, paddingVertical: 14 },
   completeBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },
-  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primaryBg, borderRadius: 12, paddingVertical: 14, borderWidth: 1.5, borderColor: POS.primary },
+  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primary + "15", borderRadius: 12, paddingVertical: 14, borderWidth: 1.5, borderColor: POS.primary },
   shareBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: POS.primary },
 });

@@ -55,12 +55,14 @@ const productCardStyle = (C: any): ViewStyle => ({
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, syncData, isSyncing, resetAllStock, userProfile, setIsSidebarOpen } = useApp();
+  const { products, addToCart, cart, removeFromCart, syncData, isSyncing, resetAllStock, userProfile, setIsSidebarOpen, setProducts } = useApp();
   const C = Colors;
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
   const [password, setPassword] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<{[key: string]: number}>({});
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -83,9 +85,9 @@ export default function ProductsScreen() {
       resetAllStock();
       setIsResetModalVisible(false);
       setPassword("");
-      showAlert("Success", "All stock has been reset to 0.", "success");
+      showAlert(t('common.success'), t('products.resetSuccess'), "success");
     } else {
-      showAlert("Error", "Incorrect password.", "error");
+      showAlert(t('common.error'), t('products.incorrectPassword'), "error");
     }
   };
 
@@ -99,29 +101,60 @@ export default function ProductsScreen() {
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
 
-  const renderItem = ({ item }: { item: any }) => (
+  const renderGridItem = ({ item }: { item: any }) => {
+    const isSelected = selectedProducts[item.id] !== undefined;
+    const selectedQty = selectedProducts[item.id] || 0;
+    
+    const handlePress = () => {
+      if (item.stock <= 0) {
+        showAlert(t('products.outOfStock'), t('products.outOfStockAlert'), "error");
+        return;
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const newQty = (selectedProducts[item.id] || 0) + 1;
+      setSelectedProducts(prev => ({
+        ...prev,
+        [item.id]: newQty
+      }));
+      
+      addToCart(item, 1);
+    };
+    
+    const handleRemove = () => {
+      if (selectedProducts[item.id]) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        removeFromCart(item.id);
+        const { [item.id]: _, ...rest } = selectedProducts;
+        setSelectedProducts(rest);
+      }
+    };
+
+    return (
     <TouchableOpacity
-      style={[productCardStyle(C), item.stock <= 0 && styles.productCardDisabled]}
-      onPress={() => {
-        if (item.stock <= 0) {
-          showAlert("Indisponible", "Ce produit est en rupture de stock.", "error");
-          return;
-        }
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        addToCart(item, 1);
-      }}
+      style={[
+        productCardStyle(C), 
+        item.stock <= 0 && styles.productCardDisabled,
+        isSelected && styles.productCardSelected
+      ]}
+      onPress={handlePress}
     >
       <View style={styles.productMain}>
         <View style={styles.priceContainer}>
           <Text style={[styles.priceValue, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
-          <View style={[styles.stockBadge, { backgroundColor: C.primary }]}>
+          <View style={[styles.stockBadge, { backgroundColor: isSelected ? C.success : C.primary }]}>
             <Text style={styles.stockText}>{fmt(item.stock)}</Text>
             <Feather name="package" size={12} color="#fff" style={{ marginLeft: 4 }} />
           </View>
         </View>
 
         <View style={styles.productCenter}>
-          <Text style={[styles.productName, { color: C.text }]}>{item.name}</Text>
+          <Text style={[styles.productName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
+          {isSelected && (
+            <View style={[styles.selectedBadge, { backgroundColor: C.success }]}>
+              <Text style={styles.selectedBadgeText}>{selectedQty} {t('products.selected')}</Text>
+            </View>
+          )}
         </View>
 
         <View style={[styles.imageContainer, { backgroundColor: C.background, borderColor: C.border }]}>
@@ -132,10 +165,108 @@ export default function ProductsScreen() {
               <Feather name="image" size={20} color={C.textMuted} />
             </View>
           )}
+          {isSelected && (
+            <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
+              <Feather name="check" size={16} color="#fff" />
+            </View>
+          )}
         </View>
       </View>
+      
+      {isSelected && (
+        <TouchableOpacity
+          style={[styles.decrementBtn, { backgroundColor: C.danger }]}
+          onPress={handleRemove}
+        >
+          <Feather name="minus" size={14} color="#fff" />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
+  };
+
+  const renderListItem = ({ item }: { item: any }) => {
+    const isSelected = selectedProducts[item.id] !== undefined;
+    const selectedQty = selectedProducts[item.id] || 0;
+    
+    const handlePress = () => {
+      if (item.stock <= 0) {
+        showAlert(t('products.outOfStock'), t('products.outOfStockAlert'), "error");
+        return;
+      }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      
+      const newQty = (selectedProducts[item.id] || 0) + 1;
+      setSelectedProducts(prev => ({
+        ...prev,
+        [item.id]: newQty
+      }));
+      
+      addToCart(item, 1);
+    };
+    
+    const handleRemove = () => {
+      if (selectedProducts[item.id]) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        removeFromCart(item.id);
+        const { [item.id]: _, ...rest } = selectedProducts;
+        setSelectedProducts(rest);
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.listItem,
+          { backgroundColor: C.card, borderColor: C.border },
+          item.stock <= 0 && styles.productCardDisabled,
+          isSelected && styles.productCardSelected
+        ]}
+        onPress={handlePress}
+      >
+        <View style={[styles.listItemImage, { backgroundColor: C.background, borderColor: C.border }]}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.listProductImage} />
+          ) : (
+            <View style={styles.placeholderImage}>
+              <Feather name="image" size={24} color={C.textMuted} />
+            </View>
+          )}
+          {isSelected && (
+            <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
+              <Feather name="check" size={14} color="#fff" />
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.listItemContent}>
+          <Text style={[styles.listItemName, { color: C.text }]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.listItemPrice, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
+          <View style={[styles.listItemStockBadge, { backgroundColor: item.stock > 0 ? C.success : C.danger }]}>
+            <Text style={styles.listItemStockText}>{fmt(item.stock)} {t('pos.available')}</Text>
+          </View>
+        </View>
+        
+        <View style={styles.listItemActions}>
+          <View style={styles.listItemQty}>
+            {isSelected ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.listItemQtyBtn, { backgroundColor: C.danger }]}
+                  onPress={handleRemove}
+                >
+                  <Feather name="minus" size={14} color="#fff" />
+                </TouchableOpacity>
+                <Text style={[styles.listItemQtyText, { color: C.text }]}>{selectedQty}</Text>
+              </>
+            ) : (
+              <Text style={[styles.listItemAddText, { color: C.textSecondary }]}>+</Text>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
@@ -195,11 +326,23 @@ export default function ProductsScreen() {
       <View style={[styles.headerActionsWrapper, { backgroundColor: C.primary }]}>
         <View style={styles.headerActions}>
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
-              <Feather name="grid" size={18} color={C.accent} />
+            <TouchableOpacity 
+              style={[
+                styles.actionIconBtn, 
+                { backgroundColor: viewMode === "grid" ? C.accent : C.surface, borderColor: C.border }
+              ]}
+              onPress={() => setViewMode("grid")}
+            >
+              <Feather name="grid" size={18} color={viewMode === "grid" ? "#fff" : C.textSecondary} />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: C.surface, borderColor: C.border }]}>
-              <Feather name="list" size={18} color={C.textSecondary} />
+            <TouchableOpacity 
+              style={[
+                styles.actionIconBtn, 
+                { backgroundColor: viewMode === "list" ? C.accent : C.surface, borderColor: C.border }
+              ]}
+              onPress={() => setViewMode("list")}
+            >
+              <Feather name="list" size={18} color={viewMode === "list" ? "#fff" : C.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -207,7 +350,7 @@ export default function ProductsScreen() {
             <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
             <TextInput
               style={[styles.searchInput, { color: C.textPrimary }]}
-              placeholder="Search..."
+              placeholder={t('products.searchPlaceholder')}
               placeholderTextColor={C.textMuted}
               value={search}
               onChangeText={setSearch}
@@ -230,16 +373,44 @@ export default function ProductsScreen() {
 
       <FlatList
         data={filteredProducts}
-        renderItem={renderItem}
+        renderItem={viewMode === "grid" ? renderGridItem : renderListItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+        numColumns={viewMode === "grid" ? 2 : 1}
+        key={viewMode}
+        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + (Object.keys(selectedProducts).length > 0 ? 100 : 100) }]}
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Feather name="package" size={48} color={C.textMuted} />
-            <Text style={[styles.emptyText, { color: C.textMuted }]}>No products found</Text>
+            <Text style={[styles.emptyText, { color: C.textMuted }]}>{t('products.noProducts')}</Text>
           </View>
         }
       />
+
+      {Object.keys(selectedProducts).length > 0 && (
+        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 60 }]}>
+          <View style={[styles.selectedInfo, { backgroundColor: C.surface }]}>
+            <Text style={[styles.selectedCount, { color: C.text }]}>
+              {Object.keys(selectedProducts).length} {Object.keys(selectedProducts).length === 1 ? t('products.product') : t('products.products')} 
+            </Text>
+            <Text style={[styles.selectedTotal, { color: C.success }]}>
+              {fmt(Object.entries(selectedProducts).reduce((sum, [id, qty]) => {
+                const product = products.find(p => p.id === id);
+                return sum + (product ? product.price * qty : 0);
+              }, 0))} MAD
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.nextBtn, { backgroundColor: C.primary }]}
+            onPress={() => {
+              setSelectedProducts({});
+              router.push("/pos/cart");
+            }}
+          >
+            <Feather name="shopping-cart" size={18} color="#fff" />
+            <Text style={styles.nextBtnText}>{t('common.next') || 'Next'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal
         visible={isResetModalVisible}
@@ -249,14 +420,14 @@ export default function ProductsScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.modalTitle, { color: C.text }]}>Reset All Stock</Text>
+            <Text style={[styles.modalTitle, { color: C.text }]}>{t('products.resetStock')}</Text>
             <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>
-              Enter your password to confirm resetting all product quantities to 0.
+              {t('products.resetConfirm')}
             </Text>
 
             <TextInput
               style={[styles.modalInput, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
-              placeholder="Password"
+              placeholder={t('auth.password')}
               placeholderTextColor={C.textMuted}
               secureTextEntry
               value={password}
@@ -271,14 +442,14 @@ export default function ProductsScreen() {
                   setPassword("");
                 }}
               >
-                <Text style={[styles.modalBtnText, { color: C.text }]}>Cancel</Text>
+                <Text style={[styles.modalBtnText, { color: C.text }]}>{t('common.cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: C.danger }]}
                 onPress={handleResetStock}
               >
-                <Text style={styles.modalBtnText}>Reset</Text>
+                <Text style={styles.modalBtnText}>{t('products.resetStock')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -399,6 +570,93 @@ const styles = StyleSheet.create({
   productCardDisabled: {
     opacity: 0.6,
   },
+  productCardSelected: {
+    borderColor: Colors.success,
+    borderWidth: 2,
+  },
+  selectedBadge: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  selectedBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
+  checkmarkOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderBottomLeftRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  decrementBtn: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  selectedInfo: {
+    flex: 1,
+    padding: 10,
+    borderRadius: 10,
+  },
+  selectedCount: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  selectedTotal: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    marginTop: 2,
+  },
+  nextBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+  },
+  nextBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+  },
   productMain: {
     flexDirection: "row",
     alignItems: "center",
@@ -515,5 +773,81 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  listItemImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  listProductImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  listItemContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  listItemName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 4,
+  },
+  listItemPrice: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 4,
+  },
+  listItemStockBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  listItemStockText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  listItemActions: {
+    marginLeft: 8,
+  },
+  listItemQty: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 4,
+  },
+  listItemQtyBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  listItemQtyText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+  },
+  listItemAddText: {
+    fontSize: 20,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textSecondary,
   },
 });

@@ -35,6 +35,26 @@ function MetricCard({ label, value, icon, color, sub, arLabel }: { label: string
   );
 }
 
+const getTypeColor = (type: string) => {
+  switch (type) {
+    case 'sell': return '#10B981';
+    case 'transfer_in': return '#3B82F6';
+    case 'transfer_out': return '#EF4444';
+    case 'adjustment': return '#F97316';
+    default: return C.primary;
+  }
+};
+
+const getTypeLabel = (type: string, t: (key: string) => string) => {
+  switch (type) {
+    case 'sell': return t('reports.sale');
+    case 'transfer_in': return t('reports.transferIn');
+    case 'transfer_out': return t('reports.transferOut');
+    case 'adjustment': return t('reports.adjustment');
+    default: return type;
+  }
+};
+
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { sales, transactions, products, setIsSidebarOpen } = useApp();
@@ -120,7 +140,7 @@ export default function ReportsScreen() {
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('metrics'); }}
         >
           <Text style={[styles.tabBtnText, activeTab === 'metrics' && styles.tabBtnTextActive]}>
-            {i18n.language === 'ar' ? 'الملخص' : i18n.language === 'fr' ? 'Résumé' : 'Metrics'}
+            {t('reports.metrics')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -128,7 +148,7 @@ export default function ReportsScreen() {
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('transactions'); }}
         >
           <Text style={[styles.tabBtnText, activeTab === 'transactions' && styles.tabBtnTextActive]}>
-            {i18n.language === 'ar' ? 'السجلات' : i18n.language === 'fr' ? 'Journaux' : 'Logs'}
+            {t('reports.logs')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -136,42 +156,33 @@ export default function ReportsScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
           <View style={styles.filterRow}>
-            {(['daily', 'weekly', 'monthly', 'all'] as const).map(f => {
-              const getLabel = () => {
-                const lang = i18n.language;
-                if (f === 'daily') return lang === 'ar' ? 'اليوم' : lang === 'fr' ? "Aujourd'hui" : 'Today';
-                if (f === 'weekly') return lang === 'ar' ? 'أسبوع' : lang === 'fr' ? 'Semaine' : 'Weekly';
-                if (f === 'monthly') return lang === 'ar' ? 'شهر' : lang === 'fr' ? 'Mois' : 'Monthly';
-                return lang === 'ar' ? 'الكل' : lang === 'fr' ? 'Tout' : 'All';
-              };
-              return (
-                <TouchableOpacity
-                  key={f}
-                  style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
-                  onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-                >
-                  <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive]}>
-                    {getLabel()}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            {(['daily', 'weekly', 'monthly', 'all'] as const).map(f => (
+              <TouchableOpacity
+                key={f}
+                style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+                onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
+              >
+                <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive]}>
+                  {t(`reports.${f}`)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </LinearGradient>
 
         {activeTab === 'metrics' ? (
           <>
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'المخزون المتبقي في الشاحنة' : i18n.language === 'fr' ? 'Stock restant du camion' : 'Truck Remaining Stock'}</Text>
+              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{t('reports.truckStock')}</Text>
               <View style={styles.metricsGrid}>
                 <MetricCard 
-                  label={i18n.language === 'ar' ? 'عدد المنتجات' : i18n.language === 'fr' ? 'Nombre de produits' : 'Products Count'} 
+                  label={t('reports.productsCount')} 
                   value={`${truckStats.count}`} 
                   icon="package" 
                   color={C.primaryLight} 
                 />
                 <MetricCard 
-                  label={i18n.language === 'ar' ? 'القيمة المتبقية' : i18n.language === 'fr' ? 'Valeur restante' : 'Remaining Value'} 
+                  label={t('reports.remainingValue')} 
                   value={`MAD ${fmt(truckStats.value)}`} 
                   icon="truck" 
                   color={C.accent} 
@@ -180,77 +191,84 @@ export default function ReportsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'الملخص المالي' : i18n.language === 'fr' ? 'Résumé financier' : 'Financial Summary'}</Text>
+              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{t('reports.financialSummary')}</Text>
               <View style={styles.metricsGrid}>
                 <MetricCard 
-                  label={i18n.language === 'ar' ? 'الإيرادات' : i18n.language === 'fr' ? 'Revenus' : 'Revenue'} 
+                  label={t('reports.revenue')} 
                   value={`MAD ${fmt(stats.rev)}`} 
                   icon="trending-up" 
                   color={C.primaryLight} 
-                  sub={`${filteredSales.length} ${i18n.language === 'ar' ? 'مبيعات' : i18n.language === 'fr' ? 'ventes' : 'sales'}`} 
+                  sub={`${filteredSales.length} ${t('tabs.sales')}`} 
                 />
                 <MetricCard 
-                  label={i18n.language === 'ar' ? 'المبلغ المستحق' : i18n.language === 'fr' ? 'Montant dû' : 'Amount Due'} 
+                  label={t('reports.amountDue')} 
                   value={`MAD ${fmt(stats.due)}`} 
                   icon="clock" 
                   color={C.warning} 
-                  sub={`${dueSalesCount} ${i18n.language === 'ar' ? 'غير مدفوع' : i18n.language === 'fr' ? 'impayé' : 'unpaid'}`} 
+                  sub={`${dueSalesCount} ${t('reports.unpaid')}`} 
                 />
               </View>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'المبيعات حسب الحالة' : i18n.language === 'fr' ? 'Ventes par statut' : 'Sales by Status'}</Text>
+              <Text style={styles.sectionTitle}>{t('reports.salesByStatus')}</Text>
               <View style={styles.statusRow}>
                 <View style={[styles.statusCard, { borderColor: C.success + "30" }]}>
                   <Text style={[styles.statusCount, { color: C.success }]}>{paidSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مدفوعة' : i18n.language === 'fr' ? 'Payée' : 'Paid'}</Text>
+                  <Text style={styles.statusLabel}>{t('reports.paid')}</Text>
                 </View>
                 <View style={[styles.statusCard, { borderColor: C.warning + "30" }]}>
                   <Text style={[styles.statusCount, { color: C.warning }]}>{partialSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'جزئية' : i18n.language === 'fr' ? 'Partielle' : 'Partial'}</Text>
+                  <Text style={styles.statusLabel}>{t('reports.partial')}</Text>
                 </View>
                 <View style={[styles.statusCard, { borderColor: C.danger + "30" }]}>
                   <Text style={[styles.statusCount, { color: C.danger }]}>{dueSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مستحقة' : i18n.language === 'fr' ? 'Due' : 'Due'}</Text>
+                  <Text style={styles.statusLabel}>{t('reports.due')}</Text>
                 </View>
               </View>
             </View>
           </>
         ) : (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'سجل المعاملات' : i18n.language === 'fr' ? 'Journal des transactions' : 'Transaction Logs'}</Text>
+            <Text style={styles.sectionTitle}>{t('reports.transactionLogs')}</Text>
             <View style={styles.tableCard}>
               <View style={[styles.tableHeader, { borderBottomColor: C.border }]}>
-                <Text style={[styles.th, { flex: 1.5 }]}>{i18n.language === 'ar' ? 'المرجع' : 'Ref'}</Text>
-                <Text style={[styles.th, { flex: 2 }]}>{i18n.language === 'ar' ? 'المنتج' : 'Product'}</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{i18n.language === 'ar' ? 'الكمية' : 'Qty'}</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>{i18n.language === 'ar' ? 'النوع' : 'Type'}</Text>
+                <Text style={[styles.th, { flex: 1.5 }]}>{t('reports.ref')}</Text>
+                <Text style={[styles.th, { flex: 2 }]}>{t('reports.product')}</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{t('reports.qty')}</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{t('reports.rem')}</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>{t('reports.type')}</Text>
               </View>
               {filteredTransactions.length === 0 ? (
                 <View style={styles.emptyTable}>
-                  <Text style={{ color: C.textMuted }}>{i18n.language === 'ar' ? 'لا توجد معاملات' : 'No transactions'}</Text>
+                  <Text style={{ color: C.textMuted }}>{t('reports.noTransactions')}</Text>
                 </View>
               ) : (
-                filteredTransactions.map((t) => (
-                  <View key={t.id} style={[styles.tableRow, { borderBottomColor: C.border + '40' }]}>
-                    <View style={{ flex: 1.5 }}>
-                      <Text style={styles.tdRef} numberOfLines={1}>{t.referenceNo}</Text>
-                      <Text style={styles.tdDate}>{new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
-                    </View>
-                    <Text style={[styles.td, { flex: 2 }]} numberOfLines={2}>{t.productName}</Text>
-                    <Text style={[styles.td, { flex: 1, textAlign: 'center', color: t.quantity < 0 ? C.danger : C.success }]}>
-                      {t.quantity}
-                    </Text>
-                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                      <View style={[styles.typeBadge, { backgroundColor: t.type === 'sell' ? C.primary + '20' : C.accent + '20' }]}>
-                        <Text style={[styles.typeText, { color: t.type === 'sell' ? C.primaryLight : C.accent }]}>
-                          {t.type === 'sell' ? (i18n.language === 'ar' ? 'بيع' : 'Sale') : (i18n.language === 'ar' ? 'تحويل' : 'Trf')}
-                        </Text>
+                filteredTransactions.map((tx) => {
+                  const typeColor = getTypeColor(tx.type);
+                  return (
+                    <View key={tx.id} style={[styles.tableRow, { backgroundColor: typeColor + '15', borderBottomColor: typeColor + '40' }]}>
+                      <View style={{ flex: 1.5 }}>
+                        <Text style={styles.tdRef} numberOfLines={1}>{tx.referenceNo}</Text>
+                        <Text style={styles.tdDate}>{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                      </View>
+                      <Text style={[styles.td, { flex: 2 }]} numberOfLines={2}>{tx.productName}</Text>
+                      <Text style={[styles.td, { flex: 1, textAlign: 'center', color: tx.quantity < 0 ? C.danger : C.success, fontWeight: '600' }]}>
+                        {tx.quantity}
+                      </Text>
+                      <Text style={[styles.td, { flex: 1, textAlign: 'center', color: C.textSecondary }]}>
+                        {tx.remainingStock ?? '-'}
+                      </Text>
+                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                        <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
+                          <Text style={[styles.typeText, { color: typeColor }]}>
+                            {getTypeLabel(tx.type, t)}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))
+                  );
+                })
               )}
             </View>
           </View>
@@ -283,7 +301,7 @@ const styles = StyleSheet.create({
   metricArLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textSecondary },
   metricSub: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
   section: { marginTop: 24, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#fff", marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#0c3683", marginBottom: 12 },
   statusRow: { flexDirection: "row", gap: 10 },
   statusCard: {
     flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 16,

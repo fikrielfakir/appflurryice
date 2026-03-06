@@ -10,7 +10,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import QRCode from "react-native-qrcode-svg";
 import { Colors as POS } from "@/constants";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
-import { Sale } from "@/context/AppContext";
+import { Sale, useApp } from "@/context/AppContext";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -20,11 +20,14 @@ import Toast from 'react-native-root-toast';
 
 export default function InvoiceScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useApp();
   const params = useLocalSearchParams<{
     invoiceNumber: string; customerName: string; customerPhone: string;
     total: string; paid: string; remaining: string; change: string;
+    returnAmount: string;
     status: string; paymentMethod: string; date: string;
     discount: string; itemsJson: string; isPreview?: string;
+    vendeur: string;
   }>();
 
   const { print, isConnecting, isPrinting, isSuccess, error, retry, currentPrinter } = usePrintInvoice();
@@ -119,7 +122,6 @@ export default function InvoiceScreen() {
               style={styles.invoiceLogo}
               resizeMode="contain"
             />
-            <Text style={styles.businessAddress}>نظام إدارة الأعمال</Text>
           </View>
 
           <View style={styles.invoiceTitleRow}>
@@ -132,6 +134,10 @@ export default function InvoiceScreen() {
               <Text style={styles.metaValue}>{dateStr}</Text>
             </View>
             <View style={styles.metaRow}>
+              <Text style={styles.metaLabel}>البائع:</Text>
+              <Text style={[styles.metaValue, { color: POS.primary }]}>{user}</Text>
+            </View>
+            <View style={styles.metaRow}>
               <Text style={styles.metaLabel}>المبلغ المستحق:</Text>
               <Text style={styles.metaValue}>MAD {fmt(total)}</Text>
             </View>
@@ -140,7 +146,7 @@ export default function InvoiceScreen() {
           <View style={styles.divider} />
 
           <View style={styles.billTo}>
-            <Text style={styles.billToLabel}>موجهة إلى:</Text>
+            <Text style={styles.billToLabel}>موجهة إلى الزبون:</Text>
             <Text style={styles.billToName}>{params.customerName}</Text>
             {params.customerPhone ? (
               <Text style={styles.billToPhone}>{params.customerPhone}</Text>
@@ -180,17 +186,24 @@ export default function InvoiceScreen() {
             </View>
           )}
 
+          {parseFloat(params.returnAmount || "0") > 0 && (
+            <View style={[styles.paidRow, { backgroundColor: POS.warning + "15", marginHorizontal: -8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 }]}>
+              <Text style={[styles.paidLabel, { color: POS.warning }]}>مبلغ  (المرتجع للمخزون):</Text>
+              <Text style={[styles.paidValue, { color: POS.warning }]}>- MAD {params.returnAmount}</Text>
+            </View>
+          )}
+
           <View style={styles.divider} />
+          <View style={styles.paidRow}>
+            <Text style={styles.paidLabel}>المبلغ المدفوع:</Text>
+            <Text style={styles.paidValue}>MAD {fmt(paid)}</Text>
+          </View>
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>المجموع:</Text>
             <Text style={styles.totalValue}>MAD {fmt(total)}</Text>
           </View>
 
-          <View style={styles.paidRow}>
-            <Text style={styles.paidLabel}>المبلغ المدفوع:</Text>
-            <Text style={styles.paidValue}>MAD {fmt(paid)}</Text>
-          </View>
 
           <View style={styles.divider} />
 
@@ -233,7 +246,7 @@ export default function InvoiceScreen() {
             {isConnecting ? "جاري الاتصال..." : isPrinting ? "جاري الطباعة..." : isSuccess ? "تمت الطباعة!" : error ? "خطأ" : "طبع الفاتورة"}
           </Text>
         </TouchableOpacity>
-        
+
         {error && (
           <TouchableOpacity
             style={styles.retryBtn}
@@ -246,13 +259,13 @@ export default function InvoiceScreen() {
             <Text style={styles.retryBtnText}>إعادة المحاولة</Text>
           </TouchableOpacity>
         )}
-        
+
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
           <Feather name="share-2" size={18} color={POS.primary} />
           <Text style={styles.shareBtnText}>مشاركة</Text>
         </TouchableOpacity>
       </View>
-      
+
       {error && (
         <View style={styles.errorBanner}>
           <Feather name="alert-circle" size={16} color="#fff" />
@@ -311,6 +324,6 @@ const styles = StyleSheet.create({
   retryBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.danger },
   errorBanner: { position: "absolute", bottom: 100, left: 16, right: 16, backgroundColor: POS.danger, borderRadius: 12, padding: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   errorBannerText: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium", color: "#fff" },
-  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primaryBg, borderRadius: 12, paddingVertical: 14, borderWidth: 1.5, borderColor: POS.primary },
+  shareBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: POS.primary + "15", borderRadius: 12, paddingVertical: 14, borderWidth: 1.5, borderColor: POS.primary },
   shareBtnText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: POS.primary },
 });

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  Platform, FlatList, Alert, Modal,
+  Platform, FlatList, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -9,6 +9,8 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp, Contact } from "@/context/AppContext";
 import { Colors as POS } from "@/constants";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { useTranslation } from "react-i18next";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,6 +20,7 @@ import Toast from 'react-native-root-toast';
 
 export default function CustomerScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ discount: string; subtotal: string; total: string }>();
   const { contacts, addContact } = useApp();
 
@@ -27,6 +30,7 @@ export default function CustomerScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [showQrConfirm, setShowQrConfirm] = useState(false);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -55,7 +59,7 @@ export default function CustomerScreen() {
       pathname: "/pos/payment",
       params: {
         ...params,
-        customerName: "Walk-in Customer",
+        customerName: t('pos.walkInCustomer'),
         customerPhone: "",
       },
     });
@@ -75,7 +79,7 @@ export default function CustomerScreen() {
 
   function handleAddCustomer() {
     if (!newName.trim() || !newPhone.trim()) {
-      Toast.show("Please enter name and phone.", {
+      Toast.show(t('customer.pleaseEnterNamePhone'), {
         duration: Toast.durations.SHORT,
         position: Toast.positions.BOTTOM,
         backgroundColor: POS.danger,
@@ -86,7 +90,7 @@ export default function CustomerScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAddModalVisible(false);
     setNewName(""); setNewPhone("");
-    Toast.show("Client ajouté", { duration: Toast.durations.SHORT });
+    Toast.show(t('customer.customerAdded'), { duration: Toast.durations.SHORT });
   }
 
   return (
@@ -96,19 +100,19 @@ export default function CustomerScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="chevron-left" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer</Text>
+          <Text style={styles.headerTitle}>{t('customer.title')}</Text>
           <View style={{ width: 36 }} />
         </View>
         <View style={styles.heroBlock}>
           <Feather name="users" size={28} color="#fff" />
-          <Text style={styles.heroText}>Select Customer</Text>
+          <Text style={styles.heroText}>{t('customer.selectCustomer')}</Text>
         </View>
       </View>
 
       <View style={styles.body}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Customer Info</Text>
+            <Text style={styles.sectionTitle}>{t('customer.customerInfo')}</Text>
             <Feather name="user" size={16} color={POS.textSecondary} />
           </View>
 
@@ -125,7 +129,7 @@ export default function CustomerScreen() {
                   <Text style={styles.verifiedPhone}>{selectedContact.phone}</Text>
                   {selectedContact.totalPurchased ? (
                     <Text style={styles.verifiedHistory}>
-                      Total: MAD {fmt(selectedContact.totalPurchased)}
+                      {t('pos.total')}: MAD {fmt(selectedContact.totalPurchased)}
                     </Text>
                   ) : null}
                 </View>
@@ -136,12 +140,12 @@ export default function CustomerScreen() {
             </View>
           ) : (
             <View style={styles.searchRow}>
-              <Feather name="lock" size={16} color={POS.textMuted} />
+              <Feather name="search" size={16} color={POS.textMuted} />
               <TextInput
                 style={styles.searchInput}
                 value={search}
                 onChangeText={setSearch}
-                placeholder="Search customer..."
+                placeholder={t('customer.search')}
                 placeholderTextColor={POS.textMuted}
               />
               {search ? (
@@ -156,7 +160,7 @@ export default function CustomerScreen() {
         {!verified && search.length > 0 && (
           <View style={styles.searchResults}>
             {filtered.length === 0 ? (
-              <Text style={styles.noResults}>No customers found</Text>
+              <Text style={styles.noResults}>{t('customer.noCustomersFound')}</Text>
             ) : (
               filtered.slice(0, 5).map(c => (
                 <TouchableOpacity key={c.id} style={styles.resultItem} onPress={() => selectCustomer(c)}>
@@ -180,21 +184,21 @@ export default function CustomerScreen() {
               <View style={styles.qrIconBox}>
                 <Feather name="maximize" size={36} color={POS.primary} />
               </View>
-              <Text style={styles.qrTitle}>Quick Customer Selection</Text>
-              <Text style={styles.qrSub}>Scan QR code for instant customer identification</Text>
+              <Text style={styles.qrTitle}>{t('customer.quickSelection')}</Text>
+              <Text style={styles.qrSub}>{t('customer.scanQrSub')}</Text>
               <TouchableOpacity
                 style={styles.qrBtn}
-                onPress={() => Alert.alert("QR Scanner", "Camera-based QR scanning available on physical devices.")}
+                onPress={() => setShowQrConfirm(true)}
               >
                 <Feather name="camera" size={16} color="#fff" />
-                <Text style={styles.qrBtnText}>Scan QR Code</Text>
+                <Text style={styles.qrBtnText}>{t('customer.scanQrCode')}</Text>
               </TouchableOpacity>
             </View>
 
             {!selectedContact && (
               <View style={styles.warningBox}>
                 <Feather name="alert-triangle" size={14} color={POS.warning} />
-                <Text style={styles.warningText}>Please select a customer to proceed</Text>
+                <Text style={styles.warningText}>{t('customer.selectToProceed')}</Text>
               </View>
             )}
           </View>
@@ -203,7 +207,7 @@ export default function CustomerScreen() {
         {verified && selectedContact && (
           <View style={styles.verifiedConfirm}>
             <Feather name="check-circle" size={16} color={POS.success} />
-            <Text style={styles.verifiedConfirmText}>Customer Verified</Text>
+            <Text style={styles.verifiedConfirmText}>{t('customer.customerVerified')}</Text>
           </View>
         )}
       </View>
@@ -211,18 +215,18 @@ export default function CustomerScreen() {
       <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity style={styles.addCustomerBtn} onPress={() => setAddModalVisible(true)}>
           <Feather name="user-plus" size={16} color={POS.primary} />
-          <Text style={styles.addCustomerText}>Add Customer</Text>
+          <Text style={styles.addCustomerText}>{t('customer.addCustomer')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.walkInBtn} onPress={handleWalkIn}>
           <Feather name="shopping-bag" size={16} color="#fff" />
-          <Text style={styles.walkInText}>Walk-in (Skip)</Text>
+          <Text style={styles.walkInText}>{t('customer.walkInSkip')}</Text>
         </TouchableOpacity>
 
         {verified && (
           <TouchableOpacity style={styles.proceedBtn} onPress={handleProceed}>
             <Feather name="credit-card" size={16} color="#fff" />
-            <Text style={styles.proceedText}>Payment</Text>
+            <Text style={styles.proceedText}>{t('customer.payment')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -230,22 +234,34 @@ export default function CustomerScreen() {
       <Modal visible={addModalVisible} transparent animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>New Customer</Text>
+            <Text style={styles.modalTitle}>{t('customer.newCustomer')}</Text>
             <TextInput style={styles.modalInput} value={newName} onChangeText={setNewName}
-              placeholder="Full Name" placeholderTextColor={POS.textMuted} />
+              placeholder={t('customer.fullName')} placeholderTextColor={POS.textMuted} />
             <TextInput style={styles.modalInput} value={newPhone} onChangeText={setNewPhone}
-              placeholder="Phone Number" placeholderTextColor={POS.textMuted} keyboardType="phone-pad" />
+              placeholder={t('customer.phoneNumber')} placeholderTextColor={POS.textMuted} keyboardType="phone-pad" />
             <View style={styles.modalBtns}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setAddModalVisible(false)}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={handleAddCustomer}>
-                <Text style={styles.modalSaveText}>Add</Text>
+                <Text style={styles.modalSaveText}>{t('common.add')}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
+
+      <ConfirmModal
+        visible={showQrConfirm}
+        title={t('customer.qrScanner') || "QR Scanner"}
+        message={t('customer.qrScannerDesc') || "Camera-based QR scanning available on physical devices."}
+        confirmText={t('common.ok') || "OK"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="info"
+        icon="camera"
+        onConfirm={() => setShowQrConfirm(false)}
+        onCancel={() => setShowQrConfirm(false)}
+      />
     </View>
   );
 }
@@ -271,7 +287,7 @@ const styles = StyleSheet.create({
   searchResults: { backgroundColor: POS.card, borderRadius: 14, overflow: "hidden" },
   noResults: { padding: 16, textAlign: "center", color: POS.textSecondary, fontFamily: "Inter_400Regular" },
   resultItem: { flexDirection: "row", alignItems: "center", padding: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: POS.border },
-  resultAvatar: { width: 36, height: 36, borderRadius: 10, backgroundColor: POS.primaryBg, justifyContent: "center", alignItems: "center" },
+  resultAvatar: { width: 36, height: 36, borderRadius: 10, backgroundColor: POS.primary + "15", justifyContent: "center", alignItems: "center" },
   resultInitial: { fontSize: 15, fontFamily: "Inter_700Bold", color: POS.primary },
   resultName: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.text },
   resultPhone: { fontSize: 12, fontFamily: "Inter_400Regular", color: POS.textSecondary },
@@ -285,7 +301,7 @@ const styles = StyleSheet.create({
   verifiedConfirm: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: POS.successBg, borderRadius: 12, padding: 14, justifyContent: "center" },
   verifiedConfirmText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: POS.success },
   qrBlock: { alignItems: "center", gap: 8 },
-  qrIconBox: { width: 72, height: 72, borderRadius: 20, backgroundColor: POS.primaryBg, justifyContent: "center", alignItems: "center" },
+  qrIconBox: { width: 72, height: 72, borderRadius: 20, backgroundColor: POS.primary + "15", justifyContent: "center", alignItems: "center" },
   qrTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: POS.text },
   qrSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: POS.textSecondary, textAlign: "center" },
   qrBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: POS.primary, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 12, marginTop: 4 },
@@ -293,7 +309,7 @@ const styles = StyleSheet.create({
   warningBox: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFF3E0", borderRadius: 8, padding: 10 },
   warningText: { fontSize: 12, fontFamily: "Inter_400Regular", color: POS.warning, flex: 1 },
   bottomActions: { backgroundColor: POS.card, paddingHorizontal: 16, paddingTop: 12, gap: 10, borderTopWidth: 1, borderTopColor: POS.border },
-  addCustomerBtn: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center", paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: POS.primary, backgroundColor: POS.primaryBg },
+  addCustomerBtn: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center", paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: POS.primary, backgroundColor: POS.primary + "15" },
   addCustomerText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: POS.primary },
   walkInBtn: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center", paddingVertical: 14, borderRadius: 12, backgroundColor: POS.textSecondary },
   walkInText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "#fff" },

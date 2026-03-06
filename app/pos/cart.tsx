@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  TextInput, Platform, Modal, Alert,
+  TextInput, Platform, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,6 +9,8 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { Colors as POS } from "@/constants";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { useTranslation } from "react-i18next";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -19,10 +21,14 @@ import Toast from 'react-native-root-toast';
 export default function CartScreen() {
   const insets = useSafeAreaInsets();
   const { cart, updateCartQty, removeFromCart, clearCart } = useApp();
+  const { t } = useTranslation();
   const [discountOpen, setDiscountOpen] = useState(false);
   const [discountPct, setDiscountPct] = useState("0");
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editQty, setEditQty] = useState("");
+  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
+  const [showRemoveItemConfirm, setShowRemoveItemConfirm] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<string | null>(null);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -31,15 +37,31 @@ export default function CartScreen() {
   const total = subtotal - discountAmt;
 
   function handleQtyEdit(productId: string, currentQty: number) {
+    const cartItem = cart.find(ci => ci.product.id === productId);
+    const availableStock = cartItem ? cartItem.product.stock - cartItem.qty : 0;
     setEditingItem(productId);
     setEditQty(String(currentQty));
   }
 
   function confirmQtyEdit(productId: string) {
     const q = parseInt(editQty);
-    if (!isNaN(q) && q > 0) {
-      updateCartQty(productId, q);
+    const cartItem = cart.find(ci => ci.product.id === productId);
+    if (!cartItem) return;
+    const maxQty = cartItem.product.stock;
+    
+    if (isNaN(q) || q <= 0) {
+      Toast.show(t('pos.invalidQty'), { duration: Toast.durations.SHORT });
+      setEditingItem(null);
+      return;
     }
+    
+    if (q > maxQty) {
+      Toast.show(`${t('pos.maxStock')}: ${maxQty}`, { duration: Toast.durations.SHORT });
+      setEditingItem(null);
+      return;
+    }
+    
+    updateCartQty(productId, q);
     setEditingItem(null);
   }
 
@@ -51,15 +73,15 @@ export default function CartScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Feather name="chevron-left" size={24} color="#fff" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Shopping Cart</Text>
+            <Text style={styles.headerTitle}>{t('pos.cart')}</Text>
             <View style={{ width: 36 }} />
           </View>
         </View>
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
           <Feather name="shopping-cart" size={48} color={POS.textMuted} />
-          <Text style={{ fontSize: 16, color: POS.textSecondary, fontFamily: "Inter_500Medium", marginTop: 12 }}>Cart is empty</Text>
+          <Text style={{ fontSize: 16, color: POS.textSecondary, fontFamily: "Inter_500Medium", marginTop: 12 }}>{t('pos.noItems')}</Text>
           <TouchableOpacity style={[styles.backToProducts, { marginTop: 20 }]} onPress={() => router.back()}>
-            <Text style={styles.backToProductsText}>Browse Products</Text>
+            <Text style={styles.backToProductsText}>{t('pos.browseProducts')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -73,17 +95,10 @@ export default function CartScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Feather name="chevron-left" size={24} color="#fff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Shopping Cart</Text>
+          <Text style={styles.headerTitle}>{t('pos.cart')}</Text>
           <TouchableOpacity
             onPress={() => {
-              Alert.alert("Clear Cart", "Remove all items?", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Clear", style: "destructive", onPress: () => { 
-                  clearCart(); 
-                  router.back(); 
-                  Toast.show("Panier vidé", { duration: Toast.durations.SHORT });
-                }},
-              ]);
+              setShowClearCartConfirm(true);
             }}
             style={styles.clearBtn}
           >
@@ -102,13 +117,20 @@ export default function CartScreen() {
             <Text style={styles.cartItemName}>{ci.product.name}</Text>
             <View style={styles.cartRow}>
               <View style={styles.priceBlock}>
-                <Text style={styles.priceLabel}>Unit Price</Text>
+                <Text style={styles.priceLabel}>{t('pos.unitPrice')}</Text>
                 <Text style={styles.priceValue}>MAD {fmt(ci.product.price)}</Text>
               </View>
               <View style={styles.qtyControls}>
                 <TouchableOpacity
-                  style={styles.qtyBtn}
-                  onPress={() => { Haptics.selectionAsync(); updateCartQty(ci.product.id, ci.qty + 1); }}
+                  style={[styles.qtyBtn, ci.qty >= ci.product.stock && styles.qtyBtnDisabled]}
+                  onPress={() => { 
+                    Haptics.selectionAsync(); 
+                    if (ci.qty < ci.product.stock) {
+                      updateCartQty(ci.product.id, ci.qty + 1);
+                    } else {
+                      Toast.show(`${t('pos.maxStock')}: ${ci.product.stock}`, { duration: Toast.durations.SHORT });
+                    }
+                  }}
                 >
                   <Text style={styles.qtyBtnText}>+</Text>
                 </TouchableOpacity>
@@ -129,15 +151,22 @@ export default function CartScreen() {
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  style={styles.qtyBtn}
-                  onPress={() => { Haptics.selectionAsync(); updateCartQty(ci.product.id, ci.qty - 1); }}
+                  style={[styles.qtyBtn, ci.qty <= 1 && styles.qtyBtnDisabled]}
+                  onPress={() => { 
+                    Haptics.selectionAsync(); 
+                    if (ci.qty > 1) {
+                      updateCartQty(ci.product.id, ci.qty - 1);
+                    } else {
+                      removeFromCart(ci.product.id);
+                    }
+                  }}
                 >
                   <Text style={styles.qtyBtnText}>−</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.priceBlock}>
-                <Text style={styles.priceLabel}>Total</Text>
-                <Text style={[styles.priceValue, { color: POS.success }]}>MAD {fmt(ci.qty * ci.product.price)}</Text>
+                <Text style={styles.priceLabel}>{t('pos.totalPrice')}</Text>
+                <Text style={[styles.priceValue, { color: POS.success }]}>{fmt(ci.qty * ci.product.price)} MAD</Text>
               </View>
             </View>
             <View style={styles.cartFooter}>
@@ -145,13 +174,8 @@ export default function CartScreen() {
                 style={styles.cartAction}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  Alert.alert("Remove", `Remove ${ci.product.name}?`, [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Remove", style: "destructive", onPress: () => {
-                      removeFromCart(ci.product.id);
-                      Toast.show("Article supprimé", { duration: Toast.durations.SHORT });
-                    }},
-                  ]);
+                  setItemToRemove(ci.product.id);
+                  setShowRemoveItemConfirm(true);
                 }}
               >
                 <Feather name="trash-2" size={16} color={POS.danger} />
@@ -163,8 +187,10 @@ export default function CartScreen() {
                 <Feather name="edit-2" size={16} color={POS.primary} />
               </TouchableOpacity>
               <View style={styles.stockInfo}>
-                <MaterialCommunityIcons name="gift-outline" size={12} color={POS.primary} />
-                <Text style={styles.stockInfoText}>{ci.product.stock.toLocaleString()} available</Text>
+                <MaterialCommunityIcons name="gift-outline" size={12} color={ci.product.stock - ci.qty < 5 ? POS.warning : POS.primary} />
+                <Text style={[styles.stockInfoText, { color: ci.product.stock - ci.qty < 5 ? POS.warning : POS.textSecondary }]}>
+                  {(ci.product.stock - ci.qty).toLocaleString()} {t('pos.available')}
+                </Text>
               </View>
             </View>
           </View>
@@ -179,11 +205,11 @@ export default function CartScreen() {
           activeOpacity={0.9}
         >
           <View style={styles.subtotalInfo}>
-            <Text style={styles.subtotalLabel}>Subtotal</Text>
-            <Text style={styles.subtotalValue}>MAD {fmt(subtotal)}</Text>
+            <Text style={styles.subtotalLabel}>{t('pos.subtotal')}</Text>
+            <Text style={styles.subtotalValue}>{fmt(subtotal)} MAD</Text>
           </View>
           <Text style={styles.customizeBtn}>
-            {discountOpen ? "Hide" : "Tap to customize"}
+            {discountOpen ? t('pos.hideDiscount') : t('pos.customizeDiscount')}
           </Text>
         </TouchableOpacity>
 
@@ -191,7 +217,7 @@ export default function CartScreen() {
           <View style={styles.discountPanel}>
             <View style={styles.discountRow}>
               <Feather name="tag" size={14} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.discountLabel}>Discount</Text>
+              <Text style={styles.discountLabel}>{t('pos.discount')}</Text>
             </View>
             <View style={styles.discountInputRow}>
               <TextInput
@@ -206,11 +232,11 @@ export default function CartScreen() {
             </View>
             {parseFloat(discountPct) > 0 && (
               <Text style={styles.discountSaving}>
-                Saving: MAD {fmt(discountAmt)}
+                {t('pos.saving')}: {fmt(discountAmt)} MAD
               </Text>
             )}
             <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>{t('pos.total')}</Text>
               <Text style={styles.totalValue}>MAD {fmt(total)}</Text>
             </View>
           </View>
@@ -221,9 +247,46 @@ export default function CartScreen() {
           onPress={() => router.push({ pathname: "/pos/customer", params: { discount: discountPct, subtotal: fmt(subtotal), total: fmt(total) } })}
         >
           <Feather name="user" size={18} color="#fff" />
-          <Text style={styles.customerBtnText}>Select Customer</Text>
+          <Text style={styles.customerBtnText}>{t('pos.selectCustomer')}</Text>
         </TouchableOpacity>
       </View>
+
+      <ConfirmModal
+        visible={showClearCartConfirm}
+        title={t('common.clear') || "Clear Cart"}
+        message={t('pos.removeConfirm') || "Are you sure?"}
+        confirmText={t('common.clear') || "Clear"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="danger"
+        onConfirm={() => {
+          clearCart();
+          router.back();
+          Toast.show(t('pos.cartCleared'), { duration: Toast.durations.SHORT });
+          setShowClearCartConfirm(false);
+        }}
+        onCancel={() => setShowClearCartConfirm(false)}
+      />
+
+      <ConfirmModal
+        visible={showRemoveItemConfirm}
+        title={t('pos.removeItem') || "Remove Item"}
+        message={t('pos.removeConfirm') || "Are you sure?"}
+        confirmText={t('common.remove') || "Remove"}
+        cancelText={t('common.cancel') || "Cancel"}
+        type="danger"
+        onConfirm={() => {
+          if (itemToRemove) {
+            removeFromCart(itemToRemove);
+            Toast.show(t('pos.itemRemoved'), { duration: Toast.durations.SHORT });
+          }
+          setShowRemoveItemConfirm(false);
+          setItemToRemove(null);
+        }}
+        onCancel={() => {
+          setShowRemoveItemConfirm(false);
+          setItemToRemove(null);
+        }}
+      />
     </View>
   );
 }
@@ -243,6 +306,7 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 14, fontFamily: "Inter_700Bold", color: POS.primary },
   qtyControls: { flexDirection: "row", alignItems: "center", gap: 0, backgroundColor: "#F5F5F5", borderRadius: 10, overflow: "hidden" },
   qtyBtn: { width: 40, height: 40, backgroundColor: POS.primary, justifyContent: "center", alignItems: "center" },
+  qtyBtnDisabled: { width: 40, height: 40, backgroundColor: POS.textMuted, justifyContent: "center", alignItems: "center" },
   qtyBtnText: { fontSize: 22, fontFamily: "Inter_600SemiBold", color: "#fff", lineHeight: 26 },
   qtyValue: { width: 44, textAlign: "center", fontSize: 18, fontFamily: "Inter_700Bold", color: POS.text },
   qtyInputInline: { width: 44, textAlign: "center", fontSize: 18, fontFamily: "Inter_700Bold", color: POS.text, padding: 0 },
