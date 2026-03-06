@@ -37,9 +37,10 @@ function MetricCard({ label, value, icon, color, sub, arLabel }: { label: string
 
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, products, setIsSidebarOpen } = useApp();
+  const { sales, transactions, products, setIsSidebarOpen } = useApp();
   const { t, i18n } = useTranslation();
   const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('daily');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'transactions'>('metrics');
 
   const filteredSales = useMemo(() => {
     const now = new Date();
@@ -49,9 +50,7 @@ export default function ReportsScreen() {
       const saleDate = new Date(s.date);
       const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
       
-      if (filter === 'daily') {
-        return saleDay.getTime() === today.getTime();
-      }
+      if (filter === 'daily') return saleDay.getTime() === today.getTime();
       if (filter === 'weekly') {
         const weekAgo = new Date(today);
         weekAgo.setDate(today.getDate() - 7);
@@ -77,6 +76,27 @@ export default function ReportsScreen() {
     return { count, value };
   }, [products]);
 
+  const filteredTransactions = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    return transactions.filter(t => {
+      const d = new Date(t.date);
+      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      
+      if (filter === 'daily') return day.getTime() === today.getTime();
+      if (filter === 'weekly') {
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+        return day >= weekAgo;
+      }
+      if (filter === 'monthly') {
+        return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
+      }
+      return true;
+    });
+  }, [transactions, filter]);
+
   const paidSalesCount = filteredSales.filter(s => s.status === "paid").length;
   const dueSalesCount = filteredSales.filter(s => s.status === "due").length;
   const partialSalesCount = filteredSales.filter(s => s.status === "partial").length;
@@ -94,6 +114,25 @@ export default function ReportsScreen() {
           setIsSidebarOpen(true);
         }}
       />
+      <View style={styles.tabHeader}>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === 'metrics' && styles.tabBtnActive]} 
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('metrics'); }}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'metrics' && styles.tabBtnTextActive]}>
+            {i18n.language === 'ar' ? 'الملخص' : i18n.language === 'fr' ? 'Résumé' : 'Metrics'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === 'transactions' && styles.tabBtnActive]} 
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('transactions'); }}
+        >
+          <Text style={[styles.tabBtnText, activeTab === 'transactions' && styles.tabBtnTextActive]}>
+            {i18n.language === 'ar' ? 'السجلات' : i18n.language === 'fr' ? 'Journaux' : 'Logs'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
           <View style={styles.filterRow}>
@@ -120,61 +159,102 @@ export default function ReportsScreen() {
           </View>
         </LinearGradient>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'المخزون المتبقي في الشاحنة' : i18n.language === 'fr' ? 'Stock restant du camion' : 'Truck Remaining Stock'}</Text>
-          <View style={styles.metricsGrid}>
-            <MetricCard 
-              label={i18n.language === 'ar' ? 'عدد المنتجات' : i18n.language === 'fr' ? 'Nombre de produits' : 'Products Count'} 
-              value={`${truckStats.count}`} 
-              icon="package" 
-              color={C.primaryLight} 
-            />
-            <MetricCard 
-              label={i18n.language === 'ar' ? 'القيمة المتبقية' : i18n.language === 'fr' ? 'Valeur restante' : 'Remaining Value'} 
-              value={`MAD ${fmt(truckStats.value)}`} 
-              icon="truck" 
-              color={C.accent} 
-            />
-          </View>
-        </View>
+        {activeTab === 'metrics' ? (
+          <>
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'المخزون المتبقي في الشاحنة' : i18n.language === 'fr' ? 'Stock restant du camion' : 'Truck Remaining Stock'}</Text>
+              <View style={styles.metricsGrid}>
+                <MetricCard 
+                  label={i18n.language === 'ar' ? 'عدد المنتجات' : i18n.language === 'fr' ? 'Nombre de produits' : 'Products Count'} 
+                  value={`${truckStats.count}`} 
+                  icon="package" 
+                  color={C.primaryLight} 
+                />
+                <MetricCard 
+                  label={i18n.language === 'ar' ? 'القيمة المتبقية' : i18n.language === 'fr' ? 'Valeur restante' : 'Remaining Value'} 
+                  value={`MAD ${fmt(truckStats.value)}`} 
+                  icon="truck" 
+                  color={C.accent} 
+                />
+              </View>
+            </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'الملخص المالي' : i18n.language === 'fr' ? 'Résumé financier' : 'Financial Summary'}</Text>
-          <View style={styles.metricsGrid}>
-            <MetricCard 
-              label={i18n.language === 'ar' ? 'الإيرادات' : i18n.language === 'fr' ? 'Revenus' : 'Revenue'} 
-              value={`MAD ${fmt(stats.rev)}`} 
-              icon="trending-up" 
-              color={C.primaryLight} 
-              sub={`${filteredSales.length} ${i18n.language === 'ar' ? 'مبيعات' : i18n.language === 'fr' ? 'ventes' : 'sales'}`} 
-            />
-            <MetricCard 
-              label={i18n.language === 'ar' ? 'المبلغ المستحق' : i18n.language === 'fr' ? 'Montant dû' : 'Amount Due'} 
-              value={`MAD ${fmt(stats.due)}`} 
-              icon="clock" 
-              color={C.warning} 
-              sub={`${dueSalesCount} ${i18n.language === 'ar' ? 'غير مدفوع' : i18n.language === 'fr' ? 'impayé' : 'unpaid'}`} 
-            />
-          </View>
-        </View>
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{i18n.language === 'ar' ? 'الملخص المالي' : i18n.language === 'fr' ? 'Résumé financier' : 'Financial Summary'}</Text>
+              <View style={styles.metricsGrid}>
+                <MetricCard 
+                  label={i18n.language === 'ar' ? 'الإيرادات' : i18n.language === 'fr' ? 'Revenus' : 'Revenue'} 
+                  value={`MAD ${fmt(stats.rev)}`} 
+                  icon="trending-up" 
+                  color={C.primaryLight} 
+                  sub={`${filteredSales.length} ${i18n.language === 'ar' ? 'مبيعات' : i18n.language === 'fr' ? 'ventes' : 'sales'}`} 
+                />
+                <MetricCard 
+                  label={i18n.language === 'ar' ? 'المبلغ المستحق' : i18n.language === 'fr' ? 'Montant dû' : 'Amount Due'} 
+                  value={`MAD ${fmt(stats.due)}`} 
+                  icon="clock" 
+                  color={C.warning} 
+                  sub={`${dueSalesCount} ${i18n.language === 'ar' ? 'غير مدفوع' : i18n.language === 'fr' ? 'impayé' : 'unpaid'}`} 
+                />
+              </View>
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'المبيعات حسب الحالة' : i18n.language === 'fr' ? 'Ventes par statut' : 'Sales by Status'}</Text>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusCard, { borderColor: C.success + "30" }]}>
-              <Text style={[styles.statusCount, { color: C.success }]}>{paidSalesCount}</Text>
-              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مدفوعة' : i18n.language === 'fr' ? 'Payée' : 'Paid'}</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'المبيعات حسب الحالة' : i18n.language === 'fr' ? 'Ventes par statut' : 'Sales by Status'}</Text>
+              <View style={styles.statusRow}>
+                <View style={[styles.statusCard, { borderColor: C.success + "30" }]}>
+                  <Text style={[styles.statusCount, { color: C.success }]}>{paidSalesCount}</Text>
+                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مدفوعة' : i18n.language === 'fr' ? 'Payée' : 'Paid'}</Text>
+                </View>
+                <View style={[styles.statusCard, { borderColor: C.warning + "30" }]}>
+                  <Text style={[styles.statusCount, { color: C.warning }]}>{partialSalesCount}</Text>
+                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'جزئية' : i18n.language === 'fr' ? 'Partielle' : 'Partial'}</Text>
+                </View>
+                <View style={[styles.statusCard, { borderColor: C.danger + "30" }]}>
+                  <Text style={[styles.statusCount, { color: C.danger }]}>{dueSalesCount}</Text>
+                  <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مستحقة' : i18n.language === 'fr' ? 'Due' : 'Due'}</Text>
+                </View>
+              </View>
             </View>
-            <View style={[styles.statusCard, { borderColor: C.warning + "30" }]}>
-              <Text style={[styles.statusCount, { color: C.warning }]}>{partialSalesCount}</Text>
-              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'جزئية' : i18n.language === 'fr' ? 'Partielle' : 'Partial'}</Text>
-            </View>
-            <View style={[styles.statusCard, { borderColor: C.danger + "30" }]}>
-              <Text style={[styles.statusCount, { color: C.danger }]}>{dueSalesCount}</Text>
-              <Text style={styles.statusLabel}>{i18n.language === 'ar' ? 'مستحقة' : i18n.language === 'fr' ? 'Due' : 'Due'}</Text>
+          </>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{i18n.language === 'ar' ? 'سجل المعاملات' : i18n.language === 'fr' ? 'Journal des transactions' : 'Transaction Logs'}</Text>
+            <View style={styles.tableCard}>
+              <View style={[styles.tableHeader, { borderBottomColor: C.border }]}>
+                <Text style={[styles.th, { flex: 1.5 }]}>{i18n.language === 'ar' ? 'المرجع' : 'Ref'}</Text>
+                <Text style={[styles.th, { flex: 2 }]}>{i18n.language === 'ar' ? 'المنتج' : 'Product'}</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{i18n.language === 'ar' ? 'الكمية' : 'Qty'}</Text>
+                <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>{i18n.language === 'ar' ? 'النوع' : 'Type'}</Text>
+              </View>
+              {filteredTransactions.length === 0 ? (
+                <View style={styles.emptyTable}>
+                  <Text style={{ color: C.textMuted }}>{i18n.language === 'ar' ? 'لا توجد معاملات' : 'No transactions'}</Text>
+                </View>
+              ) : (
+                filteredTransactions.map((t) => (
+                  <View key={t.id} style={[styles.tableRow, { borderBottomColor: C.border + '40' }]}>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={styles.tdRef} numberOfLines={1}>{t.referenceNo}</Text>
+                      <Text style={styles.tdDate}>{new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                    </View>
+                    <Text style={[styles.td, { flex: 2 }]} numberOfLines={2}>{t.productName}</Text>
+                    <Text style={[styles.td, { flex: 1, textAlign: 'center', color: t.quantity < 0 ? C.danger : C.success }]}>
+                      {t.quantity}
+                    </Text>
+                    <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                      <View style={[styles.typeBadge, { backgroundColor: t.type === 'sell' ? C.primary + '20' : C.accent + '20' }]}>
+                        <Text style={[styles.typeText, { color: t.type === 'sell' ? C.primaryLight : C.accent }]}>
+                          {t.type === 'sell' ? (i18n.language === 'ar' ? 'بيع' : 'Sale') : (i18n.language === 'ar' ? 'تحويل' : 'Trf')}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
           </View>
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -183,6 +263,11 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
   header: { paddingHorizontal: 20, paddingBottom: 20 },
+  tabHeader: { flexDirection: 'row', backgroundColor: C.surface, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: C.border },
+  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  tabBtnActive: { borderBottomColor: C.primary },
+  tabBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.textSecondary },
+  tabBtnTextActive: { color: C.primary },
   filterRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 8 },
   filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)' },
   filterBtnActive: { backgroundColor: '#fff' },
@@ -206,4 +291,14 @@ const styles = StyleSheet.create({
   },
   statusCount: { fontSize: 28, fontFamily: "Inter_700Bold" },
   statusLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
+  tableCard: { backgroundColor: C.card, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.border },
+  tableHeader: { flexDirection: 'row', paddingBottom: 10, borderBottomWidth: 1, marginBottom: 8 },
+  th: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: C.textMuted },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
+  td: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.textPrimary },
+  tdRef: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
+  tdDate: { fontSize: 10, fontFamily: 'Inter_400Regular', color: C.textMuted },
+  emptyTable: { padding: 40, alignItems: 'center' },
+  typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  typeText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
 });
