@@ -102,19 +102,21 @@ class SyncService {
         category: p.category || 'General',
         unit: p.unit || 'pcs',
         image: p.image_url || null,
-        stock: Number(p.stock_quantity || 0),
-        active: true, // You can add this field to Supabase if needed
+        // Don't set stock here - it will be preserved from local storage
+        active: true,
         updatedAt: p.updated_at,
       }));
 
-      // Merge: update existing products and add new ones, preserving local stock
+      // Merge: update existing products and add new ones, ALWAYS preserving local stock
       formattedProducts.forEach(product => {
         const existing = productMap.get(product.id);
-        // Preserve the local stock value if it exists, don't overwrite with server stock
-        if (existing && existing.stock !== undefined && existing.stock > 0) {
+        // Always preserve the local stock value - server doesn't manage stock
+        if (existing && existing.stock !== undefined) {
+          // Update product info but keep the local stock
           productMap.set(product.id, { ...product, stock: existing.stock });
         } else {
-          productMap.set(product.id, product);
+          // New product - initialize with 0 stock
+          productMap.set(product.id, { ...product, stock: 0 });
         }
       });
 
