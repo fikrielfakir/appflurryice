@@ -149,42 +149,41 @@ export default function ProductsScreen() {
       style={[
         productCardStyle(C), 
         item.stock <= 0 && styles.productCardDisabled,
-        isSelected && styles.productCardSelected
+        isSelected && styles.productCardSelected,
+        styles.gridCard
       ]}
       onPress={handlePress}
     >
-      <View style={styles.productMain}>
-        <View style={styles.priceContainer}>
-          <Text style={[styles.priceValue, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
-          <View style={[styles.stockBadge, { backgroundColor: isSelected ? C.success : C.primary }]}>
-            <Text style={styles.stockText}>{fmt(item.stock)}</Text>
-            <Feather name="package" size={12} color="#fff" style={{ marginLeft: 4 }} />
+      <View style={[styles.gridImageContainer, { backgroundColor: C.background, borderColor: C.border }]}>
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.gridProductImage} />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Feather name="image" size={28} color={C.textMuted} />
           </View>
+        )}
+        {isSelected && (
+          <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
+            <Feather name="check" size={20} color="#fff" />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.gridContent}>
+        <Text style={[styles.gridProductName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
+        
+        <Text style={[styles.gridPriceValue, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
+        
+        <View style={[styles.gridStockBadge, { backgroundColor: isSelected ? C.success : C.primary }]}>
+          <Feather name="package" size={12} color="#fff" style={{ marginRight: 4 }} />
+          <Text style={styles.gridStockText}>{fmt(item.stock)}</Text>
         </View>
 
-        <View style={styles.productCenter}>
-          <Text style={[styles.productName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
-          {isSelected && (
-            <View style={[styles.selectedBadge, { backgroundColor: C.success }]}>
-              <Text style={styles.selectedBadgeText}>{selectedQty} {t('products.selected')}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.imageContainer, { backgroundColor: C.background, borderColor: C.border }]}>
-          {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.productImage} />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Feather name="image" size={20} color={C.textMuted} />
-            </View>
-          )}
-          {isSelected && (
-            <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
-              <Feather name="check" size={16} color="#fff" />
-            </View>
-          )}
-        </View>
+        {isSelected && (
+          <View style={[styles.gridSelectedBadge, { backgroundColor: C.success }]}>
+            <Text style={styles.gridSelectedBadgeText}>{selectedQty} {t('products.selected')}</Text>
+          </View>
+        )}
       </View>
       
       {isSelected && (
@@ -1029,6 +1028,67 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  gridCard: {
+    flexDirection: "column",
+    flex: 1,
+    margin: 6,
+  },
+  gridImageContainer: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  gridProductImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  gridContent: {
+    flex: 1,
+    justifyContent: "space-between",
+  },
+  gridProductName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 6,
+    lineHeight: 18,
+  },
+  gridPriceValue: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    marginBottom: 6,
+  },
+  gridStockBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  gridStockText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+  },
+  gridSelectedBadge: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  gridSelectedBadgeText: {
+    color: "#fff",
+    fontSize: 10,
     fontFamily: "Inter_600SemiBold",
   },
 });
