@@ -107,9 +107,15 @@ class SyncService {
         updatedAt: p.updated_at,
       }));
 
-      // Merge: update existing products and add new ones
+      // Merge: update existing products and add new ones, preserving local stock
       formattedProducts.forEach(product => {
-        productMap.set(product.id, product);
+        const existing = productMap.get(product.id);
+        // Preserve the local stock value if it exists, don't overwrite with server stock
+        if (existing && existing.stock !== undefined && existing.stock > 0) {
+          productMap.set(product.id, { ...product, stock: existing.stock });
+        } else {
+          productMap.set(product.id, product);
+        }
       });
 
       const mergedProducts = Array.from(productMap.values());
