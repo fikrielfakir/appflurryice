@@ -2,6 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import { syncService } from "@/lib/syncService";
 import Colors from "@/constants/colors";
+import Toast from "react-native-root-toast";
+
+const C = Colors.dark;
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -383,11 +386,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const results = await syncService.forceFullSync();
 
-      // After sync, reload products from storage (sync service writes to the same key now)
       if (results.products.success) {
         const raw = await AsyncStorage.getItem(KEYS.products);
         if (raw) {
-          setProducts(JSON.parse(raw));
+          const syncedProducts = JSON.parse(raw);
+          const existingProducts = products;
+          
+          const mergedProducts = syncedProducts.map((syncedProduct: Product) => {
+            const existingProduct = existingProducts.find(p => p.id === syncedProduct.id);
+            if (existingProduct) {
+              return { ...syncedProduct, stock: existingProduct.stock };
+            }
+            return syncedProduct;
+          });
+          
+          setProducts(mergedProducts);
         }
       }
       if (results.contacts.success) {
@@ -411,14 +424,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const c = results.contacts.count ?? 0;
         const s = results.sales.count ?? 0;
         if (results.overall.success) {
-          alert(`Sync Complete!\n\n${p} products\n${c} contacts\n${s} sales`);
+          Toast.show(`Sync Complete!\n\n${p} products\n${c} contacts\n${s} sales`, {
+            duration: Toast.durations.LONG,
+            backgroundColor: C.success,
+          });
         } else {
-          alert(`Sync Error: ${results.overall.error}`);
+          Toast.show(`Sync Error: ${results.overall.error}`, {
+            duration: Toast.durations.SHORT,
+            backgroundColor: C.danger,
+          });
         }
       }
     } catch (error: any) {
       console.error("Sync error:", error);
-      if (!silent) alert(`Sync Failed: ${error.message || "Unknown error"}`);
+      if (!silent) Toast.show(`Sync Failed: ${error.message || "Unknown error"}`, {
+        duration: Toast.durations.SHORT,
+        backgroundColor: C.danger,
+      });
     } finally {
       setIsSyncing(false);
     }

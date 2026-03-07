@@ -92,7 +92,13 @@
     "removeFromCart": "Remove from cart",
     "resetSuccess": "All stock has been reset to 0.",
     "incorrectPassword": "Incorrect password.",
-    "outOfStock": "Out of Stock"
+    "outOfStock": "Out of Stock",
+    "filter": "Filter",
+    "allCategories": "All Categories",
+    "stockStatus": "Stock Status",
+    "inStock": "In Stock",
+    "all": "All",
+    "apply": "Apply"
   },
   "transfers": {
     "title": "Stock Transfers",
@@ -106,7 +112,8 @@
     "date": "Date",
     "transfer": "Transfer",
     "permissionRequired": "We need your permission to show the camera",
-    "grantPermission": "Grant Permission"
+    "grantPermission": "Grant Permission",
+    "alreadyExists": "Transfer already exists"
   },
   "expenses": {
     "title": "Expenses",

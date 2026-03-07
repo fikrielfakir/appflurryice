@@ -92,7 +92,13 @@
     "removeFromCart": "Retirer du panier",
     "resetSuccess": "Tout le stock a été réinitialisé à 0.",
     "incorrectPassword": "Mot de passe incorrect.",
-    "outOfStock": "Rupture de stock"
+    "outOfStock": "Rupture de stock",
+    "filter": "Filtrer",
+    "allCategories": "Toutes les catégories",
+    "stockStatus": "État du stock",
+    "inStock": "En stock",
+    "all": "Tout",
+    "apply": "Appliquer"
   },
   "transfers": {
     "title": "Transferts de stock",
@@ -106,7 +112,8 @@
     "date": "Date",
     "transfer": "Transférer",
     "permissionRequired": "Nous avons besoin de votre permission pour accéder à la caméra",
-    "grantPermission": "Accorder la permission"
+    "grantPermission": "Accorder la permission",
+    "alreadyExists": "Le transfert existe déjà"
   },
   "expenses": {
     "title": "Dépenses",

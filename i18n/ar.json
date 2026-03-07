@@ -92,7 +92,13 @@
     "removeFromCart": "إزالة من السلة",
     "resetSuccess": "تمت إعادة تعيين كل المخزون إلى 0.",
     "incorrectPassword": "كلمة المرور غير صحيحة.",
-    "outOfStock": "غير متوفر"
+    "outOfStock": "غير متوفر",
+    "filter": "تصفية",
+    "allCategories": "كل الفئات",
+    "stockStatus": "حالة المخزون",
+    "inStock": "متوفر",
+    "all": "الكل",
+    "apply": "تطبيق"
   },
   "transfers": {
     "title": "تحويل المخزون",
@@ -106,7 +112,8 @@
     "date": "التاريخ",
     "transfer": "تحويل",
     "permissionRequired": "نحتاج إذنك للوصول إلى الكاميرا",
-    "grantPermission": "منح الإذن"
+    "grantPermission": "منح الإذن",
+    "alreadyExists": "التحويل موجود بالفعل"
   },
   "expenses": {
     "title": "المصروفات",

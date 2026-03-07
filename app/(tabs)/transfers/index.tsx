@@ -6,10 +6,8 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useApp, Transfer } from '@/context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants';
-import { router } from 'expo-router';
 import { AppHeader } from '@/components/common/AppHeader';
 import { useTranslation } from 'react-i18next';
-import { LinearGradient } from 'expo-linear-gradient';
 import { usePrintInvoice } from '@/hooks/usePrintInvoice';
 
 const C = Colors;
@@ -80,6 +78,18 @@ export default function TransfersScreen() {
           total: transferData.total || 0,
           sig: transferData.sig || ""
         };
+        
+        // Check if transfer with same ref already exists
+        const existingTransfer = transfers.find(t => t.ref === newTransfer.ref);
+        if (existingTransfer) {
+          Toast.show(`${t('transfers.alreadyExists') || 'Transfer already exists'}: ${newTransfer.ref}`, {
+            duration: Toast.durations.SHORT,
+            position: Toast.positions.BOTTOM,
+            backgroundColor: C.warning,
+          });
+          return;
+        }
+        
         addTransfer(newTransfer);
         Toast.show(`Transfer ${newTransfer.ref} recorded and stock updated.`, {
           duration: Toast.durations.LONG,

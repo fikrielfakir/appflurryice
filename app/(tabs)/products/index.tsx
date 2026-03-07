@@ -63,6 +63,14 @@ export default function ProductsScreen() {
   const [password, setPassword] = useState("");
   const [selectedProducts, setSelectedProducts] = useState<{[key: string]: number}>({});
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [stockFilter, setStockFilter] = useState<"inStock" | "outOfStock" | "all">("inStock");
+
+  const categories = useMemo(() => {
+    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+    return cats.sort();
+  }, [products]);
 
   const [alertConfig, setAlertConfig] = useState<{
     visible: boolean;
@@ -93,11 +101,17 @@ export default function ProductsScreen() {
 
   const filteredProducts = useMemo(() => {
     return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.category.toLowerCase().includes(search.toLowerCase())
+      (p) => {
+        if (stockFilter === "inStock" && p.stock <= 0) return false;
+        if (stockFilter === "outOfStock" && p.stock > 0) return false;
+        if (!selectedCategory || p.category === selectedCategory) {
+          return p.name.toLowerCase().includes(search.toLowerCase()) ||
+            p.category.toLowerCase().includes(search.toLowerCase());
+        }
+        return false;
+      }
     );
-  }, [products, search]);
+  }, [products, search, selectedCategory, stockFilter]);
 
   const topInset = Platform.OS === "web" ? 20 : insets.top;
 
@@ -344,6 +358,15 @@ export default function ProductsScreen() {
             >
               <Feather name="list" size={18} color={viewMode === "list" ? "#fff" : C.textSecondary} />
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                styles.actionIconBtn, 
+                { backgroundColor: (selectedCategory || stockFilter !== "inStock") ? C.success : C.surface, borderColor: C.border }
+              ]}
+              onPress={() => setShowFilterModal(true)}
+            >
+              <Feather name="filter" size={18} color={(selectedCategory || stockFilter !== "inStock") ? "#fff" : C.textSecondary} />
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.searchContainer, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -452,6 +475,111 @@ export default function ProductsScreen() {
                 <Text style={styles.modalBtnText}>{t('products.resetStock')}</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showFilterModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFilterModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: C.text }]}>{t('products.filter') || 'Filter'}</Text>
+              <TouchableOpacity onPress={() => setShowFilterModal(false)} style={styles.modalCloseBtn}>
+                <Feather name="x" size={20} color={C.text} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[styles.filterSectionTitle, { color: C.textSecondary }]}>{t('products.stockStatus') || 'Stock Status'}</Text>
+            
+            <View style={styles.filterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  { backgroundColor: stockFilter === "inStock" ? C.success : C.background, borderColor: stockFilter === "inStock" ? C.success : C.border }
+                ]}
+                onPress={() => setStockFilter("inStock")}
+              >
+                <Feather name="package" size={14} color={stockFilter === "inStock" ? "#fff" : C.text} />
+                <Text style={[styles.filterChipText, { color: stockFilter === "inStock" ? "#fff" : C.text }]}>
+                  {t('products.inStock') || 'In Stock'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  { backgroundColor: stockFilter === "outOfStock" ? C.danger : C.background, borderColor: stockFilter === "outOfStock" ? C.danger : C.border }
+                ]}
+                onPress={() => setStockFilter("outOfStock")}
+              >
+                <Feather name="package" size={14} color={stockFilter === "outOfStock" ? "#fff" : C.danger} />
+                <Text style={[styles.filterChipText, { color: stockFilter === "outOfStock" ? "#fff" : C.danger }]}>
+                  {t('products.outOfStock') || 'Out of Stock'}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  { backgroundColor: stockFilter === "all" ? C.primary : C.background, borderColor: stockFilter === "all" ? C.primary : C.border }
+                ]}
+                onPress={() => setStockFilter("all")}
+              >
+                <Feather name="layers" size={14} color={stockFilter === "all" ? "#fff" : C.text} />
+                <Text style={[styles.filterChipText, { color: stockFilter === "all" ? "#fff" : C.text }]}>
+                  {t('products.all') || 'All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[styles.filterSectionTitle, { color: C.textSecondary, marginTop: 16 }]}>{t('products.category') || 'Category'}</Text>
+            
+            <TouchableOpacity
+              style={[
+                styles.filterOption,
+                { backgroundColor: !selectedCategory ? C.primary + '20' : C.background, borderColor: !selectedCategory ? C.primary : C.border }
+              ]}
+              onPress={() => {
+                setSelectedCategory(null);
+              }}
+            >
+              <Text style={[styles.filterOptionText, { color: !selectedCategory ? C.primary : C.text }]}>
+                {t('products.allCategories') || 'All Categories'}
+              </Text>
+              {!selectedCategory && <Feather name="check" size={18} color={C.primary} />}
+            </TouchableOpacity>
+            
+            {categories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.filterOption,
+                  { backgroundColor: selectedCategory === cat ? C.primary + '20' : C.background, borderColor: selectedCategory === cat ? C.primary : C.border }
+                ]}
+                onPress={() => {
+                  setSelectedCategory(cat);
+                }}
+              >
+                <Text style={[styles.filterOptionText, { color: selectedCategory === cat ? C.primary : C.text }]}>
+                  {cat}
+                </Text>
+                {selectedCategory === cat && <Feather name="check" size={18} color={C.primary} />}
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity
+              style={[styles.modalBtn, { backgroundColor: C.primary, marginTop: 16 }]}
+              onPress={() => {
+                setShowFilterModal(false);
+              }}
+            >
+              <Text style={styles.modalBtnText}>{t('common.apply') || 'Apply'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -747,6 +875,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     marginBottom: 8,
   },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.background,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalSubtitle: {
     fontSize: 14,
     marginBottom: 20,
@@ -849,5 +991,44 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textSecondary,
+  },
+  filterOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  filterOptionText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+  },
+  filterSectionTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 10,
+    textTransform: "uppercase",
+  },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
 });
