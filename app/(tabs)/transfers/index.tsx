@@ -24,6 +24,9 @@ export default function TransfersScreen() {
   const [selectedTransfer, setSelectedTransfer] = useState<Transfer | null>(null);
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [showPrintOverlay, setShowPrintOverlay] = useState(false);
+  const [showTransferOutModal, setShowTransferOutModal] = useState(false);
+  const [transferOutSelection, setTransferOutSelection] = useState<{[key: string]: number}>({});
+  const [showTransferOutInvoice, setShowTransferOutInvoice] = useState(false);
   const { printTransfer, isConnecting, isPrinting, isSuccess, error: printError, currentPrinter } = usePrintInvoice();
 
   useEffect(() => {
@@ -132,6 +135,76 @@ export default function TransfersScreen() {
     }
   };
 
+  const productsWithStock = products.filter(p => p.stock > 0);
+
+  const handleTransferOutProduct = (productId: string) => {
+    const currentQty = transferOutSelection[productId] || 0;
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    if (currentQty >= product.stock) {
+      Toast.show(`Max stock: ${product.stock}`, { duration: 1000, backgroundColor: C.warning });
+      return;
+    }
+    
+    setTransferOutSelection(prev => ({
+      ...prev,
+      [productId]: currentQty + 1
+    }));
+  };
+
+  const handleTransferOutQtyChange = (productId: string, newQty: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+    
+    if (newQty > product.stock || newQty < 0) return;
+    
+    if (newQty === 0) {
+      const { [productId]: _, ...rest } = transferOutSelection;
+      setTransferOutSelection(rest);
+    } else {
+      setTransferOutSelection(prev => ({ ...prev, [productId]: newQty }));
+    }
+  };
+
+  const completeTransferOut = () => {
+    if (Object.keys(transferOutSelection).length === 0) {
+      Toast.show(t('transfers.selectProducts'), { duration: 1000, backgroundColor: C.danger });
+      return;
+    }
+
+    const items = Object.entries(transferOutSelection).map(([productId, qty]) => {
+      const product = products.find(p => p.id === productId);
+      return {
+        sku: product?.sku || '',
+        name: product?.name || `Product ${productId}`,
+        qty,
+        unit: product?.unit || '0',
+      };
+    });
+
+    const total = items.reduce((sum, item) => sum + (item.qty * parseFloat(item.unit)), 0);
+    const ref = `TR-OUT-${Date.now()}`;
+
+    const newTransfer: Transfer = {
+      id: ref,
+      ref,
+      items,
+      date: new Date().toISOString(),
+      from: 'Truck',
+      to: 'Main Warehouse',
+      total,
+      sig: ''
+    };
+
+    addTransfer(newTransfer);
+    setSelectedTransfer(newTransfer);
+    setShowTransferOutModal(false);
+    setTransferOutSelection({});
+    setShowDetailSheet(true);
+    Toast.show(t('transfers.transferred'), { duration: 2000, backgroundColor: C.success });
+  };
+
   const renderItem = ({ item }: { item: Transfer }) => (
     <View style={styles.transferCard}>
       <View style={styles.transferHeader}>
@@ -172,12 +245,23 @@ export default function TransfersScreen() {
           setIsSidebarOpen(true);
         }}
         rightActions={
-          <TouchableOpacity 
-            style={styles.scanBtnHeader} 
-            onPress={() => setScanning(true)}
-          >
-            <Feather name="maximize" size={20} color="#fff" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity 
+              style={styles.scanBtnHeader}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowTransferOutModal(true);
+              }}
+            >
+              <Feather name="arrow-up" size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.scanBtnHeader} 
+              onPress={() => setScanning(true)}
+            >
+              <Feather name="maximize" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
         }
       />
 
@@ -324,6 +408,84 @@ export default function TransfersScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={showTransferOutModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTransferOutModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowTransferOutModal(false)}>
+          <Pressable style={styles.sheetContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.invoiceTitle}>{t('transfers.transferOut')} - {productsWithStock.length} {t('products.products')}</Text>
+            
+            {productsWithStock.length === 0 ? (
+              <View style={{ alignItems: 'center', marginTop: 40 }}>
+                <Feather name="package" size={48} color={C.textMuted} />
+                <Text style={styles.emptyText}>No products with stock available</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={productsWithStock}
+                scrollEnabled={false}
+                renderItem={({ item }) => {
+                  const selectedQty = transferOutSelection[item.id] || 0;
+                  return (
+                    <View style={[styles.transferOutItem, { backgroundColor: selectedQty > 0 ? C.primary + '10' : 'transparent' }]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.itemName, { color: C.text }]} numberOfLines={1}>{item.name}</Text>
+                        <Text style={[styles.itemQty, { color: C.textMuted }]}>Stock: {item.stock}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {selectedQty > 0 && (
+                          <>
+                            <TouchableOpacity 
+                              style={[styles.qtyBtn, { backgroundColor: C.danger }]}
+                              onPress={() => handleTransferOutQtyChange(item.id, selectedQty - 1)}
+                            >
+                              <Feather name="minus" size={14} color="#fff" />
+                            </TouchableOpacity>
+                            <Text style={[styles.qtyText, { color: C.text }]}>{selectedQty}</Text>
+                          </>
+                        )}
+                        <TouchableOpacity 
+                          style={[styles.qtyBtn, { backgroundColor: selectedQty > 0 ? C.primary : C.success }]}
+                          onPress={() => handleTransferOutProduct(item.id)}
+                        >
+                          <Feather name={selectedQty > 0 ? "plus" : "plus"} size={14} color="#fff" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                }}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{ paddingVertical: 8 }}
+                style={{ maxHeight: 400, marginBottom: 16 }}
+              />
+            )}
+
+            <TouchableOpacity 
+              style={[styles.completeBtn, Object.keys(transferOutSelection).length === 0 && styles.completeBtnDisabled]}
+              onPress={completeTransferOut}
+              disabled={Object.keys(transferOutSelection).length === 0}
+            >
+              <Feather name="check" size={20} color="#fff" />
+              <Text style={styles.completeBtnText}>{t('common.complete')} - {Object.keys(transferOutSelection).length} {t('products.items')}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => {
+                setShowTransferOutModal(false);
+                setTransferOutSelection({});
+              }}
+            >
+              <Text style={styles.closeButtonText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -414,4 +576,37 @@ const styles = StyleSheet.create({
   printOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   printOverlayContent: { backgroundColor: C.surface, padding: 32, borderRadius: 16, alignItems: 'center', minWidth: 200 },
   printOverlayText: { marginTop: 16, fontSize: 16, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
+  transferOutItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: C.border
+  },
+  itemName: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  itemQty: { fontSize: 12, marginTop: 4 },
+  qtyBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 8, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  qtyText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', minWidth: 24, textAlign: 'center' },
+  completeBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    gap: 8, 
+    backgroundColor: C.success, 
+    padding: 16, 
+    borderRadius: 12, 
+    marginBottom: 12 
+  },
+  completeBtnDisabled: { opacity: 0.5 },
+  completeBtnText: { color: '#fff', fontSize: 16, fontFamily: 'Inter_600SemiBold' },
 });
