@@ -383,25 +383,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const results = await syncService.forceFullSync();
 
+      // After sync, reload products from storage (sync service writes to the same key now)
       if (results.products.success) {
-        const raw = await AsyncStorage.getItem(SYNC_KEYS.products);
+        const raw = await AsyncStorage.getItem(KEYS.products);
         if (raw) {
           setProducts(JSON.parse(raw));
-          await AsyncStorage.setItem(KEYS.products, raw);
         }
       }
       if (results.contacts.success) {
-        const raw = await AsyncStorage.getItem(SYNC_KEYS.contacts);
+        const raw = await AsyncStorage.getItem(KEYS.contacts);
         if (raw) {
           setContacts(JSON.parse(raw));
-          await AsyncStorage.setItem(KEYS.contacts, raw);
         }
       }
       if (results.sales.success) {
-        const raw = await AsyncStorage.getItem(SYNC_KEYS.sales);
+        const raw = await AsyncStorage.getItem(KEYS.sales);
         if (raw) {
           setSales(JSON.parse(raw));
-          await AsyncStorage.setItem(KEYS.sales, raw);
         }
       }
 

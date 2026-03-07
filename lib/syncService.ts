@@ -7,9 +7,9 @@ type Sale = Database['public']['Tables']['sales']['Row'];
 type SaleItem = Database['public']['Tables']['sale_items']['Row'];
 
 const STORAGE_KEYS = {
-  PRODUCTS: '@bizpos_products',
-  CONTACTS: '@bizpos_contacts',
-  SALES: '@bizpos_sales',
+  PRODUCTS: 'bizpos_products',
+  CONTACTS: 'bizpos_contacts',
+  SALES: 'bizpos_sales',
   SALE_ITEMS: '@bizpos_sale_items',
   LAST_SYNC: '@bizpos_last_sync',
   LAST_SYNC_PRODUCTS: '@bizpos_last_sync_products',
