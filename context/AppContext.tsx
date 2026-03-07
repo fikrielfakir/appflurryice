@@ -38,6 +38,7 @@ export interface TransferItem {
   name: string;
   qty: number;
   unit: string;
+  productId?: string;
 }
 
 export interface Transfer {
@@ -532,27 +533,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function addTransfer(transfer: Transfer) {
     const updatedProducts = products.map(p => {
-      const item = transfer.items.find(it => it.sku === p.sku);
+      // Match by productId first (most reliable), then by SKU
+      const item = transfer.items.find(it => it.productId === p.id || (it.sku && it.sku === p.sku));
       if (!item) return p;
       
       let newStock = p.stock ?? 0;
       const fromLoc = (transfer.from || "").toLowerCase();
       const toLoc = (transfer.to || "").toLowerCase();
       
-      const isFinisOrStore = (loc: string) => 
+      const isStorage = (loc: string) => 
         loc.includes("produits finis") || 
         loc.includes("main store") || 
+        loc.includes("main warehouse") ||
+        loc.includes("warehouse") ||
         loc.includes("cam 01") ||
         loc.includes("0199-a-44");
 
-      if (isFinisOrStore(fromLoc)) {
-        newStock -= item.qty;
-      }
-      if (isFinisOrStore(toLoc)) {
-        newStock += item.qty;
+      const isTruck = (loc: string) => 
+        loc.includes("truck") || 
+        loc.includes("vehicle");
+
+      // If transferring between truck and warehouse
+      if ((isTruck(fromLoc) && isStorage(toLoc)) || 
+          (isStorage(fromLoc) && isTruck(toLoc))) {
+        if (isTruck(fromLoc) && isStorage(toLoc)) {
+          newStock += item.qty; // Returning items from truck to warehouse = increase stock
+        } else if (isStorage(fromLoc) && isTruck(toLoc)) {
+          newStock -= item.qty; // Taking items from warehouse to truck = decrease stock
+        }
+      } else {
+        // Original logic for other location types
+        if (isStorage(fromLoc)) {
+          newStock -= item.qty;
+        }
+        if (isStorage(toLoc)) {
+          newStock += item.qty;
+        }
       }
       
-      return { ...p, stock: newStock };
+      return { ...p, stock: Math.max(0, newStock) };
     });
 
     const transferTransactions: Transaction[] = transfer.items.map(item => {

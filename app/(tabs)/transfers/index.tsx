@@ -176,6 +176,7 @@ export default function TransfersScreen() {
     const items = Object.entries(transferOutSelection).map(([productId, qty]) => {
       const product = products.find(p => p.id === productId);
       return {
+        productId,
         sku: product?.sku || '',
         name: product?.name || `Product ${productId}`,
         qty,
