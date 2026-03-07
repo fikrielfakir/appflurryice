@@ -167,7 +167,7 @@ export default function TransfersScreen() {
     }
   };
 
-  const completeTransferOut = () => {
+  const completeTransferOut = async () => {
     if (Object.keys(transferOutSelection).length === 0) {
       Toast.show(t('transfers.selectProducts'), { duration: 1000, backgroundColor: C.danger });
       return;
@@ -198,7 +198,7 @@ export default function TransfersScreen() {
       sig: ''
     };
 
-    addTransfer(newTransfer);
+    await addTransfer(newTransfer);
     setSelectedTransfer(newTransfer);
     setShowTransferOutModal(false);
     setTransferOutSelection({});

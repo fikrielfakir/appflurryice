@@ -575,14 +575,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     const transferTransactions: Transaction[] = transfer.items.map(item => {
-      const product = products.find(p => p.sku === item.sku);
-      const updatedProduct = updatedProducts.find(p => p.sku === item.sku);
+      // Match by productId first (most reliable), then by SKU
+      const product = products.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
+      const updatedProduct = updatedProducts.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
       return {
         id: genId(),
         date: transfer.date,
         referenceNo: transfer.ref,
         type: "transfer_out",
-        productId: product?.id || '',
+        productId: product?.id || item.productId || '',
         productName: item.name,
         quantity: -item.qty,
         remainingStock: updatedProduct?.stock || 0,
