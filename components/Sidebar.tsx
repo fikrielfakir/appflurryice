@@ -7,41 +7,14 @@ import { Feather } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
+import { D } from "@/constants/theme";
 
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  bg:         "#F7F6F2",
-  surface:    "#FFFFFF",
-
-  heroA:      "#1C1C2E",
-  heroB:      "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow:   "#A78BFA",
-
-  ink:        "#111118",
-  inkMid:     "#3D3C52",
-  inkSoft:    "#8B8AA5",
-  inkGhost:   "#C4C3D0",
-
-  emerald:    "#00B37D",
-  emeraldBg:  "#E6FAF4",
-  rose:       "#F04E6A",
-  amber:      "#F59E0B",
-  blue:       "#3B82F6",
-  blueBg:     "#EFF6FF",
-  violet:     "#8B5CF6",
-  violetBg:   "#F5F3FF",
-
-  border:     "#ECEAE4",
-  shadow:     "rgba(17,17,24,0.06)",
-};
-
-// Icon color palette per route — tinted icon badges
 const ITEM_ACCENTS: Record<string, { color: string; bg: string }> = {
   "/(tabs)/reports":  { color: D.blue,    bg: D.blueBg },
   "/(tabs)/contacts": { color: D.emerald, bg: D.emeraldBg },
+  "/(tabs)/debts":    { color: D.rose,    bg: D.roseBg },
   "/settings/screen": { color: D.violet,  bg: D.violetBg },
-  "/settings/sync":   { color: D.amber,   bg: "#FEF3C7" },
+  "/settings/sync":   { color: D.amber,   bg: D.amberBg },
 };
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -50,10 +23,11 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const { t }   = useTranslation();
 
   const MENU_ITEMS = [
-    { title: t("tabs.reports"),    icon: "bar-chart-2", route: "/(tabs)/reports"  },
-    { title: t("tabs.contacts"),   icon: "users",       route: "/(tabs)/contacts" },
-    { title: t("settings.screen"), icon: "monitor",     route: "/settings/screen" },
-    { title: t("settings.sync"),   icon: "cloud",       route: "/settings/sync"   },
+    { title: t("tabs.reports"),    icon: "bar-chart-2",  route: "/(tabs)/reports"  },
+    { title: t("tabs.contacts"),   icon: "users",        route: "/(tabs)/contacts" },
+    { title: t("tabs.debts"),      icon: "alert-circle", route: "/(tabs)/debts"    },
+    { title: t("settings.screen"), icon: "monitor",      route: "/settings/screen" },
+    { title: t("settings.sync"),   icon: "cloud",        route: "/settings/sync"   },
   ];
 
   if (!isOpen) return null;

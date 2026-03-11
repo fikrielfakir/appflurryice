@@ -31,7 +31,8 @@
     "transfers": "Transferts",
     "expenses": "Dépenses",
     "contacts": "Contacts",
-    "reports": "Rapports"
+    "reports": "Rapports",
+    "debts": "Dettes"
   },
   "dashboard": {
     "goodMorning": "Bonjour",
@@ -199,6 +200,19 @@
     "invalidQRCode": "Données du code QR invalides",
     "added": "contacts ajoutés",
     "noNewContacts": "Aucun nouveau contact à importer"
+  },
+  "debts": {
+    "title": "Dettes",
+    "totalOutstanding": "Total des impayés",
+    "customersWithDue": "clients avec des dettes",
+    "allClear": "Tout est réglé !",
+    "allClearSub": "Aucune dette en cours pour le moment",
+    "unpaidInvoices": "facture(s) impayée(s)",
+    "totalDue": "Total dû",
+    "invoices": "Factures",
+    "totalAmount": "Montant total",
+    "paid": "Payé",
+    "remaining": "Reste à payer"
   },
   "reports": {
     "title": "Rapports",

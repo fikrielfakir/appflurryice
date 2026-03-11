@@ -31,7 +31,8 @@
     "transfers": "Transfers",
     "expenses": "Expenses",
     "contacts": "Contacts",
-    "reports": "Reports"
+    "reports": "Reports",
+    "debts": "Indebtedness"
   },
   "dashboard": {
     "goodMorning": "Good morning",
@@ -201,6 +202,19 @@
     "invalidQRCode": "Invalid QR code data",
     "added": "contacts added",
     "noNewContacts": "No new contacts to import"
+  },
+  "debts": {
+    "title": "Indebtedness",
+    "totalOutstanding": "Total Outstanding",
+    "customersWithDue": "customers with due",
+    "allClear": "All Clear!",
+    "allClearSub": "No outstanding dues at the moment",
+    "unpaidInvoices": "unpaid invoice(s)",
+    "totalDue": "Total Due",
+    "invoices": "Invoices",
+    "totalAmount": "Total Amount",
+    "paid": "Paid",
+    "remaining": "Remaining"
   },
   "reports": {
     "title": "Reports",

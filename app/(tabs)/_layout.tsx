@@ -122,6 +122,10 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         name="reports"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="debts"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

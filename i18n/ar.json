@@ -31,7 +31,8 @@
     "transfers": "التحويلات",
     "expenses": "المصروفات",
     "contacts": "جهات الاتصال",
-    "reports": "التقارير"
+    "reports": "التقارير",
+    "debts": "المديونيات"
   },
   "dashboard": {
     "goodMorning": "صباح الخير",
@@ -201,6 +202,19 @@
     "invalidQRCode": "بيانات رمز QR غير صالحة",
     "added": "جهات اتصال مضافة",
     "noNewContacts": "لا توجد جهات اتصال جديدة للاستيراد"
+  },
+  "debts": {
+    "title": "المديونيات",
+    "totalOutstanding": "إجمالي المستحق",
+    "customersWithDue": "عملاء لديهم ديون",
+    "allClear": "لا توجد ديون!",
+    "allClearSub": "لا توجد مستحقات في الوقت الحالي",
+    "unpaidInvoices": "فاتورة/فواتير غير مدفوعة",
+    "totalDue": "إجمالي الدين",
+    "invoices": "الفواتير",
+    "totalAmount": "المبلغ الإجمالي",
+    "paid": "المدفوع",
+    "remaining": "المتبقي"
   },
   "reports": {
     "title": "التقارير",
