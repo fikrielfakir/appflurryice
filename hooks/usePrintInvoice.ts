@@ -13,9 +13,21 @@ export interface PrinterDevice {
   name: string;
 }
 
+export interface DailySummaryData {
+  totalSales: number;
+  cashCollected: number;
+  customerCredit: number;
+  stockValue: number;
+  salesCount: number;
+  periodLabel: string;
+  vendorName?: string;
+  truckLabel?: string;
+}
+
 export interface UsePrintInvoiceReturn {
   print: (sale: Sale) => Promise<void>;
   printTransfer: (transfer: Transfer) => Promise<void>;
+  printDailySummary: (data: DailySummaryData) => Promise<void>;
   isConnecting: boolean;
   isPrinting: boolean;
   isSuccess: boolean;
@@ -80,6 +92,39 @@ function generateReceiptText(sale: Sale): string {
   lines.push(center('شكرا لثقتكم!'));
   lines.push('');
   
+  return lines.join('\n');
+}
+
+function generateDailySummaryText(data: DailySummaryData): string {
+  const lines: string[] = [];
+  const width = 48;
+  const center = (s: string) => s.padStart(Math.ceil((width + s.length) / 2)).padEnd(width);
+  const leftRight = (l: string, r: string) => l.padEnd(width - r.length) + r;
+
+  const today = new Date().toLocaleDateString('fr-MA', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+
+  lines.push(center('RESUME JOURNALIER'));
+  lines.push(center('RAPPORT VENDEUR'));
+  lines.push('='.repeat(width));
+  lines.push(`Date    : ${today}`);
+  lines.push(`Periode : ${data.periodLabel}`);
+  if (data.vendorName) lines.push(`Vendeur : ${data.vendorName}`);
+  if (data.truckLabel) lines.push(`Camion  : ${data.truckLabel}`);
+  lines.push('-'.repeat(width));
+  lines.push(leftRight('Total ventes', fmt(data.totalSales) + ' MAD'));
+  lines.push(leftRight('Total encaisse', fmt(data.cashCollected) + ' MAD'));
+  lines.push(leftRight('Credit clients', fmt(data.customerCredit) + ' MAD'));
+  lines.push('-'.repeat(width));
+  lines.push(leftRight('Stock restant', fmt(data.stockValue) + ' MAD'));
+  lines.push('='.repeat(width));
+  lines.push(leftRight('Nb. de factures', `${data.salesCount}`));
+  lines.push('-'.repeat(width));
+  lines.push('');
+  lines.push(center('BizPOS · ' + today));
+  lines.push('');
+
   return lines.join('\n');
 }
 
@@ -462,6 +507,67 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     }
   }, [currentPrinter]);
 
+  const printDailySummary = useCallback(async (data: DailySummaryData) => {
+    if (!Printer.current || !BleManager.current) {
+      setError(ERROR_MESSAGES.NO_PRINTER);
+      setState('error');
+      return;
+    }
+
+    if (!currentPrinter) {
+      setError(ERROR_MESSAGES.NO_PRINTER);
+      setState('error');
+      return;
+    }
+
+    const hasPermission = await requestPermissions();
+    if (!hasPermission) {
+      setState('error');
+      return;
+    }
+
+    setState('connecting');
+    setError(null);
+
+    try {
+      await Printer.current.init({
+        width: PAPER_WIDTH,
+        deviceId: currentPrinter.id,
+      });
+
+      setState('printing');
+
+      const text = generateDailySummaryText(data);
+
+      await Printer.current.printText(text, {
+        encoding: 'UTF-8',
+        codepage: 21,
+        widthTimes: 0,
+        heightTimes: 0,
+        fontType: 0,
+      });
+
+      await Printer.current.cut();
+
+      setState('success');
+
+      setTimeout(() => {
+        setState('idle');
+      }, 2500);
+    } catch (err: any) {
+      console.error('Print daily summary error:', err);
+      const errMsg = err.message?.toLowerCase() || '';
+      if (errMsg.includes('bluetooth')) {
+        setError(ERROR_MESSAGES.BT_OFF);
+      } else if (errMsg.includes('connect') || errMsg.includes('connection')) {
+        setError(ERROR_MESSAGES.CONNECTION_FAILED);
+      } else {
+        setError(ERROR_MESSAGES.PRINT_FAILED);
+      }
+      setState('error');
+    }
+  }, [currentPrinter]);
+
   const retry = useCallback(() => {
     setState('idle');
     setError(null);
@@ -472,6 +578,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
   return {
     print,
     printTransfer,
+    printDailySummary,
     isConnecting: state === 'connecting',
     isPrinting: state === 'printing',
     isSuccess: state === 'success',

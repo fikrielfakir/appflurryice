@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,9 @@ import { Transaction } from "@/context/AppContext";
 import { AppHeader } from "@/components/common/AppHeader";
 import { MetricCard } from "@/components/reports/MetricCard";
 import { TransactionRow } from "@/components/reports/TransactionRow";
+import { DailySummaryModal } from "@/components/reports/DailySummaryModal";
 import { useReportMetrics, FilterKey } from "@/hooks/useReportMetrics";
+import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 
 // ── Formatting utility ────────────────────────────────────────────────────────
 export function fmt(n: number | undefined | null): string {
@@ -108,16 +110,44 @@ function EmptyTransactions({ label }: { label: string }) {
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, transactions, products, setIsSidebarOpen } = useApp();
+  const { sales, transactions, products, setIsSidebarOpen, userProfile, config } = useApp();
   const { t } = useTranslation();
 
   const [filter, setFilter] = useState<FilterKey>("daily");
-  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">(
-    "metrics"
-  );
+  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
     useReportMetrics(sales, transactions, products, filter);
+
+  const {
+    printDailySummary,
+    isConnecting,
+    isPrinting,
+    isSuccess,
+    currentPrinter,
+  } = usePrintInvoice();
+
+  const periodLabel = useMemo(() => {
+    const map: Record<FilterKey, string> = {
+      daily:   "Aujourd'hui",
+      weekly:  "Cette semaine",
+      monthly: "Ce mois",
+      all:     "Tout",
+    };
+    return map[filter];
+  }, [filter]);
+
+  const summaryData = useMemo(() => ({
+    totalSales:     financials.totalRevenue,
+    cashCollected:  financials.cashCollected,
+    customerCredit: financials.customerCredit,
+    stockValue:     truckStock.value,
+    salesCount:     filteredSales.length,
+    periodLabel,
+    vendorName:     userProfile?.name || userProfile?.username,
+    truckLabel:     config.truckLocation,
+  }), [financials, truckStock, filteredSales.length, periodLabel, userProfile, config]);
 
   // ── Filter pills config ──────────────────────────────────────────────────
   const FILTERS: { key: FilterKey; label: string }[] = [
@@ -155,6 +185,19 @@ export default function ReportsScreen() {
     []
   );
 
+  const handleOpenPrint = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowPrintModal(true);
+  }, []);
+
+  const handleClosePrint = useCallback(() => {
+    setShowPrintModal(false);
+  }, []);
+
+  const handlePrint = useCallback(async () => {
+    await printDailySummary(summaryData);
+  }, [printDailySummary, summaryData]);
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <View style={S.screen}>
@@ -178,6 +221,15 @@ export default function ReportsScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             setIsSidebarOpen(true);
           }}
+          rightActions={
+            <TouchableOpacity
+              style={S.printHeaderBtn}
+              onPress={handleOpenPrint}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="printer" size={17} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+          }
         />
 
         {/* Stats summary row */}
@@ -445,6 +497,18 @@ export default function ReportsScreen() {
           )}
         </View>
       )}
+
+      {/* ── Daily Summary Print Modal ── */}
+      <DailySummaryModal
+        visible={showPrintModal}
+        data={summaryData}
+        isPrinting={isPrinting}
+        isConnecting={isConnecting}
+        isSuccess={isSuccess}
+        printerName={currentPrinter?.name}
+        onPrint={handlePrint}
+        onClose={handleClosePrint}
+      />
     </View>
   );
 }
@@ -452,6 +516,18 @@ export default function ReportsScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = StyleSheet.create({
   screen: { flex: 1, backgroundColor: D.bg },
+
+  // Print header button
+  printHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   // Hero
   heroWrapper: { overflow: "hidden" },
