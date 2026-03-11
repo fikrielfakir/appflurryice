@@ -11,34 +11,7 @@ import * as Haptics from "expo-haptics";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useApp, AppUser } from "@/context/AppContext";
 import { useTranslation } from "react-i18next";
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  bg:         "#F7F6F2",
-  surface:    "#FFFFFF",
-
-  heroA:      "#1C1C2E",
-  heroB:      "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow:   "#A78BFA",
-
-  ink:        "#111118",
-  inkMid:     "#3D3C52",
-  inkSoft:    "#8B8AA5",
-  inkGhost:   "#C4C3D0",
-
-  emerald:    "#00B37D",
-  emeraldBg:  "#E6FAF4",
-  rose:       "#F04E6A",
-  roseBg:     "#FEE9ED",
-  amber:      "#F59E0B",
-  amberBg:    "#FEF3C7",
-  violet:     "#8B5CF6",
-  violetBg:   "#F5F3FF",
-
-  border:     "#ECEAE4",
-  shadow:     "rgba(17,17,24,0.08)",
-};
+import { D } from "@/constants/theme";
 
 export default function SetupScreen() {
   const insets = useSafeAreaInsets();

@@ -11,47 +11,11 @@ import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import { useTranslation } from "react-i18next";
+import { D } from "@/constants/theme";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  // Backgrounds
-  bg:           "#F7F6F2",       // warm ivory
-  surface:      "#FFFFFF",
-  card:         "#FFFFFF",
-
-  // Hero
-  heroA:        "#1C1C2E",       // deep navy-black
-  heroB:        "#2D2B55",       // deep indigo
-  heroAccent:   "#6C63FF",       // soft violet
-  heroGlow:     "#A78BFA",
-
-  // Ink
-  ink:          "#111118",
-  inkMid:       "#3D3C52",
-  inkSoft:      "#8B8AA5",
-  inkGhost:     "#C4C3D0",
-
-  // Semantic
-  emerald:      "#00B37D",
-  emeraldBg:    "#E6FAF4",
-  rose:         "#F04E6A",
-  roseBg:       "#FEE9ED",
-  amber:        "#F59E0B",
-  amberBg:      "#FEF3C7",
-  blue:         "#3B82F6",
-  blueBg:       "#EFF6FF",
-  violet:       "#8B5CF6",
-  violetBg:     "#F5F3FF",
-
-  // Structure
-  border:       "#ECEAE4",
-  borderStrong: "#D9D6CC",
-  shadow:       "rgba(17,17,24,0.06)",
-};
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();

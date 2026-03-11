@@ -14,39 +14,9 @@ import { AppHeader } from "@/components/common/AppHeader";
 import { useTranslation } from "react-i18next";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 import Toast from "react-native-root-toast";
+import { D } from "@/constants/theme";
 
 const { width } = Dimensions.get("window");
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  bg:         "#F7F6F2",
-  surface:    "#FFFFFF",
-  card:       "#FFFFFF",
-
-  heroA:      "#1C1C2E",
-  heroB:      "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow:   "#A78BFA",
-
-  ink:        "#111118",
-  inkMid:     "#3D3C52",
-  inkSoft:    "#8B8AA5",
-  inkGhost:   "#C4C3D0",
-
-  emerald:    "#00B37D",
-  emeraldBg:  "#E6FAF4",
-  rose:       "#F04E6A",
-  roseBg:     "#FEE9ED",
-  amber:      "#F59E0B",
-  amberBg:    "#FEF3C7",
-  blue:       "#3B82F6",
-  blueBg:     "#EFF6FF",
-  violet:     "#8B5CF6",
-  violetBg:   "#F5F3FF",
-
-  border:     "#ECEAE4",
-  shadow:     "rgba(17,17,24,0.06)",
-};
 
 // Accent cycle for transfer cards
 const STRIP_COLORS = [D.heroAccent, D.emerald, D.blue, D.amber, D.violet, D.rose];

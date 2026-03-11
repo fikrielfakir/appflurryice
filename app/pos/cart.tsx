@@ -12,41 +12,11 @@ import { useApp } from "@/context/AppContext";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTranslation } from "react-i18next";
 import Toast from "react-native-root-toast";
+import { D } from "@/constants/theme";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  bg:         "#F7F6F2",
-  surface:    "#FFFFFF",
-  card:       "#FFFFFF",
-
-  heroA:      "#1C1C2E",
-  heroB:      "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow:   "#A78BFA",
-
-  ink:        "#111118",
-  inkMid:     "#3D3C52",
-  inkSoft:    "#8B8AA5",
-  inkGhost:   "#C4C3D0",
-
-  emerald:    "#00B37D",
-  emeraldBg:  "#E6FAF4",
-  rose:       "#F04E6A",
-  roseBg:     "#FEE9ED",
-  amber:      "#F59E0B",
-  amberBg:    "#FEF3C7",
-  blue:       "#3B82F6",
-  blueBg:     "#EFF6FF",
-  violet:     "#8B5CF6",
-  violetBg:   "#F5F3FF",
-
-  border:     "#ECEAE4",
-  shadow:     "rgba(17,17,24,0.06)",
-};
 
 export default function CartScreen() {
   const insets = useSafeAreaInsets();

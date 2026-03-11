@@ -12,38 +12,11 @@ import QRCode from "react-native-qrcode-svg";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 import { Sale, useApp } from "@/context/AppContext";
 import Toast from "react-native-root-toast";
+import { D } from "@/constants/theme";
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
-
-// ── Design tokens (UI chrome only) ───────────────────────────────────────────
-const D = {
-  bg: "#F7F6F2",
-  surface: "#FFFFFF",
-
-  heroA: "#1C1C2E",
-  heroB: "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow: "#A78BFA",
-
-  ink: "#111118",
-  inkMid: "#3D3C52",
-  inkSoft: "#8B8AA5",
-  inkGhost: "#C4C3D0",
-
-  emerald: "#00B37D",
-  emeraldBg: "#E6FAF4",
-  rose: "#F04E6A",
-  roseBg: "#FEE9ED",
-  amber: "#F59E0B",
-  amberBg: "#FEF3C7",
-  violet: "#8B5CF6",
-  violetBg: "#F5F3FF",
-
-  border: "#ECEAE4",
-  shadow: "rgba(17,17,24,0.06)",
-};
 
 // ── Thermal invoice colours (black on white ONLY) ─────────────────────────────
 const T = {

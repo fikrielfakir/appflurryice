@@ -23,6 +23,7 @@ import { TransactionRow } from "@/components/reports/TransactionRow";
 import { DailySummaryModal } from "@/components/reports/DailySummaryModal";
 import { useReportMetrics, FilterKey } from "@/hooks/useReportMetrics";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
+import { D } from "@/constants/theme";
 
 // ── Formatting utility ────────────────────────────────────────────────────────
 export function fmt(n: number | undefined | null): string {
@@ -32,37 +33,6 @@ export function fmt(n: number | undefined | null): string {
     maximumFractionDigits: 2,
   });
 }
-
-// ── Design tokens ─────────────────────────────────────────────────────────────
-const D = {
-  bg:         "#F7F6F2",
-  surface:    "#FFFFFF",
-  card:       "#FFFFFF",
-  heroA:      "#1C1C2E",
-  heroB:      "#2D2B55",
-  heroAccent: "#6C63FF",
-  heroGlow:   "#A78BFA",
-  ink:        "#111118",
-  inkMid:     "#3D3C52",
-  inkSoft:    "#8B8AA5",
-  inkGhost:   "#C4C3D0",
-  emerald:    "#00B37D",
-  emeraldBg:  "#E6FAF4",
-  rose:       "#F04E6A",
-  roseBg:     "#FEE9ED",
-  amber:      "#F59E0B",
-  amberBg:    "#FEF3C7",
-  blue:       "#3B82F6",
-  blueBg:     "#EFF6FF",
-  violet:     "#8B5CF6",
-  violetBg:   "#F5F3FF",
-  orange:     "#F97316",
-  orangeBg:   "#FFF3E8",
-  teal:       "#14B8A6",
-  tealBg:     "#F0FDFA",
-  border:     "#ECEAE4",
-  shadow:     "rgba(17,17,24,0.06)",
-};
 
 // ── Transaction type label helper ────────────────────────────────────────────
 function getTypeLabel(type: string, t: (key: string) => string): string {
