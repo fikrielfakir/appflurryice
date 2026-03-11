@@ -1,76 +1,69 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  View, Text, ScrollView, StyleSheet, Platform, TouchableOpacity,
+  View,
+  Text,
+  ScrollView,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ListRenderItemInfo,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
-import { useApp } from "@/context/AppContext";
-import { Colors } from "@/constants";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { AppHeader } from "@/components/common/AppHeader";
 import { useTranslation } from "react-i18next";
 
-function fmt(n: number | undefined | null) {
+import { useApp } from "@/context/AppContext";
+import { Transaction } from "@/context/AppContext";
+import { AppHeader } from "@/components/common/AppHeader";
+import { MetricCard } from "@/components/reports/MetricCard";
+import { TransactionRow } from "@/components/reports/TransactionRow";
+import { useReportMetrics, FilterKey } from "@/hooks/useReportMetrics";
+
+// ── Formatting utility ────────────────────────────────────────────────────────
+export function fmt(n: number | undefined | null): string {
   if (n === undefined || n === null) return "0.00";
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const D = {
-  bg:          "#F7F6F2",
-  surface:     "#FFFFFF",
-  card:        "#FFFFFF",
-
-  heroA:       "#1C1C2E",
-  heroB:       "#2D2B55",
-  heroAccent:  "#6C63FF",
-  heroGlow:    "#A78BFA",
-
-  ink:         "#111118",
-  inkMid:      "#3D3C52",
-  inkSoft:     "#8B8AA5",
-  inkGhost:    "#C4C3D0",
-
-  emerald:     "#00B37D",
-  emeraldBg:   "#E6FAF4",
-  rose:        "#F04E6A",
-  roseBg:      "#FEE9ED",
-  amber:       "#F59E0B",
-  amberBg:     "#FEF3C7",
-  blue:        "#3B82F6",
-  blueBg:      "#EFF6FF",
-  violet:      "#8B5CF6",
-  violetBg:    "#F5F3FF",
-  orange:      "#F97316",
-  orangeBg:    "#FFF3E8",
-
-  border:      "#ECEAE4",
-  shadow:      "rgba(17,17,24,0.06)",
+  bg:         "#F7F6F2",
+  surface:    "#FFFFFF",
+  card:       "#FFFFFF",
+  heroA:      "#1C1C2E",
+  heroB:      "#2D2B55",
+  heroAccent: "#6C63FF",
+  heroGlow:   "#A78BFA",
+  ink:        "#111118",
+  inkMid:     "#3D3C52",
+  inkSoft:    "#8B8AA5",
+  inkGhost:   "#C4C3D0",
+  emerald:    "#00B37D",
+  emeraldBg:  "#E6FAF4",
+  rose:       "#F04E6A",
+  roseBg:     "#FEE9ED",
+  amber:      "#F59E0B",
+  amberBg:    "#FEF3C7",
+  blue:       "#3B82F6",
+  blueBg:     "#EFF6FF",
+  violet:     "#8B5CF6",
+  violetBg:   "#F5F3FF",
+  orange:     "#F97316",
+  orangeBg:   "#FFF3E8",
+  teal:       "#14B8A6",
+  tealBg:     "#F0FDFA",
+  border:     "#ECEAE4",
+  shadow:     "rgba(17,17,24,0.06)",
 };
 
-const getTypeColor = (type: string) => {
-  switch (type) {
-    case "sell":         return D.emerald;
-    case "transfer_in":  return D.blue;
-    case "transfer_out": return D.rose;
-    case "adjustment":   return D.orange;
-    default:             return D.heroAccent;
-  }
-};
-
-const getTypeBg = (type: string) => {
-  switch (type) {
-    case "sell":         return D.emeraldBg;
-    case "transfer_in":  return D.blueBg;
-    case "transfer_out": return D.roseBg;
-    case "adjustment":   return D.orangeBg;
-    default:             return D.violetBg;
-  }
-};
-
-const getTypeLabel = (type: string, t: (key: string) => string) => {
+// ── Transaction type label helper ────────────────────────────────────────────
+function getTypeLabel(type: string, t: (key: string) => string): string {
   switch (type) {
     case "sell":         return t("reports.sale");
     case "transfer_in":  return t("reports.transferIn");
@@ -78,129 +71,103 @@ const getTypeLabel = (type: string, t: (key: string) => string) => {
     case "adjustment":   return t("reports.adjustment");
     default:             return type;
   }
-};
+}
 
-// ── Metric Card ───────────────────────────────────────────────────────────────
-function MetricCard({ label, value, icon, color, bg, sub }: {
-  label: string; value: string; icon: string; color: string; bg: string; sub?: string;
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function SectionHeader({
+  title,
+  dotColor,
+}: {
+  title: string;
+  dotColor: string;
 }) {
   return (
-    <View style={[MC.card]}>
-      <View style={[MC.iconWrap, { backgroundColor: bg }]}>
-        <Feather name={icon as any} size={18} color={color} />
-      </View>
-      <Text style={MC.value}>{value}</Text>
-      <Text style={MC.label}>{label}</Text>
-      {sub ? <Text style={MC.sub}>{sub}</Text> : null}
-      <View style={[MC.accent, { backgroundColor: color }]} />
+    <View style={S.sectionHeader}>
+      <View style={[S.sectionDot, { backgroundColor: dotColor }]} />
+      <Text style={S.sectionTitle}>{title}</Text>
     </View>
   );
 }
 
-const MC = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: D.card,
-    borderRadius: 18,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: D.border,
-    gap: 4,
-    overflow: "hidden",
-    elevation: 1,
-    shadowColor: D.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-  },
-  iconWrap: {
-    width: 38, height: 38, borderRadius: 11,
-    justifyContent: "center", alignItems: "center",
-    marginBottom: 8,
-  },
-  value: { fontSize: 17, fontFamily: "Inter_700Bold", color: D.ink },
-  label: { fontSize: 11, fontFamily: "Inter_500Medium", color: D.inkSoft },
-  sub: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost, marginTop: 2 },
-  accent: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
-    height: 3, borderRadius: 2,
-  },
-});
+function MetricsRow({ children }: { children: React.ReactNode }) {
+  return <View style={S.metricsRow}>{children}</View>;
+}
+
+function EmptyTransactions({ label }: { label: string }) {
+  return (
+    <View style={S.emptyWrap}>
+      <View style={S.emptyIcon}>
+        <Feather name="inbox" size={28} color={D.inkSoft} />
+      </View>
+      <Text style={S.emptyTitle}>{label}</Text>
+    </View>
+  );
+}
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { sales, transactions, products, setIsSidebarOpen } = useApp();
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<"daily" | "weekly" | "monthly" | "all">("daily");
-  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
 
-  const filteredSales = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return sales.filter((s) => {
-      const d = new Date(s.date);
-      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      if (filter === "daily")   return day.getTime() === today.getTime();
-      if (filter === "weekly")  { const w = new Date(today); w.setDate(today.getDate() - 7); return day >= w; }
-      if (filter === "monthly") return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
-      return true;
-    });
-  }, [sales, filter]);
+  const [filter, setFilter] = useState<FilterKey>("daily");
+  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">(
+    "metrics"
+  );
 
-  const stats = useMemo(() => {
-    const rev = filteredSales.reduce((s, x) => s + x.amount, 0);
-    const due = filteredSales.reduce((s, x) => s + (x.amount - x.paid), 0);
-    return { rev, due };
-  }, [filteredSales]);
+  const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
+    useReportMetrics(sales, transactions, products, filter);
 
-  const truckStats = useMemo(() => {
-    const inStock = products.filter((p) => (p.stock || 0) > 0);
-    return {
-      count: inStock.length,
-      value: inStock.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0),
-    };
-  }, [products]);
-
-  const filteredTransactions = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return transactions.filter((tx) => {
-      const d = new Date(tx.date);
-      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      if (filter === "daily")   return day.getTime() === today.getTime();
-      if (filter === "weekly")  { const w = new Date(today); w.setDate(today.getDate() - 7); return day >= w; }
-      if (filter === "monthly") return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
-      return true;
-    });
-  }, [transactions, filter]);
-
-  const paidCount    = filteredSales.filter((s) => s.status === "paid").length;
-  const dueCount     = filteredSales.filter((s) => s.status === "due").length;
-  const partialCount = filteredSales.filter((s) => s.status === "partial").length;
-  const total        = paidCount + dueCount + partialCount || 1;
-
-  const FILTERS: { key: "daily" | "weekly" | "monthly" | "all"; label: string }[] = [
+  // ── Filter pills config ──────────────────────────────────────────────────
+  const FILTERS: { key: FilterKey; label: string }[] = [
     { key: "daily",   label: t("reports.daily") },
     { key: "weekly",  label: t("reports.weekly") },
     { key: "monthly", label: t("reports.monthly") },
     { key: "all",     label: t("reports.all") },
   ];
 
-  return (
-    <View style={[S.screen, { backgroundColor: D.bg }]}>
+  // ── FlatList keyExtractor & renderItem (stable references) ───────────────
+  const keyExtractor = useCallback((item: Transaction) => item.id, []);
 
-      {/* ── Hero: gradient wraps the AppHeader so dark mode blends perfectly ── */}
+  const renderTransaction = useCallback(
+    ({ item, index }: ListRenderItemInfo<Transaction>) => (
+      <TransactionRow
+        item={item}
+        typeLabel={getTypeLabel(item.type, t)}
+        isLast={index === filteredTransactions.length - 1}
+      />
+    ),
+    [filteredTransactions.length, t]
+  );
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleFilterChange = useCallback((key: FilterKey) => {
+    Haptics.selectionAsync();
+    setFilter(key);
+  }, []);
+
+  const handleTabChange = useCallback(
+    (tab: "metrics" | "transactions") => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setActiveTab(tab);
+    },
+    []
+  );
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  return (
+    <View style={S.screen}>
+
+      {/* ── Hero ── */}
       <View style={S.heroWrapper}>
         <LinearGradient
           colors={[D.heroA, D.heroB]}
           style={StyleSheet.absoluteFill}
         />
-        {/* Decorative blobs */}
         <View style={S.blob1} pointerEvents="none" />
         <View style={S.blob2} pointerEvents="none" />
 
-        {/* AppHeader sits inside the gradient — dark=true gives transparent bg */}
         <AppHeader
           title={t("reports.title")}
           dark
@@ -213,14 +180,18 @@ export default function ReportsScreen() {
           }}
         />
 
-        {/* Stats row */}
+        {/* Stats summary row */}
         <View style={S.heroInner}>
           <View style={S.heroLeft}>
-            <Text style={S.heroLabel}>{t("reports.totalRevenue") || "Revenu total"}</Text>
-            <Text style={S.heroValue}>MAD {fmt(stats.rev)}</Text>
-            <Text style={S.heroSub}>{filteredSales.length} ventes · {t(`reports.${filter}`)}</Text>
+            <Text style={S.heroLabel}>{t("reports.totalRevenue")}</Text>
+            <Text style={S.heroValue}>MAD {fmt(financials.totalRevenue)}</Text>
+            <Text style={S.heroSub}>
+              {filteredSales.length} {t("tabs.sales")} · {t(`reports.${filter}`)}
+            </Text>
           </View>
+
           <View style={S.heroDivider} />
+
           <View style={S.heroRight}>
             <View style={S.heroMini}>
               <View style={[S.heroMiniIcon, { backgroundColor: D.rose + "30" }]}>
@@ -228,7 +199,9 @@ export default function ReportsScreen() {
               </View>
               <View>
                 <Text style={S.heroMiniLbl}>{t("reports.amountDue")}</Text>
-                <Text style={[S.heroMiniVal, { color: "#F87171" }]}>MAD {fmt(stats.due)}</Text>
+                <Text style={[S.heroMiniVal, { color: "#F87171" }]}>
+                  MAD {fmt(financials.customerCredit)}
+                </Text>
               </View>
             </View>
             <View style={S.heroMini}>
@@ -237,7 +210,9 @@ export default function ReportsScreen() {
               </View>
               <View>
                 <Text style={S.heroMiniLbl}>{t("reports.productsCount")}</Text>
-                <Text style={[S.heroMiniVal, { color: D.heroGlow }]}>{truckStats.count}</Text>
+                <Text style={[S.heroMiniVal, { color: D.heroGlow }]}>
+                  {truckStock.count}
+                </Text>
               </View>
             </View>
           </View>
@@ -249,9 +224,16 @@ export default function ReportsScreen() {
             <TouchableOpacity
               key={f.key}
               style={[S.filterPill, filter === f.key && S.filterPillActive]}
-              onPress={() => { Haptics.selectionAsync(); setFilter(f.key); }}
+              onPress={() => handleFilterChange(f.key)}
             >
-              <Text style={[S.filterTxt, filter === f.key && S.filterTxtActive]}>{f.label}</Text>
+              <Text
+                style={[
+                  S.filterTxt,
+                  filter === f.key && S.filterTxtActive,
+                ]}
+              >
+                {f.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -263,7 +245,7 @@ export default function ReportsScreen() {
           <TouchableOpacity
             key={tab}
             style={[S.tabBtn, activeTab === tab && S.tabBtnActive]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab(tab); }}
+            onPress={() => handleTabChange(tab)}
           >
             <Feather
               name={tab === "metrics" ? "pie-chart" : "list"}
@@ -278,179 +260,275 @@ export default function ReportsScreen() {
         ))}
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
-      >
-        {/* ── METRICS TAB ── */}
-        {activeTab === "metrics" ? (
-          <>
-            {/* Truck / Stock */}
-            <View style={S.section}>
-              <View style={S.sectionHeader}>
-                <View style={[S.sectionDot, { backgroundColor: D.blue }]} />
-                <Text style={S.sectionTitle}>{t("reports.truckStock")}</Text>
-              </View>
-              <View style={S.metricsRow}>
-                <MetricCard
-                  label={t("reports.productsCount")}
-                  value={`${truckStats.count}`}
-                  icon="package"
-                  color={D.blue}
-                  bg={D.blueBg}
-                />
-                <MetricCard
-                  label={t("reports.remainingValue")}
-                  value={`MAD ${fmt(truckStats.value)}`}
-                  icon="truck"
-                  color={D.violet}
-                  bg={D.violetBg}
-                />
-              </View>
-            </View>
-
-            {/* Financial */}
-            <View style={S.section}>
-              <View style={S.sectionHeader}>
-                <View style={[S.sectionDot, { backgroundColor: D.emerald }]} />
-                <Text style={S.sectionTitle}>{t("reports.financialSummary")}</Text>
-              </View>
-              <View style={S.metricsRow}>
-                <MetricCard
-                  label={t("reports.revenue")}
-                  value={`MAD ${fmt(stats.rev)}`}
-                  icon="trending-up"
-                  color={D.emerald}
-                  bg={D.emeraldBg}
-                  sub={`${filteredSales.length} ${t("tabs.sales")}`}
-                />
-                <MetricCard
-                  label={t("reports.amountDue")}
-                  value={`MAD ${fmt(stats.due)}`}
-                  icon="clock"
-                  color={D.amber}
-                  bg={D.amberBg}
-                  sub={`${dueCount} ${t("reports.unpaid")}`}
-                />
-              </View>
-            </View>
-
-            {/* Sales by status */}
-            <View style={S.section}>
-              <View style={S.sectionHeader}>
-                <View style={[S.sectionDot, { backgroundColor: D.violet }]} />
-                <Text style={S.sectionTitle}>{t("reports.salesByStatus")}</Text>
-              </View>
-
-              {/* Progress bar */}
-              <View style={S.progressBarWrap}>
-                <View style={[S.progressSeg, { flex: paidCount / total, backgroundColor: D.emerald }]} />
-                <View style={[S.progressSeg, { flex: partialCount / total, backgroundColor: D.amber }]} />
-                <View style={[S.progressSeg, { flex: dueCount / total, backgroundColor: D.rose }]} />
-              </View>
-
-              <View style={S.statusRow}>
-                {[
-                  { label: t("reports.paid"),    count: paidCount,    color: D.emerald, bg: D.emeraldBg },
-                  { label: t("reports.partial"), count: partialCount, color: D.amber,   bg: D.amberBg },
-                  { label: t("reports.due"),     count: dueCount,     color: D.rose,    bg: D.roseBg },
-                ].map((s) => (
-                  <View key={s.label} style={[S.statusCard, { borderTopColor: s.color }]}>
-                    <View style={[S.statusIconWrap, { backgroundColor: s.bg }]}>
-                      <Text style={[S.statusCount, { color: s.color }]}>{s.count}</Text>
-                    </View>
-                    <Text style={S.statusLabel}>{s.label}</Text>
-                    <Text style={S.statusPct}>{Math.round((s.count / total) * 100)}%</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </>
-        ) : (
-          /* ── TRANSACTIONS TAB ── */
+      {/* ── Content ── */}
+      {activeTab === "metrics" ? (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            S.scrollContent,
+            { paddingBottom: 120 + insets.bottom },
+          ]}
+        >
+          {/* Truck / Stock section */}
           <View style={S.section}>
-            <View style={S.sectionHeader}>
-              <View style={[S.sectionDot, { backgroundColor: D.heroAccent }]} />
-              <Text style={S.sectionTitle}>{t("reports.transactionLogs")}</Text>
+            <SectionHeader
+              title={t("reports.truckStock")}
+              dotColor={D.blue}
+            />
+            <MetricsRow>
+              <MetricCard
+                label={t("reports.productsCount")}
+                value={`${truckStock.count}`}
+                icon="package"
+                color={D.blue}
+                bg={D.blueBg}
+              />
+              <MetricCard
+                label={t("reports.remainingValue")}
+                value={`MAD ${fmt(truckStock.value)}`}
+                icon="truck"
+                color={D.violet}
+                bg={D.violetBg}
+              />
+            </MetricsRow>
+          </View>
+
+          {/* Financial summary section */}
+          <View style={S.section}>
+            <SectionHeader
+              title={t("reports.financialSummary")}
+              dotColor={D.emerald}
+            />
+            <MetricsRow>
+              <MetricCard
+                label={t("reports.revenue")}
+                value={`MAD ${fmt(financials.totalRevenue)}`}
+                icon="trending-up"
+                color={D.emerald}
+                bg={D.emeraldBg}
+                sub={`${filteredSales.length} ${t("tabs.sales")}`}
+              />
+              <MetricCard
+                label={t("reports.cashCollected")}
+                value={`MAD ${fmt(financials.cashCollected)}`}
+                icon="check-circle"
+                color={D.teal}
+                bg={D.tealBg}
+                sub={`${Math.round(financials.collectionRate)}% ${t("reports.collected")}`}
+              />
+            </MetricsRow>
+
+            <View style={[S.metricsRow, { marginTop: 12 }]}>
+              <MetricCard
+                label={t("reports.customerCredit")}
+                value={`MAD ${fmt(financials.customerCredit)}`}
+                icon="clock"
+                color={D.amber}
+                bg={D.amberBg}
+                sub={`${statusCounts.due} ${t("reports.unpaid")}`}
+              />
+              <MetricCard
+                label={t("reports.avgSaleValue")}
+                value={`MAD ${fmt(financials.avgSaleValue)}`}
+                icon="bar-chart-2"
+                color={D.orange}
+                bg={D.orangeBg}
+                sub={t("reports.perInvoice")}
+              />
+            </View>
+          </View>
+
+          {/* Sales by status section */}
+          <View style={S.section}>
+            <SectionHeader
+              title={t("reports.salesByStatus")}
+              dotColor={D.violet}
+            />
+
+            <View style={S.progressBarWrap}>
+              <View
+                style={[
+                  S.progressSeg,
+                  {
+                    flex: statusCounts.paid / statusCounts.total,
+                    backgroundColor: D.emerald,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  S.progressSeg,
+                  {
+                    flex: statusCounts.partial / statusCounts.total,
+                    backgroundColor: D.amber,
+                  },
+                ]}
+              />
+              <View
+                style={[
+                  S.progressSeg,
+                  {
+                    flex: statusCounts.due / statusCounts.total,
+                    backgroundColor: D.rose,
+                  },
+                ]}
+              />
             </View>
 
-            {filteredTransactions.length === 0 ? (
-              <View style={S.emptyWrap}>
-                <View style={S.emptyIcon}>
-                  <Feather name="inbox" size={28} color={D.inkSoft} />
+            <View style={S.statusRow}>
+              {[
+                {
+                  label: t("reports.paid"),
+                  count: statusCounts.paid,
+                  color: D.emerald,
+                  bg: D.emeraldBg,
+                },
+                {
+                  label: t("reports.partial"),
+                  count: statusCounts.partial,
+                  color: D.amber,
+                  bg: D.amberBg,
+                },
+                {
+                  label: t("reports.due"),
+                  count: statusCounts.due,
+                  color: D.rose,
+                  bg: D.roseBg,
+                },
+              ].map((s) => (
+                <View
+                  key={s.label}
+                  style={[S.statusCard, { borderTopColor: s.color }]}
+                >
+                  <View
+                    style={[S.statusIconWrap, { backgroundColor: s.bg }]}
+                  >
+                    <Text style={[S.statusCount, { color: s.color }]}>
+                      {s.count}
+                    </Text>
+                  </View>
+                  <Text style={S.statusLabel}>{s.label}</Text>
+                  <Text style={S.statusPct}>
+                    {Math.round((s.count / statusCounts.total) * 100)}%
+                  </Text>
                 </View>
-                <Text style={S.emptyTitle}>{t("reports.noTransactions")}</Text>
-              </View>
-            ) : (
-              <View style={S.txList}>
-                {filteredTransactions.map((tx, i) => {
-                  const color = getTypeColor(tx.type);
-                  const bg    = getTypeBg(tx.type);
-                  return (
-                    <View
-                      key={tx.id}
-                      style={[
-                        S.txCard,
-                        i === filteredTransactions.length - 1 && { marginBottom: 0 },
-                      ]}
-                    >
-                      {/* Color strip */}
-                      <View style={[S.txStrip, { backgroundColor: color }]} />
-
-                      {/* Type badge */}
-                      <View style={[S.txBadge, { backgroundColor: bg }]}>
-                        <Text style={[S.txBadgeTxt, { color }]}>{getTypeLabel(tx.type, t)}</Text>
-                      </View>
-
-                      {/* Middle */}
-                      <View style={S.txMid}>
-                        <Text style={S.txProduct} numberOfLines={1}>{tx.productName}</Text>
-                        <View style={S.txMeta}>
-                          <Text style={S.txRef}>{tx.referenceNo}</Text>
-                          <View style={S.txDot} />
-                          <Text style={S.txDate}>
-                            {new Date(tx.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Qty / remaining */}
-                      <View style={S.txRight}>
-                        <Text style={[S.txQty, { color: tx.quantity < 0 ? D.rose : D.emerald }]}>
-                          {tx.quantity > 0 ? "+" : ""}{tx.quantity}
-                        </Text>
-                        <Text style={S.txRem}>
-                          {tx.remainingStock ?? "—"} <Text style={S.txRemUnit}>rest.</Text>
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+              ))}
+            </View>
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      ) : (
+        /* ── Transactions tab: FlatList for performance ── */
+        <View style={S.txContainer}>
+          <View style={S.section}>
+            <SectionHeader
+              title={t("reports.transactionLogs")}
+              dotColor={D.heroAccent}
+            />
+          </View>
+
+          {filteredTransactions.length === 0 ? (
+            <EmptyTransactions label={t("reports.noTransactions")} />
+          ) : (
+            <View style={S.txCard}>
+              <FlatList
+                data={filteredTransactions}
+                keyExtractor={keyExtractor}
+                renderItem={renderTransaction}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+                initialNumToRender={20}
+                maxToRenderPerBatch={30}
+                windowSize={10}
+                removeClippedSubviews
+              />
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const S = StyleSheet.create({
-  screen: { flex: 1 },
+  screen: { flex: 1, backgroundColor: D.bg },
 
-  // Hero wrapper: gradient + header + stats + filters all in one block
-  heroWrapper: {
-    overflow: "hidden",
-  },
+  // Hero
+  heroWrapper: { overflow: "hidden" },
   blob1: {
-    position: "absolute", width: 200, height: 200, borderRadius: 100,
-    backgroundColor: D.heroAccent, opacity: 0.1, top: -50, right: -50,
+    position: "absolute",
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: D.heroAccent,
+    opacity: 0.1, top: -50, right: -50,
   },
   blob2: {
-    position: "absolute", width: 120, height: 120, borderRadius: 60,
-    backgroundColor: D.heroGlow, opacity: 0.07, bottom: 30, left: -30,
+    position: "absolute",
+    width: 120, height: 120, borderRadius: 60,
+    backgroundColor: D.heroGlow,
+    opacity: 0.07, bottom: 30, left: -30,
   },
+  heroInner: {
+    flexDirection: "row",
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 18,
+  },
+  heroLeft:  { flex: 1.2, justifyContent: "center" },
+  heroRight: { flex: 1, justifyContent: "space-around", gap: 12 },
+  heroLabel: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 6,
+  },
+  heroValue: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.8,
+  },
+  heroSub: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+  },
+  heroDivider: {
+    width: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    marginHorizontal: 16,
+  },
+  heroMini: { flexDirection: "row", alignItems: "center", gap: 8 },
+  heroMiniIcon: {
+    width: 28, height: 28, borderRadius: 8,
+    justifyContent: "center", alignItems: "center",
+  },
+  heroMiniLbl: {
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 9,
+    fontFamily: "Inter_400Regular",
+  },
+  heroMiniVal: { fontSize: 12, fontFamily: "Inter_700Bold", marginTop: 1 },
+
+  // Filter pills
+  filterRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+  },
+  filterPillActive: { backgroundColor: "#FFFFFF" },
+  filterTxt: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
+  filterTxtActive: { color: D.heroB, fontFamily: "Inter_700Bold" },
 
   // Tab bar
   tabBar: {
@@ -469,44 +547,20 @@ const S = StyleSheet.create({
   tabTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: D.inkSoft },
   tabTxtActive: { color: D.heroAccent },
 
-  heroInner: {
-    flexDirection: "row",
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 18,
-  },
-  heroLeft: { flex: 1.2, justifyContent: "center" },
-  heroLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
-  heroValue: { color: "#FFFFFF", fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.8 },
-  heroSub: { color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4 },
-  heroDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.1)", marginHorizontal: 16 },
-  heroRight: { flex: 1, justifyContent: "space-around", gap: 12 },
-  heroMini: { flexDirection: "row", alignItems: "center", gap: 8 },
-  heroMiniIcon: { width: 28, height: 28, borderRadius: 8, justifyContent: "center", alignItems: "center" },
-  heroMiniLbl: { color: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "Inter_400Regular" },
-  heroMiniVal: { fontSize: 12, fontFamily: "Inter_700Bold", marginTop: 1 },
-
-  filterRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4,
-    gap: 8,
-  },
-  filterPill: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
-  },
-  filterPillActive: { backgroundColor: "#FFFFFF" },
-  filterTxt: { color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_500Medium" },
-  filterTxtActive: { color: D.heroB, fontFamily: "Inter_700Bold" },
-
   // Sections
-  section: { marginTop: 24, paddingHorizontal: 16 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
-  sectionDot: { width: 8, height: 8, borderRadius: 4 },
-  sectionTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: D.ink, letterSpacing: -0.2 },
+  scrollContent: {},
+  section:        { marginTop: 24, paddingHorizontal: 16 },
+  sectionHeader:  { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  sectionDot:     { width: 8, height: 8, borderRadius: 4 },
+  sectionTitle:   {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: D.ink,
+    letterSpacing: -0.2,
+  },
   metricsRow: { flexDirection: "row", gap: 12 },
 
-  // Status
+  // Progress bar
   progressBarWrap: {
     flexDirection: "row",
     height: 6, borderRadius: 3,
@@ -514,6 +568,8 @@ const S = StyleSheet.create({
     marginBottom: 16, gap: 2,
   },
   progressSeg: { height: 6, borderRadius: 3, minWidth: 4 },
+
+  // Status cards
   statusRow: { flexDirection: "row", gap: 10 },
   statusCard: {
     flex: 1,
@@ -527,50 +583,48 @@ const S = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1, shadowRadius: 6,
   },
-  statusIconWrap: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  statusIconWrap: {
+    width: 48, height: 48, borderRadius: 14,
+    justifyContent: "center", alignItems: "center",
+  },
   statusCount: { fontSize: 24, fontFamily: "Inter_700Bold" },
   statusLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: D.inkSoft },
-  statusPct: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost },
+  statusPct:   { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost },
 
   // Transactions
-  txList: {
+  txContainer: { flex: 1 },
+  txCard: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginTop: 4,
     backgroundColor: D.card,
     borderRadius: 18,
-    borderWidth: 1, borderColor: D.border,
+    borderWidth: 1,
+    borderColor: D.border,
     overflow: "hidden",
     elevation: 1,
     shadowColor: D.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 1, shadowRadius: 6,
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
-  txCard: {
-    flexDirection: "row",
+
+  // Empty state
+  emptyWrap: {
+    flex: 1,
     alignItems: "center",
-    paddingVertical: 13, paddingRight: 16, paddingLeft: 4,
-    borderBottomWidth: 1, borderBottomColor: D.border,
+    paddingVertical: 80,
     gap: 10,
   },
-  txStrip: { width: 3, height: 36, borderRadius: 3 },
-  txBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  txBadgeTxt: { fontSize: 10, fontFamily: "Inter_700Bold" },
-  txMid: { flex: 1 },
-  txProduct: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: D.ink, marginBottom: 3 },
-  txMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
-  txRef: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
-  txDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: D.inkGhost },
-  txDate: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
-  txRight: { alignItems: "flex-end", gap: 3 },
-  txQty: { fontSize: 15, fontFamily: "Inter_700Bold" },
-  txRem: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
-  txRemUnit: { color: D.inkGhost },
-
-  // Empty
-  emptyWrap: { alignItems: "center", paddingVertical: 56, gap: 10 },
   emptyIcon: {
     width: 64, height: 64, borderRadius: 20,
     backgroundColor: D.bg,
     justifyContent: "center", alignItems: "center",
     borderWidth: 1, borderColor: D.border,
   },
-  emptyTitle: { fontSize: 15, fontFamily: "Inter_500Medium", color: D.inkSoft },
+  emptyTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    color: D.inkSoft,
+  },
 });
