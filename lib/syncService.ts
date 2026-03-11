@@ -3,8 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Product = Database['public']['Tables']['products']['Row'];
 type Contact = Database['public']['Tables']['contacts']['Row'];
-type Sale = Database['public']['Tables']['sales']['Row'];
-type SaleItem = Database['public']['Tables']['sale_items']['Row'];
 
 const STORAGE_KEYS = {
   PRODUCTS: 'bizpos_products',
@@ -156,6 +154,7 @@ class SyncService {
       let query = supabase
         .from('contacts')
         .select('*')
+        .eq('type', 'customer')
         .order('updated_at', { ascending: false });
 
       if (lastSync) {
@@ -187,16 +186,28 @@ class SyncService {
       const contactMap = new Map(existingContacts.map((c: any) => [String(c.id), c]));
 
       // Format and merge contacts
-      const formattedContacts = data.map(c => ({
-        id: String(c.id),
-        name: c.name,
-        phone: c.phone || '',
-        email: c.email || '',
-        address: c.address || '',
-        balance: Number(c.balance || 0),
-        type: c.type || 'customer',
-        updatedAt: c.updated_at,
-      }));
+      const formattedContacts = data.map(c => {
+        let refrigerators = c.refrigerators;
+        if (refrigerators) {
+          try {
+            const parsed = JSON.parse(refrigerators);
+            if (typeof parsed === 'string') {
+              refrigerators = parsed;
+            }
+          } catch {}
+        }
+        return {
+          id: String(c.id),
+          name: c.name,
+          phone: c.phone || '',
+          email: c.email || '',
+          address: c.address || '',
+          balance: Number(c.balance || 0),
+          type: c.type || 'customer',
+          updatedAt: c.updated_at,
+          refrigerators: refrigerators || null,
+        };
+      });
 
       formattedContacts.forEach(contact => {
         contactMap.set(contact.id, contact);

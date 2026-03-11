@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Switch, ScrollView, TouchableOpacity, Modal, Pressable, TextInput } from 'react-native';
 import { AppHeader } from '@/components/common/AppHeader';
 import { Colors } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
@@ -14,6 +14,8 @@ export default function ScreenSettings() {
   const { config, updateConfig } = useApp();
   const { t, i18n } = useTranslation();
   const [showLanguageSheet, setShowLanguageSheet] = useState(false);
+  const [showTruckModal, setShowTruckModal] = useState(false);
+  const [truckLocation, setTruckLocation] = useState(config?.truckLocation || '');
 
   const languages = [
     { code: 'ar', label: 'العربية', flag: '🇸🇦' },
@@ -91,7 +93,59 @@ export default function ScreenSettings() {
             <Feather name="chevron-right" size={20} color={C.textMuted} />
           </View>
         </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>{t('settings.truckSettings') || 'Truck Settings'}</Text>
+        <TouchableOpacity style={styles.menuCard} onPress={() => {
+          setTruckLocation(config?.truckLocation || 'CAM 01 - 0199-A-44');
+          setShowTruckModal(true);
+        }}>
+          <View style={styles.menuItem}>
+            <View style={styles.menuIcon}>
+              <Feather name="truck" size={20} color={C.primary} />
+            </View>
+            <View style={styles.menuText}>
+              <Text style={styles.menuLabel}>{t('settings.truckLocation') || 'Truck Location'}</Text>
+              <Text style={styles.menuDescription}>
+                {config?.truckLocation || 'CAM 01 - 0199-A-44'}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={20} color={C.textMuted} />
+          </View>
+        </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={showTruckModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTruckModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowTruckModal(false)}>
+          <Pressable style={styles.sheetContent} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>{t('settings.truckLocation') || 'Truck Location'}</Text>
+            <TextInput
+              style={styles.input}
+              value={truckLocation}
+              onChangeText={setTruckLocation}
+              placeholder={t('settings.enterTruckLocation') || 'Enter truck location'}
+              placeholderTextColor={C.textMuted}
+            />
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={() => {
+                updateConfig({ truckLocation: truckLocation });
+                setShowTruckModal(false);
+              }}
+            >
+              <Text style={styles.saveButtonText}>{t('common.save')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.closeButton} onPress={() => setShowTruckModal(false)}>
+              <Text style={styles.closeButtonText}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={showLanguageSheet}
@@ -281,8 +335,30 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 12,
   },
   closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  input: {
+    backgroundColor: C.background,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: C.textPrimary,
+    borderWidth: 1,
+    borderColor: C.border,
+    marginBottom: 16,
+  },
+  saveButton: {
+    backgroundColor: C.success,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  saveButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

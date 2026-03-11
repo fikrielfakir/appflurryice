@@ -12,73 +12,138 @@ import { router } from "expo-router";
 import { AppHeader } from "@/components/common/AppHeader";
 import { useTranslation } from "react-i18next";
 
-const C = Colors;
-
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function MetricCard({ label, value, icon, color, sub, arLabel }: { label: string; value: string; icon: string; color: string; sub?: string; arLabel?: string }) {
-  return (
-    <View style={[styles.metricCard, { backgroundColor: C.card, borderColor: color + "30" }]}>
-      <View style={[styles.metricIcon, { backgroundColor: color + "15" }]}>
-        <Feather name={icon as any} size={20} color={color} />
-      </View>
-      <Text style={[styles.metricValue, { color: C.textPrimary }]}>{value}</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text style={[styles.metricLabel, { color: C.textSecondary }]}>{label}</Text>
-        {arLabel && <Text style={[styles.metricArLabel, { color: C.textSecondary }]}>{arLabel}</Text>}
-      </View>
-      {sub ? <Text style={[styles.metricSub, { color: C.textMuted }]}>{sub}</Text> : null}
-    </View>
-  );
-}
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const D = {
+  bg:          "#F7F6F2",
+  surface:     "#FFFFFF",
+  card:        "#FFFFFF",
+
+  heroA:       "#1C1C2E",
+  heroB:       "#2D2B55",
+  heroAccent:  "#6C63FF",
+  heroGlow:    "#A78BFA",
+
+  ink:         "#111118",
+  inkMid:      "#3D3C52",
+  inkSoft:     "#8B8AA5",
+  inkGhost:    "#C4C3D0",
+
+  emerald:     "#00B37D",
+  emeraldBg:   "#E6FAF4",
+  rose:        "#F04E6A",
+  roseBg:      "#FEE9ED",
+  amber:       "#F59E0B",
+  amberBg:     "#FEF3C7",
+  blue:        "#3B82F6",
+  blueBg:      "#EFF6FF",
+  violet:      "#8B5CF6",
+  violetBg:    "#F5F3FF",
+  orange:      "#F97316",
+  orangeBg:    "#FFF3E8",
+
+  border:      "#ECEAE4",
+  shadow:      "rgba(17,17,24,0.06)",
+};
 
 const getTypeColor = (type: string) => {
   switch (type) {
-    case 'sell': return '#10B981';
-    case 'transfer_in': return '#3B82F6';
-    case 'transfer_out': return '#EF4444';
-    case 'adjustment': return '#F97316';
-    default: return C.primary;
+    case "sell":         return D.emerald;
+    case "transfer_in":  return D.blue;
+    case "transfer_out": return D.rose;
+    case "adjustment":   return D.orange;
+    default:             return D.heroAccent;
+  }
+};
+
+const getTypeBg = (type: string) => {
+  switch (type) {
+    case "sell":         return D.emeraldBg;
+    case "transfer_in":  return D.blueBg;
+    case "transfer_out": return D.roseBg;
+    case "adjustment":   return D.orangeBg;
+    default:             return D.violetBg;
   }
 };
 
 const getTypeLabel = (type: string, t: (key: string) => string) => {
   switch (type) {
-    case 'sell': return t('reports.sale');
-    case 'transfer_in': return t('reports.transferIn');
-    case 'transfer_out': return t('reports.transferOut');
-    case 'adjustment': return t('reports.adjustment');
-    default: return type;
+    case "sell":         return t("reports.sale");
+    case "transfer_in":  return t("reports.transferIn");
+    case "transfer_out": return t("reports.transferOut");
+    case "adjustment":   return t("reports.adjustment");
+    default:             return type;
   }
 };
 
+// ── Metric Card ───────────────────────────────────────────────────────────────
+function MetricCard({ label, value, icon, color, bg, sub }: {
+  label: string; value: string; icon: string; color: string; bg: string; sub?: string;
+}) {
+  return (
+    <View style={[MC.card]}>
+      <View style={[MC.iconWrap, { backgroundColor: bg }]}>
+        <Feather name={icon as any} size={18} color={color} />
+      </View>
+      <Text style={MC.value}>{value}</Text>
+      <Text style={MC.label}>{label}</Text>
+      {sub ? <Text style={MC.sub}>{sub}</Text> : null}
+      <View style={[MC.accent, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+const MC = StyleSheet.create({
+  card: {
+    flex: 1,
+    backgroundColor: D.card,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: D.border,
+    gap: 4,
+    overflow: "hidden",
+    elevation: 1,
+    shadowColor: D.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
+  },
+  iconWrap: {
+    width: 38, height: 38, borderRadius: 11,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 8,
+  },
+  value: { fontSize: 17, fontFamily: "Inter_700Bold", color: D.ink },
+  label: { fontSize: 11, fontFamily: "Inter_500Medium", color: D.inkSoft },
+  sub: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost, marginTop: 2 },
+  accent: {
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    height: 3, borderRadius: 2,
+  },
+});
+
+// ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { sales, transactions, products, setIsSidebarOpen } = useApp();
-  const { t, i18n } = useTranslation();
-  const [filter, setFilter] = useState<'daily' | 'weekly' | 'monthly' | 'all'>('daily');
-  const [activeTab, setActiveTab] = useState<'metrics' | 'transactions'>('metrics');
+  const { t } = useTranslation();
+  const [filter, setFilter] = useState<"daily" | "weekly" | "monthly" | "all">("daily");
+  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
 
   const filteredSales = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    return sales.filter(s => {
-      const saleDate = new Date(s.date);
-      const saleDay = new Date(saleDate.getFullYear(), saleDate.getMonth(), saleDate.getDate());
-      
-      if (filter === 'daily') return saleDay.getTime() === today.getTime();
-      if (filter === 'weekly') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        return saleDay >= weekAgo;
-      }
-      if (filter === 'monthly') {
-        return saleDay.getMonth() === today.getMonth() && saleDay.getFullYear() === today.getFullYear();
-      }
+    return sales.filter((s) => {
+      const d = new Date(s.date);
+      const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      if (filter === "daily")   return day.getTime() === today.getTime();
+      if (filter === "weekly")  { const w = new Date(today); w.setDate(today.getDate() - 7); return day >= w; }
+      if (filter === "monthly") return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
       return true;
     });
   }, [sales, filter]);
@@ -90,187 +155,279 @@ export default function ReportsScreen() {
   }, [filteredSales]);
 
   const truckStats = useMemo(() => {
-    const inStockProducts = products.filter(p => (p.stock || 0) > 0);
-    const count = inStockProducts.length;
-    const value = inStockProducts.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0);
-    return { count, value };
+    const inStock = products.filter((p) => (p.stock || 0) > 0);
+    return {
+      count: inStock.length,
+      value: inStock.reduce((s, p) => s + ((p.stock || 0) * (p.price || 0)), 0),
+    };
   }, [products]);
 
   const filteredTransactions = useMemo(() => {
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    return transactions.filter(t => {
-      const d = new Date(t.date);
+    return transactions.filter((tx) => {
+      const d = new Date(tx.date);
       const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      
-      if (filter === 'daily') return day.getTime() === today.getTime();
-      if (filter === 'weekly') {
-        const weekAgo = new Date(today);
-        weekAgo.setDate(today.getDate() - 7);
-        return day >= weekAgo;
-      }
-      if (filter === 'monthly') {
-        return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
-      }
+      if (filter === "daily")   return day.getTime() === today.getTime();
+      if (filter === "weekly")  { const w = new Date(today); w.setDate(today.getDate() - 7); return day >= w; }
+      if (filter === "monthly") return day.getMonth() === today.getMonth() && day.getFullYear() === today.getFullYear();
       return true;
     });
   }, [transactions, filter]);
 
-  const paidSalesCount = filteredSales.filter(s => s.status === "paid").length;
-  const dueSalesCount = filteredSales.filter(s => s.status === "due").length;
-  const partialSalesCount = filteredSales.filter(s => s.status === "partial").length;
+  const paidCount    = filteredSales.filter((s) => s.status === "paid").length;
+  const dueCount     = filteredSales.filter((s) => s.status === "due").length;
+  const partialCount = filteredSales.filter((s) => s.status === "partial").length;
+  const total        = paidCount + dueCount + partialCount || 1;
+
+  const FILTERS: { key: "daily" | "weekly" | "monthly" | "all"; label: string }[] = [
+    { key: "daily",   label: t("reports.daily") },
+    { key: "weekly",  label: t("reports.weekly") },
+    { key: "monthly", label: t("reports.monthly") },
+    { key: "all",     label: t("reports.all") },
+  ];
 
   return (
-    <View style={[styles.screen, { backgroundColor: C.surface }]}>
-      <AppHeader
-        title={t('reports.title')}
-        dark
-        showBack
-        onBackPress={() => router.back()}
-        showMenu
-        onMenuPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setIsSidebarOpen(true);
-        }}
-      />
-      <View style={styles.tabHeader}>
-        <TouchableOpacity 
-          style={[styles.tabBtn, activeTab === 'metrics' && styles.tabBtnActive]} 
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('metrics'); }}
-        >
-          <Text style={[styles.tabBtnText, activeTab === 'metrics' && styles.tabBtnTextActive]}>
-            {t('reports.metrics')}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabBtn, activeTab === 'transactions' && styles.tabBtnActive]} 
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab('transactions'); }}
-        >
-          <Text style={[styles.tabBtnText, activeTab === 'transactions' && styles.tabBtnTextActive]}>
-            {t('reports.logs')}
-          </Text>
-        </TouchableOpacity>
+    <View style={[S.screen, { backgroundColor: D.bg }]}>
+
+      {/* ── Hero: gradient wraps the AppHeader so dark mode blends perfectly ── */}
+      <View style={S.heroWrapper}>
+        <LinearGradient
+          colors={[D.heroA, D.heroB]}
+          style={StyleSheet.absoluteFill}
+        />
+        {/* Decorative blobs */}
+        <View style={S.blob1} pointerEvents="none" />
+        <View style={S.blob2} pointerEvents="none" />
+
+        {/* AppHeader sits inside the gradient — dark=true gives transparent bg */}
+        <AppHeader
+          title={t("reports.title")}
+          dark
+          showBack
+          onBackPress={() => router.back()}
+          showMenu
+          onMenuPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            setIsSidebarOpen(true);
+          }}
+        />
+
+        {/* Stats row */}
+        <View style={S.heroInner}>
+          <View style={S.heroLeft}>
+            <Text style={S.heroLabel}>{t("reports.totalRevenue") || "Revenu total"}</Text>
+            <Text style={S.heroValue}>MAD {fmt(stats.rev)}</Text>
+            <Text style={S.heroSub}>{filteredSales.length} ventes · {t(`reports.${filter}`)}</Text>
+          </View>
+          <View style={S.heroDivider} />
+          <View style={S.heroRight}>
+            <View style={S.heroMini}>
+              <View style={[S.heroMiniIcon, { backgroundColor: D.rose + "30" }]}>
+                <Feather name="clock" size={13} color="#F87171" />
+              </View>
+              <View>
+                <Text style={S.heroMiniLbl}>{t("reports.amountDue")}</Text>
+                <Text style={[S.heroMiniVal, { color: "#F87171" }]}>MAD {fmt(stats.due)}</Text>
+              </View>
+            </View>
+            <View style={S.heroMini}>
+              <View style={[S.heroMiniIcon, { backgroundColor: D.emerald + "30" }]}>
+                <Feather name="package" size={13} color={D.heroGlow} />
+              </View>
+              <View>
+                <Text style={S.heroMiniLbl}>{t("reports.productsCount")}</Text>
+                <Text style={[S.heroMiniVal, { color: D.heroGlow }]}>{truckStats.count}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Filter pills */}
+        <View style={S.filterRow}>
+          {FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f.key}
+              style={[S.filterPill, filter === f.key && S.filterPillActive]}
+              onPress={() => { Haptics.selectionAsync(); setFilter(f.key); }}
+            >
+              <Text style={[S.filterTxt, filter === f.key && S.filterTxtActive]}>{f.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
-        <LinearGradient colors={[C.primary, C.primaryDark, C.surface]} style={[styles.header, { paddingTop: 16 }]}>
-          <View style={styles.filterRow}>
-            {(['daily', 'weekly', 'monthly', 'all'] as const).map(f => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
-                onPress={() => { Haptics.selectionAsync(); setFilter(f); }}
-              >
-                <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive]}>
-                  {t(`reports.${f}`)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </LinearGradient>
+      {/* ── Tab bar ── */}
+      <View style={S.tabBar}>
+        {(["metrics", "transactions"] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[S.tabBtn, activeTab === tab && S.tabBtnActive]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveTab(tab); }}
+          >
+            <Feather
+              name={tab === "metrics" ? "pie-chart" : "list"}
+              size={14}
+              color={activeTab === tab ? D.heroAccent : D.inkSoft}
+              style={{ marginRight: 6 }}
+            />
+            <Text style={[S.tabTxt, activeTab === tab && S.tabTxtActive]}>
+              {tab === "metrics" ? t("reports.metrics") : t("reports.logs")}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-        {activeTab === 'metrics' ? (
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+      >
+        {/* ── METRICS TAB ── */}
+        {activeTab === "metrics" ? (
           <>
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{t('reports.truckStock')}</Text>
-              <View style={styles.metricsGrid}>
-                <MetricCard 
-                  label={t('reports.productsCount')} 
-                  value={`${truckStats.count}`} 
-                  icon="package" 
-                  color={C.primaryLight} 
+            {/* Truck / Stock */}
+            <View style={S.section}>
+              <View style={S.sectionHeader}>
+                <View style={[S.sectionDot, { backgroundColor: D.blue }]} />
+                <Text style={S.sectionTitle}>{t("reports.truckStock")}</Text>
+              </View>
+              <View style={S.metricsRow}>
+                <MetricCard
+                  label={t("reports.productsCount")}
+                  value={`${truckStats.count}`}
+                  icon="package"
+                  color={D.blue}
+                  bg={D.blueBg}
                 />
-                <MetricCard 
-                  label={t('reports.remainingValue')} 
-                  value={`MAD ${fmt(truckStats.value)}`} 
-                  icon="truck" 
-                  color={C.accent} 
+                <MetricCard
+                  label={t("reports.remainingValue")}
+                  value={`MAD ${fmt(truckStats.value)}`}
+                  icon="truck"
+                  color={D.violet}
+                  bg={D.violetBg}
                 />
               </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>{t('reports.financialSummary')}</Text>
-              <View style={styles.metricsGrid}>
-                <MetricCard 
-                  label={t('reports.revenue')} 
-                  value={`MAD ${fmt(stats.rev)}`} 
-                  icon="trending-up" 
-                  color={C.primaryLight} 
-                  sub={`${filteredSales.length} ${t('tabs.sales')}`} 
+            {/* Financial */}
+            <View style={S.section}>
+              <View style={S.sectionHeader}>
+                <View style={[S.sectionDot, { backgroundColor: D.emerald }]} />
+                <Text style={S.sectionTitle}>{t("reports.financialSummary")}</Text>
+              </View>
+              <View style={S.metricsRow}>
+                <MetricCard
+                  label={t("reports.revenue")}
+                  value={`MAD ${fmt(stats.rev)}`}
+                  icon="trending-up"
+                  color={D.emerald}
+                  bg={D.emeraldBg}
+                  sub={`${filteredSales.length} ${t("tabs.sales")}`}
                 />
-                <MetricCard 
-                  label={t('reports.amountDue')} 
-                  value={`MAD ${fmt(stats.due)}`} 
-                  icon="clock" 
-                  color={C.warning} 
-                  sub={`${dueSalesCount} ${t('reports.unpaid')}`} 
+                <MetricCard
+                  label={t("reports.amountDue")}
+                  value={`MAD ${fmt(stats.due)}`}
+                  icon="clock"
+                  color={D.amber}
+                  bg={D.amberBg}
+                  sub={`${dueCount} ${t("reports.unpaid")}`}
                 />
               </View>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('reports.salesByStatus')}</Text>
-              <View style={styles.statusRow}>
-                <View style={[styles.statusCard, { borderColor: C.success + "30" }]}>
-                  <Text style={[styles.statusCount, { color: C.success }]}>{paidSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{t('reports.paid')}</Text>
-                </View>
-                <View style={[styles.statusCard, { borderColor: C.warning + "30" }]}>
-                  <Text style={[styles.statusCount, { color: C.warning }]}>{partialSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{t('reports.partial')}</Text>
-                </View>
-                <View style={[styles.statusCard, { borderColor: C.danger + "30" }]}>
-                  <Text style={[styles.statusCount, { color: C.danger }]}>{dueSalesCount}</Text>
-                  <Text style={styles.statusLabel}>{t('reports.due')}</Text>
-                </View>
+            {/* Sales by status */}
+            <View style={S.section}>
+              <View style={S.sectionHeader}>
+                <View style={[S.sectionDot, { backgroundColor: D.violet }]} />
+                <Text style={S.sectionTitle}>{t("reports.salesByStatus")}</Text>
+              </View>
+
+              {/* Progress bar */}
+              <View style={S.progressBarWrap}>
+                <View style={[S.progressSeg, { flex: paidCount / total, backgroundColor: D.emerald }]} />
+                <View style={[S.progressSeg, { flex: partialCount / total, backgroundColor: D.amber }]} />
+                <View style={[S.progressSeg, { flex: dueCount / total, backgroundColor: D.rose }]} />
+              </View>
+
+              <View style={S.statusRow}>
+                {[
+                  { label: t("reports.paid"),    count: paidCount,    color: D.emerald, bg: D.emeraldBg },
+                  { label: t("reports.partial"), count: partialCount, color: D.amber,   bg: D.amberBg },
+                  { label: t("reports.due"),     count: dueCount,     color: D.rose,    bg: D.roseBg },
+                ].map((s) => (
+                  <View key={s.label} style={[S.statusCard, { borderTopColor: s.color }]}>
+                    <View style={[S.statusIconWrap, { backgroundColor: s.bg }]}>
+                      <Text style={[S.statusCount, { color: s.color }]}>{s.count}</Text>
+                    </View>
+                    <Text style={S.statusLabel}>{s.label}</Text>
+                    <Text style={S.statusPct}>{Math.round((s.count / total) * 100)}%</Text>
+                  </View>
+                ))}
               </View>
             </View>
           </>
         ) : (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('reports.transactionLogs')}</Text>
-            <View style={styles.tableCard}>
-              <View style={[styles.tableHeader, { borderBottomColor: C.border }]}>
-                <Text style={[styles.th, { flex: 1.5 }]}>{t('reports.ref')}</Text>
-                <Text style={[styles.th, { flex: 2 }]}>{t('reports.product')}</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{t('reports.qty')}</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'center' }]}>{t('reports.rem')}</Text>
-                <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>{t('reports.type')}</Text>
-              </View>
-              {filteredTransactions.length === 0 ? (
-                <View style={styles.emptyTable}>
-                  <Text style={{ color: C.textMuted }}>{t('reports.noTransactions')}</Text>
+          /* ── TRANSACTIONS TAB ── */
+          <View style={S.section}>
+            <View style={S.sectionHeader}>
+              <View style={[S.sectionDot, { backgroundColor: D.heroAccent }]} />
+              <Text style={S.sectionTitle}>{t("reports.transactionLogs")}</Text>
+            </View>
+
+            {filteredTransactions.length === 0 ? (
+              <View style={S.emptyWrap}>
+                <View style={S.emptyIcon}>
+                  <Feather name="inbox" size={28} color={D.inkSoft} />
                 </View>
-              ) : (
-                filteredTransactions.map((tx) => {
-                  const typeColor = getTypeColor(tx.type);
+                <Text style={S.emptyTitle}>{t("reports.noTransactions")}</Text>
+              </View>
+            ) : (
+              <View style={S.txList}>
+                {filteredTransactions.map((tx, i) => {
+                  const color = getTypeColor(tx.type);
+                  const bg    = getTypeBg(tx.type);
                   return (
-                    <View key={tx.id} style={[styles.tableRow, { backgroundColor: typeColor + '15', borderBottomColor: typeColor + '40' }]}>
-                      <View style={{ flex: 1.5 }}>
-                        <Text style={styles.tdRef} numberOfLines={1}>{tx.referenceNo}</Text>
-                        <Text style={styles.tdDate}>{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+                    <View
+                      key={tx.id}
+                      style={[
+                        S.txCard,
+                        i === filteredTransactions.length - 1 && { marginBottom: 0 },
+                      ]}
+                    >
+                      {/* Color strip */}
+                      <View style={[S.txStrip, { backgroundColor: color }]} />
+
+                      {/* Type badge */}
+                      <View style={[S.txBadge, { backgroundColor: bg }]}>
+                        <Text style={[S.txBadgeTxt, { color }]}>{getTypeLabel(tx.type, t)}</Text>
                       </View>
-                      <Text style={[styles.td, { flex: 2 }]} numberOfLines={2}>{tx.productName}</Text>
-                      <Text style={[styles.td, { flex: 1, textAlign: 'center', color: tx.quantity < 0 ? C.danger : C.success, fontWeight: '600' }]}>
-                        {tx.quantity}
-                      </Text>
-                      <Text style={[styles.td, { flex: 1, textAlign: 'center', color: C.textSecondary }]}>
-                        {tx.remainingStock ?? '-'}
-                      </Text>
-                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                        <View style={[styles.typeBadge, { backgroundColor: typeColor + '25' }]}>
-                          <Text style={[styles.typeText, { color: typeColor }]}>
-                            {getTypeLabel(tx.type, t)}
+
+                      {/* Middle */}
+                      <View style={S.txMid}>
+                        <Text style={S.txProduct} numberOfLines={1}>{tx.productName}</Text>
+                        <View style={S.txMeta}>
+                          <Text style={S.txRef}>{tx.referenceNo}</Text>
+                          <View style={S.txDot} />
+                          <Text style={S.txDate}>
+                            {new Date(tx.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
                           </Text>
                         </View>
                       </View>
+
+                      {/* Qty / remaining */}
+                      <View style={S.txRight}>
+                        <Text style={[S.txQty, { color: tx.quantity < 0 ? D.rose : D.emerald }]}>
+                          {tx.quantity > 0 ? "+" : ""}{tx.quantity}
+                        </Text>
+                        <Text style={S.txRem}>
+                          {tx.remainingStock ?? "—"} <Text style={S.txRemUnit}>rest.</Text>
+                        </Text>
+                      </View>
                     </View>
                   );
-                })
-              )}
-            </View>
+                })}
+              </View>
+            )}
           </View>
         )}
       </ScrollView>
@@ -278,45 +435,142 @@ export default function ReportsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
-  header: { paddingHorizontal: 20, paddingBottom: 20 },
-  tabHeader: { flexDirection: 'row', backgroundColor: C.surface, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: C.border },
-  tabBtn: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabBtnActive: { borderBottomColor: C.primary },
-  tabBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: C.textSecondary },
-  tabBtnTextActive: { color: C.primary },
-  filterRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 8 },
-  filterBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)' },
-  filterBtnActive: { backgroundColor: '#fff' },
-  filterBtnText: { color: '#fff', fontSize: 12, fontFamily: 'Inter_500Medium' },
-  filterBtnTextActive: { color: C.primary },
-  metricsGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 0, gap: 10, marginTop: 8 },
-  metricCard: {
-    flex: 1, minWidth: "45%", backgroundColor: C.card, borderRadius: 16, padding: 16, borderWidth: 1, gap: 4,
+// ── Styles ────────────────────────────────────────────────────────────────────
+const S = StyleSheet.create({
+  screen: { flex: 1 },
+
+  // Hero wrapper: gradient + header + stats + filters all in one block
+  heroWrapper: {
+    overflow: "hidden",
   },
-  metricIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center", marginBottom: 8 },
-  metricValue: { fontSize: 18, fontFamily: "Inter_700Bold", color: "#fff" },
-  metricLabel: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textSecondary },
-  metricArLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  metricSub: { fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
+  blob1: {
+    position: "absolute", width: 200, height: 200, borderRadius: 100,
+    backgroundColor: D.heroAccent, opacity: 0.1, top: -50, right: -50,
+  },
+  blob2: {
+    position: "absolute", width: 120, height: 120, borderRadius: 60,
+    backgroundColor: D.heroGlow, opacity: 0.07, bottom: 30, left: -30,
+  },
+
+  // Tab bar
+  tabBar: {
+    flexDirection: "row",
+    backgroundColor: D.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    paddingHorizontal: 16,
+  },
+  tabBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    paddingVertical: 13,
+    borderBottomWidth: 2, borderBottomColor: "transparent",
+  },
+  tabBtnActive: { borderBottomColor: D.heroAccent },
+  tabTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: D.inkSoft },
+  tabTxtActive: { color: D.heroAccent },
+
+  heroInner: {
+    flexDirection: "row",
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 18,
+  },
+  heroLeft: { flex: 1.2, justifyContent: "center" },
+  heroLabel: { color: "rgba(255,255,255,0.45)", fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 1, textTransform: "uppercase", marginBottom: 6 },
+  heroValue: { color: "#FFFFFF", fontSize: 26, fontFamily: "Inter_700Bold", letterSpacing: -0.8 },
+  heroSub: { color: "rgba(255,255,255,0.4)", fontSize: 11, fontFamily: "Inter_400Regular", marginTop: 4 },
+  heroDivider: { width: 1, backgroundColor: "rgba(255,255,255,0.1)", marginHorizontal: 16 },
+  heroRight: { flex: 1, justifyContent: "space-around", gap: 12 },
+  heroMini: { flexDirection: "row", alignItems: "center", gap: 8 },
+  heroMiniIcon: { width: 28, height: 28, borderRadius: 8, justifyContent: "center", alignItems: "center" },
+  heroMiniLbl: { color: "rgba(255,255,255,0.4)", fontSize: 9, fontFamily: "Inter_400Regular" },
+  heroMiniVal: { fontSize: 12, fontFamily: "Inter_700Bold", marginTop: 1 },
+
+  filterRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16, paddingBottom: 16, paddingTop: 4,
+    gap: 8,
+  },
+  filterPill: {
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+  },
+  filterPillActive: { backgroundColor: "#FFFFFF" },
+  filterTxt: { color: "rgba(255,255,255,0.75)", fontSize: 12, fontFamily: "Inter_500Medium" },
+  filterTxtActive: { color: D.heroB, fontFamily: "Inter_700Bold" },
+
+  // Sections
   section: { marginTop: 24, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: "#0c3683", marginBottom: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+  sectionDot: { width: 8, height: 8, borderRadius: 4 },
+  sectionTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: D.ink, letterSpacing: -0.2 },
+  metricsRow: { flexDirection: "row", gap: 12 },
+
+  // Status
+  progressBarWrap: {
+    flexDirection: "row",
+    height: 6, borderRadius: 3,
+    overflow: "hidden",
+    marginBottom: 16, gap: 2,
+  },
+  progressSeg: { height: 6, borderRadius: 3, minWidth: 4 },
   statusRow: { flexDirection: "row", gap: 10 },
   statusCard: {
-    flex: 1, backgroundColor: C.card, borderRadius: 14, padding: 16,
-    borderWidth: 1, alignItems: "center", gap: 4,
+    flex: 1,
+    backgroundColor: D.card,
+    borderRadius: 16, padding: 14,
+    borderWidth: 1, borderColor: D.border,
+    borderTopWidth: 3,
+    alignItems: "center", gap: 4,
+    elevation: 1,
+    shadowColor: D.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1, shadowRadius: 6,
   },
-  statusCount: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  statusLabel: { fontSize: 12, fontFamily: "Inter_500Medium", color: C.textSecondary },
-  tableCard: { backgroundColor: C.card, borderRadius: 16, padding: 12, borderWidth: 1, borderColor: C.border },
-  tableHeader: { flexDirection: 'row', paddingBottom: 10, borderBottomWidth: 1, marginBottom: 8 },
-  th: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: C.textMuted },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-  td: { fontSize: 13, fontFamily: 'Inter_500Medium', color: C.textPrimary },
-  tdRef: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: C.textPrimary },
-  tdDate: { fontSize: 10, fontFamily: 'Inter_400Regular', color: C.textMuted },
-  emptyTable: { padding: 40, alignItems: 'center' },
-  typeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  typeText: { fontSize: 10, fontFamily: 'Inter_700Bold' },
+  statusIconWrap: { width: 48, height: 48, borderRadius: 14, justifyContent: "center", alignItems: "center" },
+  statusCount: { fontSize: 24, fontFamily: "Inter_700Bold" },
+  statusLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: D.inkSoft },
+  statusPct: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost },
+
+  // Transactions
+  txList: {
+    backgroundColor: D.card,
+    borderRadius: 18,
+    borderWidth: 1, borderColor: D.border,
+    overflow: "hidden",
+    elevation: 1,
+    shadowColor: D.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1, shadowRadius: 6,
+  },
+  txCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 13, paddingRight: 16, paddingLeft: 4,
+    borderBottomWidth: 1, borderBottomColor: D.border,
+    gap: 10,
+  },
+  txStrip: { width: 3, height: 36, borderRadius: 3 },
+  txBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  txBadgeTxt: { fontSize: 10, fontFamily: "Inter_700Bold" },
+  txMid: { flex: 1 },
+  txProduct: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: D.ink, marginBottom: 3 },
+  txMeta: { flexDirection: "row", alignItems: "center", gap: 6 },
+  txRef: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
+  txDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: D.inkGhost },
+  txDate: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
+  txRight: { alignItems: "flex-end", gap: 3 },
+  txQty: { fontSize: 15, fontFamily: "Inter_700Bold" },
+  txRem: { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkSoft },
+  txRemUnit: { color: D.inkGhost },
+
+  // Empty
+  emptyWrap: { alignItems: "center", paddingVertical: 56, gap: 10 },
+  emptyIcon: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: D.bg,
+    justifyContent: "center", alignItems: "center",
+    borderWidth: 1, borderColor: D.border,
+  },
+  emptyTitle: { fontSize: 15, fontFamily: "Inter_500Medium", color: D.inkSoft },
 });

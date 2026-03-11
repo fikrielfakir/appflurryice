@@ -13,28 +13,30 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/colors';
 import { FontSize, FontWeight } from '@/constants/typography';
 import { HeaderHeight, Shadow, Spacing, TouchTarget, IconSize } from '@/constants/layout';
-
-// Icon imports — using expo icons for better compatibility
 import { Ionicons } from '@expo/vector-icons';
 
+// ── Design tokens — unified with Dashboard / Reports / Sales / Products ───────
+const D = {
+  heroA:      "#1C1C2E",
+  heroB:      "#2D2B55",
+  heroAccent: "#6C63FF",
+  heroGlow:   "#A78BFA",
+  ink:        "#111118",
+  inkSoft:    "#8B8AA5",
+  surface:    "#FFFFFF",
+  border:     "#ECEAE4",
+  danger:     "#F04E6A",
+};
+
 interface AppHeaderProps {
-  /** Screen title displayed in center. If undefined and showLogo=true, shows logo. */
   title?: string;
-  /** Show Flurry Ice logo instead of title text */
   showLogo?: boolean;
-  /** Show hamburger menu button on the left */
   showMenu?: boolean;
-  /** Show back arrow on the left */
   showBack?: boolean;
-  /** Callback for menu button press */
   onMenuPress?: () => void;
-  /** Callback for back button press */
   onBackPress?: () => void;
-  /** Right side: up to 2 icon buttons */
   rightActions?: React.ReactNode;
-  /** Dark (navy) header. White header is default. */
   dark?: boolean;
-  /** Override container style (avoid overriding height) */
   style?: ViewStyle;
 }
 
@@ -50,158 +52,197 @@ export function AppHeader({
   style,
 }: AppHeaderProps) {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'ios' ? insets.top : StatusBar.currentHeight ?? 0;
+  const topPad = Platform.OS === 'ios' ? insets.top : (StatusBar.currentHeight ?? 0);
 
-  const iconColor  = dark ? Colors.textOnDark  : Colors.primary;
-  const titleColor = dark ? Colors.textOnDark  : Colors.textPrimary;
-  const bgColor    = dark ? Colors.primary      : Colors.card;
+  // Dark mode: transparent (sits inside gradient hero)
+  // Light mode: white surface with subtle border
+  const wrapperBg   = dark ? 'transparent' : D.surface;
+  const iconColor   = dark ? 'rgba(255,255,255,0.9)' : D.ink;
+  const titleColor  = dark ? '#FFFFFF' : D.ink;
 
   return (
     <View
       style={[
-        styles.wrapper,
-        { paddingTop: topPad, backgroundColor: bgColor },
-        dark ? {} : Shadow.header,
+        S.wrapper,
+        { paddingTop: topPad, backgroundColor: wrapperBg },
+        !dark && S.lightShadow,
         style,
       ]}
     >
-      <View style={styles.bar}>
-        {/* LEFT — Menu or Back */}
-        <View style={styles.side}>
+      <View style={S.bar}>
+
+        {/* LEFT */}
+        <View style={S.side}>
           {showMenu && (
             <TouchableOpacity
-              style={styles.iconBtn}
+              style={[S.iconBtn, dark ? S.iconBtnDark : S.iconBtnLight]}
               onPress={onMenuPress}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="menu-outline" size={IconSize.md} color={iconColor} />
+              <Ionicons name="menu-outline" size={20} color={iconColor} />
             </TouchableOpacity>
           )}
           {showBack && !showMenu && (
             <TouchableOpacity
-              style={styles.iconBtn}
+              style={[S.iconBtn, dark ? S.iconBtnDark : S.iconBtnLight]}
               onPress={onBackPress}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="arrow-back-outline" size={IconSize.md} color={iconColor} />
+              <Ionicons name="arrow-back-outline" size={20} color={iconColor} />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* CENTER — Logo or Title */}
-        <View style={styles.center}>
+        {/* CENTER */}
+        <View style={S.center}>
           {showLogo ? (
             <Image
               source={require('@/assets/flurry-logo.png')}
-              style={[styles.logo, dark && styles.logoLight]}
+              style={[S.logo, dark && S.logoTint]}
               resizeMode="contain"
             />
           ) : title ? (
-            <Text style={[styles.title, { color: titleColor }]} numberOfLines={1}>
+            <Text style={[S.title, { color: titleColor }]} numberOfLines={1}>
               {title}
             </Text>
           ) : null}
         </View>
 
-        {/* RIGHT — Custom Actions */}
-        <View style={styles.side}>
-          <View style={styles.rightRow}>
+        {/* RIGHT */}
+        <View style={S.side}>
+          <View style={S.rightRow}>
             {rightActions}
           </View>
         </View>
+
       </View>
     </View>
   );
 }
 
-// ── Header Icon Button (use inside rightActions) ──────────────────────────
+// ── HeaderIconBtn ─────────────────────────────────────────────────────────────
 interface HeaderIconBtnProps {
   icon: React.ReactNode;
   onPress?: () => void;
-  badge?: number; // optional notification dot
+  badge?: number;
   dark?: boolean;
 }
 
 export function HeaderIconBtn({ icon, onPress, badge, dark }: HeaderIconBtnProps) {
   return (
     <TouchableOpacity
-      style={styles.iconBtn}
+      style={[S.iconBtn, dark ? S.iconBtnDark : S.iconBtnLight]}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
       hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
     >
       {icon}
       {badge !== undefined && badge > 0 && (
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+        <View style={S.badge}>
+          <Text style={S.badgeTxt}>{badge > 99 ? '99+' : badge}</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
+// ── Styles ────────────────────────────────────────────────────────────────────
+const S = StyleSheet.create({
   wrapper: {
     zIndex: 100,
   },
+
+  // Subtle bottom border + shadow for light headers
+  lightShadow: {
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    shadowColor: "rgba(17,17,24,0.06)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+
   bar: {
-    height:         HeaderHeight.bar,
-    flexDirection:  'row',
-    alignItems:     'center',
-    paddingHorizontal: Spacing.md,
+    height: HeaderHeight.bar,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
   },
+
   side: {
-    minWidth: 80,
-    alignItems:     'center',
+    minWidth: 76,
+    alignItems: 'center',
     justifyContent: 'center',
   },
+
   center: {
-    flex:           1,
-    alignItems:     'center',
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.xs,
+    paddingHorizontal: 8,
   },
+
   title: {
-    fontSize:   FontSize.lg,
-    fontWeight: FontWeight.semibold,
-    letterSpacing: -0.2,
+    fontSize: 17,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: -0.3,
   },
+
   logo: {
     height: 32,
-    width:  120,
+    width: 110,
   },
-  logoLight: {
-    tintColor: Colors.white,
+  logoTint: {
+    tintColor: '#FFFFFF',
   },
+
   rightRow: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap:            Spacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
   },
+
+  // Icon button — dark variant (inside gradient hero)
+  iconBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+
+  // Icon button — light variant (white header)
+  iconBtnLight: {
+    backgroundColor: '#F7F6F2',
+    borderWidth: 1,
+    borderColor: D.border,
+  },
+
   iconBtn: {
-    width:           TouchTarget.min,
-    height:          TouchTarget.min,
-    alignItems:      'center',
-    justifyContent:  'center',
-    borderRadius:    Spacing.md,
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+
   badge: {
-    position:        'absolute',
-    top:             6,
-    right:           6,
-    minWidth:        16,
-    height:          16,
-    borderRadius:    8,
-    backgroundColor: Colors.danger,
-    alignItems:      'center',
-    justifyContent:  'center',
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: D.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: 3,
   },
-  badgeText: {
-    color:      Colors.white,
-    fontSize:   9,
-    fontWeight: FontWeight.bold,
+  badgeTxt: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontFamily: 'Inter_700Bold',
   },
 });

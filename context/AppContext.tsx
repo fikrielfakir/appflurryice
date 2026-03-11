@@ -99,9 +99,12 @@ export interface Contact {
   name: string;
   phone: string;
   email?: string;
+  address?: string;
   type: "customer" | "lead" | "supplier";
   date: string;
   totalPurchased?: number;
+  balance?: number;
+  refrigerators?: string;
 }
 
 export interface Expense {
@@ -119,6 +122,7 @@ interface AppConfig {
   fullScreen: boolean;
   keepScreenOn: boolean;
   darkMode: boolean;
+  truckLocation: string;
 }
 
 interface AppContextValue {
@@ -129,6 +133,7 @@ interface AppContextValue {
   sales: Sale[];
   transactions: Transaction[];
   contacts: Contact[];
+  setContacts: React.Dispatch<React.SetStateAction<Contact[]>>;
   expenses: Expense[];
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
@@ -144,6 +149,7 @@ interface AppContextValue {
   deleteSale: (id: string) => void;
   addContact: (contact: Omit<Contact, "id" | "date">) => void;
   deleteContact: (id: string) => void;
+  updateContact: (id: string, updates: Partial<Omit<Contact, "id" | "date">>) => void;
   addExpense: (expense: Omit<Expense, "id" | "date">) => void;
   deleteExpense: (id: string) => void;
   addTransfer: (transfer: Transfer) => void;
@@ -243,6 +249,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fullScreen: false,
     keepScreenOn: false,
     darkMode: false,
+    truckLocation: 'CAM 01 - 0199-A-44',
   });
 
   useEffect(() => { loadData(); }, []);
@@ -392,7 +399,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (raw) {
           const syncedProducts = JSON.parse(raw);
           const existingProducts = products;
-          
+
           const mergedProducts = syncedProducts.map((syncedProduct: Product) => {
             const existingProduct = existingProducts.find(p => p.id === syncedProduct.id);
             if (existingProduct) {
@@ -400,7 +407,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             return syncedProduct;
           });
-          
+
           setProducts(mergedProducts);
         }
       }
@@ -455,21 +462,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   function addSale(sale: Omit<Sale, "id" | "date" | "invoiceNumber">): Sale {
     const now = new Date().toISOString();
+
+    // ✅ Enrich items with productId before saving
+    const enrichedItems: SaleItem[] = sale.items.map(item => {
+      const product = products.find(p => p.name === item.name);
+      return {
+        ...item,
+        productId: item.productId || product?.id || '',  // ensure productId is always set
+      };
+    });
+
     const newSale: Sale = {
       ...sale,
+      items: enrichedItems,   // ✅ use enriched items
       id: genId(),
       invoiceNumber: genInvoiceNumber(sales.length),
       date: now,
     };
-    
+
     const updatedProducts = products.map(p => {
-      const saleItem = sale.items.find(item => item.name === p.name);
+      const saleItem = enrichedItems.find(item => item.productId === p.id); // ✅ match by id
       if (saleItem) {
         return { ...p, stock: Math.max(0, (p.stock || 0) - saleItem.qty) };
       }
       return p;
     });
-    
+
     const newTransactions: Transaction[] = sale.items.map(item => {
       const product = products.find(p => p.name === item.name);
       const updatedProduct = updatedProducts.find(p => p.name === item.name);
@@ -485,14 +503,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         sellId: newSale.id,
       };
     });
-    
+
     const updatedTransactions = [...newTransactions, ...transactions];
     setTransactions(updatedTransactions);
     AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
-    
+
     setProducts(updatedProducts);
     AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
-    
+
     const updated = [newSale, ...sales];
     setSales(updated);
     AsyncStorage.setItem(KEYS.sales, JSON.stringify(updated));
@@ -500,6 +518,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteSale(id: string) {
+    const saleToDelete = sales.find(s => s.id === id);
+
+    if (saleToDelete?.items) {
+      const updatedProducts = products.map(product => {
+        const saleItem = saleToDelete.items.find(
+          item => item.productId === product.id || item.name === product.name
+        );
+        if (saleItem) {
+          return { ...product, stock: product.stock + saleItem.qty };
+        }
+        return product;
+      });
+      setProducts(updatedProducts);
+      await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
+    }
+
     const updated = sales.filter(s => s.id !== id);
     setSales(updated);
     await AsyncStorage.setItem(KEYS.sales, JSON.stringify(updated));
@@ -514,6 +548,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function deleteContact(id: string) {
     const updated = contacts.filter(c => c.id !== id);
+    setContacts(updated);
+    await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(updated));
+  }
+
+  async function updateContact(id: string, updates: Partial<Omit<Contact, "id" | "date">>) {
+    const updated = contacts.map(c => c.id === id ? { ...c, ...updates } : c);
     setContacts(updated);
     await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(updated));
   }
@@ -536,56 +576,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Match by productId first (most reliable), then by SKU
       const item = transfer.items.find(it => it.productId === p.id || (it.sku && it.sku === p.sku));
       if (!item) return p;
-      
+
       let newStock = p.stock ?? 0;
       const fromLoc = (transfer.from || "").toLowerCase();
       const toLoc = (transfer.to || "").toLowerCase();
-      
-      const isStorage = (loc: string) => 
-        loc.includes("produits finis") || 
-        loc.includes("main store") || 
-        loc.includes("main warehouse") ||
-        loc.includes("warehouse") ||
+      const ref = (transfer.ref || "").toLowerCase();
+
+      const isTruck = (loc: string) =>
+        loc.includes("truck") ||
+        loc.includes("vehicle") ||
         loc.includes("cam 01") ||
         loc.includes("0199-a-44");
 
-      const isTruck = (loc: string) => 
-        loc.includes("truck") || 
-        loc.includes("vehicle");
+      const isStorage = (loc: string) =>
+        loc.includes("produits finis") ||
+        loc.includes("main store") ||
+        loc.includes("main warehouse") ||
+        loc.includes("warehouse") ||
+        loc.includes("storage");
 
-      // If transferring between truck and warehouse
-      if ((isTruck(fromLoc) && isStorage(toLoc)) || 
-          (isStorage(fromLoc) && isTruck(toLoc))) {
-        if (isTruck(fromLoc) && isStorage(toLoc)) {
-          newStock += item.qty; // Returning items from truck to warehouse = increase stock
-        } else if (isStorage(fromLoc) && isTruck(toLoc)) {
-          newStock -= item.qty; // Taking items from warehouse to truck = decrease stock
-        }
-      } else {
-        // Original logic for other location types
-        if (isStorage(fromLoc)) {
+      // QR Code Scan = Transfer IN (always increase stock)
+      // QR codes start with "ST" reference
+      if (ref.startsWith("st")) {
+        // Transfer IN from external source - increase stock
+        newStock += item.qty;
+      }
+      // Transfer OUT (TR-OUT) - decrease stock
+      else if (ref.startsWith("tr-out")) {
+        // Transfer OUT to truck - decrease stock
+        newStock -= item.qty;
+      }
+      // Original logic for other cases
+      else {
+        // If transferring to truck (transfer OUT) - decrease stock
+        if (isTruck(toLoc)) {
           newStock -= item.qty;
         }
-        if (isStorage(toLoc)) {
+        // If transferring from truck back to storage (return/transfer IN) - increase stock
+        else if (isTruck(fromLoc) && isStorage(toLoc)) {
           newStock += item.qty;
         }
+        // If transferring from storage to storage - decrease from, increase to
+        else if (isStorage(fromLoc) && isStorage(toLoc)) {
+          newStock -= item.qty;
+        }
+        // Default: if from is storage, decrease stock
+        else if (isStorage(fromLoc)) {
+          newStock -= item.qty;
+        }
       }
-      
+
       return { ...p, stock: Math.max(0, newStock) };
     });
 
+    const ref = (transfer.ref || "").toLowerCase();
+    const isTransferOut = ref.startsWith("tr-out");
+    const isTransferIn = ref.startsWith("st");
+
     const transferTransactions: Transaction[] = transfer.items.map(item => {
-      // Match by productId first (most reliable), then by SKU
       const product = products.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
       const updatedProduct = updatedProducts.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
+
+      const txType: Transaction["type"] = isTransferOut ? "transfer_out" : "transfer_in";
+      const txQty = isTransferOut ? -item.qty : +item.qty;
+
       return {
         id: genId(),
         date: transfer.date,
         referenceNo: transfer.ref,
-        type: "transfer_out",
+        type: txType,
         productId: product?.id || item.productId || '',
         productName: item.name,
-        quantity: -item.qty,
+        quantity: txQty,
         remainingStock: updatedProduct?.stock || 0,
         transferId: transfer.id,
       };
@@ -633,12 +695,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, transactions, contacts, expenses, products, transfers, cart, config, updateConfig, setProducts,
+    sales, transactions, contacts, setContacts, expenses, products, transfers, cart, config, updateConfig, setProducts,
     setupFromQR,
     completeSetup,
     login, logout,
     addSale, deleteSale,
-    addContact, deleteContact,
+    addContact, deleteContact, updateContact,
     addExpense, deleteExpense,
     addTransfer,
     resetAllStock: () => {

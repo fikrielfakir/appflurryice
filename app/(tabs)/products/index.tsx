@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,214 +10,166 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  ViewStyle,
+  Pressable,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppHeader } from "@/components/common/AppHeader";
 import { useTranslation } from "react-i18next";
+import Toast from "react-native-root-toast";
 
 function fmt(n: number | undefined | null) {
   if (n === undefined || n === null) return "0.00";
-  return n.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const headerStyle = (C: any): ViewStyle => ({
-  paddingHorizontal: 16,
-  paddingBottom: 16,
-  backgroundColor: C.surface,
-  borderBottomWidth: 1,
-  borderBottomColor: C.border,
-});
-
-const productCardStyle = (C: any): ViewStyle => ({
-  backgroundColor: C.card,
-  borderRadius: 16,
-  padding: 12,
-  marginBottom: 10,
-  borderWidth: 1,
-  borderColor: C.border,
-  elevation: 2,
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 1 },
-  shadowOpacity: 0.1,
-  shadowRadius: 2,
-});
+// ── Design tokens — unified with Dashboard / Reports / Sales ─────────────────
+const D = {
+  bg:          "#F7F6F2",
+  surface:     "#FFFFFF",
+  card:        "#FFFFFF",
+  heroA:       "#1C1C2E",
+  heroB:       "#2D2B55",
+  heroAccent:  "#6C63FF",
+  heroGlow:    "#A78BFA",
+  ink:         "#111118",
+  inkMid:      "#3D3C52",
+  inkSoft:     "#8B8AA5",
+  inkGhost:    "#C4C3D0",
+  emerald:     "#00B37D",
+  emeraldBg:   "#E6FAF4",
+  rose:        "#F04E6A",
+  roseBg:      "#FEE9ED",
+  amber:       "#F59E0B",
+  amberBg:     "#FEF3C7",
+  blue:        "#3B82F6",
+  blueBg:      "#EFF6FF",
+  violet:      "#8B5CF6",
+  violetBg:    "#F5F3FF",
+  border:      "#ECEAE4",
+  borderFocus: "#C4B5FD",
+  shadow:      "rgba(17,17,24,0.06)",
+};
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, removeFromCart, syncData, isSyncing, resetAllStock, userProfile, setIsSidebarOpen, setProducts } = useApp();
-  const C = Colors;
+  const { products, addToCart, cart, removeFromCart, syncData, isSyncing, setIsSidebarOpen, setProducts } = useApp();
   const { t } = useTranslation();
-  const [search, setSearch] = useState("");
+
+  const [search, setSearch]                           = useState("");
+  const [selectedProducts, setSelectedProducts]       = useState<{ [key: string]: number }>({});
+  const [viewMode, setViewMode]                       = useState<"grid" | "list">("grid");
+  const [showFilterModal, setShowFilterModal]         = useState(false);
   const [isResetModalVisible, setIsResetModalVisible] = useState(false);
-  const [password, setPassword] = useState("");
-  const [selectedProducts, setSelectedProducts] = useState<{[key: string]: number}>({});
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [showFilterModal, setShowFilterModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [stockFilter, setStockFilter] = useState<"inStock" | "outOfStock" | "all">("inStock");
+  const [selectedCategory, setSelectedCategory]       = useState<string | null>(null);
+  const [stockFilter, setStockFilter]                 = useState<"inStock" | "outOfStock" | "all">("inStock");
+  const [scanning, setScanning]                       = useState(false);
+  const [permission, requestPermission]               = useCameraPermissions();
+  const [showSyncSheet, setShowSyncSheet]             = useState(false);
+  const [alertConfig, setAlertConfig]                 = useState<{
+    visible: boolean; title: string; message: string; type: "success" | "error" | "info";
+  }>({ visible: false, title: "", message: "", type: "info" });
 
-  const categories = useMemo(() => {
-    const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
-    return cats.sort();
-  }, [products]);
+  useEffect(() => {
+    AsyncStorage.getItem("@products_view_mode").then((saved) => {
+      if (saved === "list" || saved === "grid") setViewMode(saved);
+    });
+  }, []);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: "success" | "error" | "info";
-  }>({
-    visible: false,
-    title: "",
-    message: "",
-    type: "info",
-  });
-
-  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") => {
-    setAlertConfig({ visible: true, title, message, type });
+  const handleViewModeChange = (mode: "grid" | "list") => {
+    setViewMode(mode);
+    AsyncStorage.setItem("@products_view_mode", mode);
   };
 
-  const handleResetStock = () => {
-    if (password === userProfile?.password) {
-      resetAllStock();
-      setIsResetModalVisible(false);
-      setPassword("");
-      showAlert(t('common.success'), t('products.resetSuccess'), "success");
-    } else {
-      showAlert(t('common.error'), t('products.incorrectPassword'), "error");
+  const startScanning = async () => {
+    if (!permission?.granted) {
+      const res = await requestPermission();
+      if (!res.granted) {
+        Toast.show(t("auth.cameraPermissionRequired") || "Camera permission required", {
+          duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.rose,
+        });
+        return;
+      }
+    }
+    setScanning(true);
+  };
+
+  const handleQRScan = async ({ data }: { data: string }) => {
+    setScanning(false);
+    try {
+      const qrData: { id: number; name?: string; sku: string; price: string }[] = JSON.parse(data);
+      if (!Array.isArray(qrData)) {
+        Toast.show(t("products.invalidQRCode") || "Invalid QR code format", { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.rose });
+        return;
+      }
+      let updatedCount = 0, addedCount = 0;
+      const newProducts: typeof products = [];
+      qrData.forEach((item) => {
+        const existing = products.find((p) => String(p.sku) === item.sku || String(p.id) === String(item.id));
+        if (existing) {
+          const np = parseFloat(item.price);
+          if (!isNaN(np) && np !== existing.price) updatedCount++;
+        } else {
+          addedCount++;
+          newProducts.push({ id: String(item.id), name: item.name || item.sku || `Product ${item.id}`, price: parseFloat(item.price) || 0, unit: "piece", category: "Imported", sku: item.sku || String(item.id), stock: 0 });
+        }
+      });
+      const updated = products.map((product) => {
+        const qi = qrData.find((p) => String(p.sku) === String(product.sku) || String(p.id) === String(product.id));
+        if (qi) { const np = parseFloat(qi.price); if (!isNaN(np)) return { ...product, price: np }; }
+        return product;
+      });
+      const all = [...updated, ...newProducts];
+      if (addedCount > 0 || updatedCount > 0) {
+        setProducts(all);
+        await AsyncStorage.setItem("@bizpos_products", JSON.stringify(all));
+        const msg = addedCount > 0 && updatedCount > 0
+          ? `${addedCount} ajouté, ${updatedCount} mis à jour`
+          : addedCount > 0 ? `${addedCount} produits ajoutés` : `${updatedCount} prix mis à jour`;
+        Toast.show(msg, { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.emerald });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Toast.show(t("products.noChanges") || "Aucune modification", { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.amber });
+      }
+    } catch {
+      Toast.show(t("products.invalidQRCode") || "QR invalide", { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.rose });
     }
   };
 
+  const showAlert = (title: string, message: string, type: "success" | "error" | "info" = "info") =>
+    setAlertConfig({ visible: true, title, message, type });
+
   const filteredProducts = useMemo(() => {
-    return products.filter(
-      (p) => {
-        if (stockFilter === "inStock" && p.stock <= 0) return false;
-        if (stockFilter === "outOfStock" && p.stock > 0) return false;
-        if (!selectedCategory || p.category === selectedCategory) {
-          return p.name.toLowerCase().includes(search.toLowerCase()) ||
-            p.category.toLowerCase().includes(search.toLowerCase());
-        }
-        return false;
+    return products.filter((p) => {
+      if (stockFilter === "inStock" && p.stock <= 0) return false;
+      if (stockFilter === "outOfStock" && p.stock > 0) return false;
+      if (!selectedCategory || p.category === selectedCategory) {
+        return p.name.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase());
       }
-    );
+      return false;
+    });
   }, [products, search, selectedCategory, stockFilter]);
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top;
-
+  // ── Grid card ────────────────────────────────────────────────────────────────
   const renderGridItem = ({ item }: { item: any }) => {
     const isSelected = selectedProducts[item.id] !== undefined;
     const selectedQty = selectedProducts[item.id] || 0;
-    
+    const isOut = item.stock <= 0;
+
     const handlePress = () => {
-      if (item.stock <= 0) {
-        showAlert(t('products.outOfStock'), t('products.outOfStockAlert'), "error");
-        return;
-      }
+      if (isOut) { showAlert(t("products.outOfStock"), t("products.outOfStockAlert"), "error"); return; }
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      const newQty = (selectedProducts[item.id] || 0) + 1;
-      setSelectedProducts(prev => ({
-        ...prev,
-        [item.id]: newQty
-      }));
-      
+      setSelectedProducts((prev) => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
       addToCart(item, 1);
     };
-    
-    const handleRemove = () => {
-      if (selectedProducts[item.id]) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        removeFromCart(item.id);
-        const { [item.id]: _, ...rest } = selectedProducts;
-        setSelectedProducts(rest);
-      }
-    };
-
-    return (
-    <TouchableOpacity
-      style={[
-        productCardStyle(C), 
-        item.stock <= 0 && styles.productCardDisabled,
-        isSelected && styles.productCardSelected,
-        styles.gridCard
-      ]}
-      onPress={handlePress}
-    >
-      <View style={[styles.gridImageContainer, { backgroundColor: C.background, borderColor: C.border }]}>
-        {item.image ? (
-          <Image source={{ uri: item.image }} style={styles.gridProductImage} />
-        ) : (
-          <View style={styles.placeholderImage}>
-            <Feather name="image" size={28} color={C.textMuted} />
-          </View>
-        )}
-        {isSelected && (
-          <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
-            <Feather name="check" size={20} color="#fff" />
-          </View>
-        )}
-      </View>
-
-      <View style={styles.gridContent}>
-        <Text style={[styles.gridProductName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
-        
-        <Text style={[styles.gridPriceValue, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
-        
-        <View style={[styles.gridStockBadge, { backgroundColor: isSelected ? C.success : C.primary }]}>
-          <Feather name="package" size={12} color="#fff" style={{ marginRight: 4 }} />
-          <Text style={styles.gridStockText}>{fmt(item.stock)}</Text>
-        </View>
-
-        {isSelected && (
-          <View style={[styles.gridSelectedBadge, { backgroundColor: C.success }]}>
-            <Text style={styles.gridSelectedBadgeText}>{selectedQty} {t('products.selected')}</Text>
-          </View>
-        )}
-      </View>
-      
-      {isSelected && (
-        <TouchableOpacity
-          style={[styles.decrementBtn, { backgroundColor: C.danger }]}
-          onPress={handleRemove}
-        >
-          <Feather name="minus" size={14} color="#fff" />
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
-  );
-  };
-
-  const renderListItem = ({ item }: { item: any }) => {
-    const isSelected = selectedProducts[item.id] !== undefined;
-    const selectedQty = selectedProducts[item.id] || 0;
-    
-    const handlePress = () => {
-      if (item.stock <= 0) {
-        showAlert(t('products.outOfStock'), t('products.outOfStockAlert'), "error");
-        return;
-      }
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      
-      const newQty = (selectedProducts[item.id] || 0) + 1;
-      setSelectedProducts(prev => ({
-        ...prev,
-        [item.id]: newQty
-      }));
-      
-      addToCart(item, 1);
-    };
-    
     const handleRemove = () => {
       if (selectedProducts[item.id]) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -229,356 +181,332 @@ export default function ProductsScreen() {
 
     return (
       <TouchableOpacity
-        style={[
-          styles.listItem,
-          { backgroundColor: C.card, borderColor: C.border },
-          item.stock <= 0 && styles.productCardDisabled,
-          isSelected && styles.productCardSelected
-        ]}
+        style={[S.gridCard, isSelected && S.gridCardSelected, isOut && S.cardDisabled]}
         onPress={handlePress}
+        activeOpacity={0.82}
       >
-        <View style={[styles.listItemImage, { backgroundColor: C.background, borderColor: C.border }]}>
-          {item.image ? (
-            <Image source={{ uri: item.image }} style={styles.listProductImage} />
-          ) : (
-            <View style={styles.placeholderImage}>
-              <Feather name="image" size={24} color={C.textMuted} />
-            </View>
-          )}
-          {isSelected && (
-            <View style={[styles.checkmarkOverlay, { backgroundColor: C.success }]}>
-              <Feather name="check" size={14} color="#fff" />
-            </View>
-          )}
+        <View style={S.gridImgWrap}>
+          {item.image
+            ? <Image source={{ uri: item.image }} style={S.gridImg} />
+            : <View style={S.imgPlaceholder}><Feather name="image" size={24} color={D.inkGhost} /></View>
+          }
+          {isSelected && <View style={S.checkBadge}><Feather name="check" size={11} color="#fff" /></View>}
+          {isOut && <View style={S.outOverlay}><Text style={S.outOverlayTxt}>Rupture</Text></View>}
         </View>
-        
-        <View style={styles.listItemContent}>
-          <Text style={[styles.listItemName, { color: C.text }]} numberOfLines={1}>{item.name}</Text>
-          <Text style={[styles.listItemPrice, { color: C.primary }]}>{fmt(item.price)} MAD</Text>
-          <View style={[styles.listItemStockBadge, { backgroundColor: item.stock > 0 ? C.success : C.danger }]}>
-            <Text style={styles.listItemStockText}>{fmt(item.stock)} {t('pos.available')}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.listItemActions}>
-          <View style={styles.listItemQty}>
-            {isSelected ? (
-              <>
-                <TouchableOpacity
-                  style={[styles.listItemQtyBtn, { backgroundColor: C.danger }]}
-                  onPress={handleRemove}
-                >
-                  <Feather name="minus" size={14} color="#fff" />
-                </TouchableOpacity>
-                <Text style={[styles.listItemQtyText, { color: C.text }]}>{selectedQty}</Text>
-              </>
-            ) : (
-              <Text style={[styles.listItemAddText, { color: C.textSecondary }]}>+</Text>
+
+        <View style={S.gridInfo}>
+          <Text style={S.gridName} numberOfLines={2}>{item.name}</Text>
+          <Text style={S.gridPrice}>{fmt(item.price)} <Text style={S.gridCurrency}>MAD</Text></Text>
+          <View style={S.gridFooter}>
+            <View style={[S.stockPill, { backgroundColor: isOut ? D.roseBg : isSelected ? D.emeraldBg : D.blueBg }]}>
+              <View style={[S.stockDot, { backgroundColor: isOut ? D.rose : isSelected ? D.emerald : D.blue }]} />
+              <Text style={[S.stockTxt, { color: isOut ? D.rose : isSelected ? D.emerald : D.blue }]}>{fmt(item.stock)}</Text>
+            </View>
+            {isSelected && (
+              <View style={S.qtyBadge}><Text style={S.qtyBadgeTxt}>×{selectedQty}</Text></View>
             )}
           </View>
+        </View>
+
+        {isSelected && (
+          <TouchableOpacity style={S.minusBtn} onPress={handleRemove}>
+            <Feather name="minus" size={11} color="#fff" />
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // ── List item ────────────────────────────────────────────────────────────────
+  const renderListItem = ({ item }: { item: any }) => {
+    const isSelected = selectedProducts[item.id] !== undefined;
+    const selectedQty = selectedProducts[item.id] || 0;
+    const isOut = item.stock <= 0;
+
+    const handlePress = () => {
+      if (isOut) { showAlert(t("products.outOfStock"), t("products.outOfStockAlert"), "error"); return; }
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setSelectedProducts((prev) => ({ ...prev, [item.id]: (prev[item.id] || 0) + 1 }));
+      addToCart(item, 1);
+    };
+    const handleRemove = () => {
+      if (selectedProducts[item.id]) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        removeFromCart(item.id);
+        const { [item.id]: _, ...rest } = selectedProducts;
+        setSelectedProducts(rest);
+      }
+    };
+
+    return (
+      <TouchableOpacity
+        style={[S.listItem, isSelected && S.listItemSelected, isOut && S.cardDisabled]}
+        onPress={handlePress}
+        activeOpacity={0.82}
+      >
+        {isSelected && <View style={S.listAccent} />}
+        <View style={[S.listImgWrap, isSelected && { borderColor: D.emerald + "50" }]}>
+          {item.image
+            ? <Image source={{ uri: item.image }} style={S.listImg} />
+            : <View style={S.imgPlaceholder}><Feather name="image" size={18} color={D.inkGhost} /></View>
+          }
+          {isSelected && <View style={S.listCheckBadge}><Feather name="check" size={8} color="#fff" /></View>}
+        </View>
+        <View style={S.listBody}>
+          <Text style={S.listName} numberOfLines={1}>{item.name}</Text>
+          <Text style={S.listPrice}>{fmt(item.price)} <Text style={S.listCurrency}>MAD</Text></Text>
+          <View style={[S.stockPill, { alignSelf: "flex-start", backgroundColor: isOut ? D.roseBg : D.emeraldBg }]}>
+            <View style={[S.stockDot, { backgroundColor: isOut ? D.rose : D.emerald }]} />
+            <Text style={[S.stockTxt, { color: isOut ? D.rose : D.emerald }]}>
+              {fmt(item.stock)} {t("pos.available")}
+            </Text>
+          </View>
+        </View>
+        <View style={S.listRight}>
+          {isSelected ? (
+            <View style={S.listQtyRow}>
+              <TouchableOpacity style={S.listMinusBtn} onPress={handleRemove}>
+                <Feather name="minus" size={11} color="#fff" />
+              </TouchableOpacity>
+              <Text style={S.listQtyTxt}>{selectedQty}</Text>
+            </View>
+          ) : (
+            <View style={S.listAddBtn}>
+              <Feather name="plus" size={15} color={D.heroAccent} />
+            </View>
+          )}
         </View>
       </TouchableOpacity>
     );
   };
 
+  const hasSelection = Object.keys(selectedProducts).length > 0;
+
   return (
-    <LinearGradient colors={[C.accent, C.surface]} style={styles.screen}>
-      <AppHeader 
-        title={t('products.title')}
-        dark
-        showMenu
-        onMenuPress={() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          setIsSidebarOpen(true);
-        }}
-        rightActions={
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                syncData();
-              }}
-              disabled={isSyncing}
-              style={[styles.cartBtnHeader, { backgroundColor: 'transparent' }]}
-            >
-              {isSyncing ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Feather name="cloud" size={20} color="#fff" />
-              )}
-            </TouchableOpacity>
+    <View style={[S.screen, { backgroundColor: D.bg }]}>
 
-            <TouchableOpacity
-              style={[styles.cartBtnHeader, { backgroundColor: C.surface }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                setIsResetModalVisible(true);
-              }}
-            >
-              <Feather name="refresh-cw" size={20} color={C.danger} />
-            </TouchableOpacity>
+      {/* ── Hero header ── */}
+      <View style={S.hero}>
+        <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
+        <View style={S.blob1} pointerEvents="none" />
+        <View style={S.blob2} pointerEvents="none" />
 
-            <TouchableOpacity
-              style={[styles.cartBtnHeader, { backgroundColor: C.surface }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push("/pos/cart");
-              }}
-            >
-              {cart.length > 0 && (
-                <View style={[styles.cartBadge, { backgroundColor: C.danger, borderColor: C.surface }]}>
-                  <Text style={styles.cartBadgeText}>{cart.length}</Text>
-                </View>
-              )}
-              <Feather name="shopping-cart" size={20} color={C.primary} />
-            </TouchableOpacity>
-          </View>
-        }
-      />
-
-      <View style={[styles.headerActionsWrapper, { backgroundColor: C.primary }]}>
-        <View style={styles.headerActions}>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={[
-                styles.actionIconBtn, 
-                { backgroundColor: viewMode === "grid" ? C.accent : C.surface, borderColor: C.border }
-              ]}
-              onPress={() => setViewMode("grid")}
-            >
-              <Feather name="grid" size={18} color={viewMode === "grid" ? "#fff" : C.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.actionIconBtn, 
-                { backgroundColor: viewMode === "list" ? C.accent : C.surface, borderColor: C.border }
-              ]}
-              onPress={() => setViewMode("list")}
-            >
-              <Feather name="list" size={18} color={viewMode === "list" ? "#fff" : C.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[
-                styles.actionIconBtn, 
-                { backgroundColor: (selectedCategory || stockFilter !== "inStock") ? C.success : C.surface, borderColor: C.border }
-              ]}
-              onPress={() => setShowFilterModal(true)}
-            >
-              <Feather name="filter" size={18} color={(selectedCategory || stockFilter !== "inStock") ? "#fff" : C.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.searchContainer, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Feather name="search" size={18} color={C.textMuted} style={{ marginRight: 8 }} />
-            <TextInput
-              style={[styles.searchInput, { color: C.textPrimary }]}
-              placeholder={t('products.searchPlaceholder')}
-              placeholderTextColor={C.textMuted}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Feather name="x" size={18} color={C.textMuted} />
+        <AppHeader
+          title={t("products.title")}
+          dark
+          showMenu
+          onMenuPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setIsSidebarOpen(true); }}
+          rightActions={
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity style={S.hBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowSyncSheet(true); }} disabled={isSyncing}>
+                {isSyncing ? <ActivityIndicator size="small" color="#fff" /> : <Feather name="refresh-cw" size={17} color="rgba(255,255,255,0.9)" />}
               </TouchableOpacity>
-            )}
+              <TouchableOpacity style={S.hBtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/pos/cart"); }}>
+                {cart.length > 0 && <View style={S.cartBadge}><Text style={S.cartBadgeTxt}>{cart.length}</Text></View>}
+                <Feather name="shopping-cart" size={17} color="rgba(255,255,255,0.9)" />
+              </TouchableOpacity>
+            </View>
+          }
+        />
+
+        {/* Toolbar */}
+        <View style={S.toolbar}>
+          <View style={S.countChip}>
+            <Feather name="layers" size={11} color="rgba(255,255,255,0.75)" />
+            <Text style={S.countChipTxt}>{products.length} {t("products.products") || "produits"}</Text>
           </View>
+          <View style={{ flex: 1 }} />
+          <View style={S.viewToggle}>
+            <TouchableOpacity style={[S.toggleBtn, viewMode === "grid" && S.toggleActive]} onPress={() => handleViewModeChange("grid")}>
+              <Feather name="grid" size={13} color={viewMode === "grid" ? D.heroB : "rgba(255,255,255,0.7)"} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[S.toggleBtn, viewMode === "list" && S.toggleActive]} onPress={() => handleViewModeChange("list")}>
+              <Feather name="list" size={13} color={viewMode === "list" ? D.heroB : "rgba(255,255,255,0.7)"} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={[S.filterBtn, (selectedCategory || stockFilter !== "inStock") && S.filterBtnActive]}
+            onPress={() => setShowFilterModal(true)}
+          >
+            <Feather name="sliders" size={13} color={(selectedCategory || stockFilter !== "inStock") ? D.heroB : "rgba(255,255,255,0.85)"} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Search */}
+        <View style={S.searchWrap}>
+          <Feather name="search" size={14} color={D.inkSoft} style={{ marginRight: 8 }} />
+          <TextInput
+            style={S.searchInput}
+            placeholder={t("products.searchPlaceholder")}
+            placeholderTextColor={D.inkGhost}
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Feather name="x" size={14} color={D.inkSoft} />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
+      {/* Sync banner */}
       {isSyncing && (
-        <View style={[styles.syncIndicator, { backgroundColor: C.accent }]}>
-          <ActivityIndicator size="small" color="#fff" />
-          <Text style={styles.syncIndicatorText}>Synchronisation en cours...</Text>
+        <View style={S.syncBanner}>
+          <ActivityIndicator size="small" color={D.heroAccent} />
+          <Text style={S.syncBannerTxt}>Synchronisation en cours…</Text>
         </View>
       )}
 
+      {/* ── Product list ── */}
       <FlatList
         data={filteredProducts}
         renderItem={viewMode === "grid" ? renderGridItem : renderListItem}
         keyExtractor={(item) => item.id}
+        extraData={products}
         numColumns={viewMode === "grid" ? 2 : 1}
         key={viewMode}
-        contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + (Object.keys(selectedProducts).length > 0 ? 100 : 100) }]}
+        style={S.list}
+        contentContainerStyle={[S.listContent, { paddingBottom: insets.bottom + (hasSelection ? 130 : 24) }]}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Feather name="package" size={48} color={C.textMuted} />
-            <Text style={[styles.emptyText, { color: C.textMuted }]}>{t('products.noProducts')}</Text>
+          <View style={S.emptyWrap}>
+            <View style={S.emptyIcon}><Feather name="package" size={30} color={D.heroAccent} /></View>
+            <Text style={S.emptyTitle}>{t("products.noProducts")}</Text>
+            <Text style={S.emptyDesc}>Ajoutez ou synchronisez des produits</Text>
           </View>
         }
       />
 
-      {Object.keys(selectedProducts).length > 0 && (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 60 }]}>
-          <View style={[styles.selectedInfo, { backgroundColor: C.surface }]}>
-            <Text style={[styles.selectedCount, { color: C.text }]}>
-              {Object.keys(selectedProducts).length} {Object.keys(selectedProducts).length === 1 ? t('products.product') : t('products.products')} 
+      {/* ── Bottom selection bar ── */}
+      {hasSelection && (
+        <View style={[S.bottomBar, { paddingBottom: insets.bottom + 64 }]}>
+          <View style={S.selInfo}>
+            <Text style={S.selCount}>
+              {Object.keys(selectedProducts).length}{" "}
+              {Object.keys(selectedProducts).length === 1 ? t("products.product") : t("products.products")}
             </Text>
-            <Text style={[styles.selectedTotal, { color: C.success }]}>
+            <Text style={S.selTotal}>
               {fmt(Object.entries(selectedProducts).reduce((sum, [id, qty]) => {
-                const product = products.find(p => p.id === id);
+                const product = products.find((p) => p.id === id);
                 return sum + (product ? product.price * qty : 0);
               }, 0))} MAD
             </Text>
           </View>
-          <TouchableOpacity
-            style={[styles.nextBtn, { backgroundColor: C.primary }]}
-            onPress={() => {
-              setSelectedProducts({});
-              router.push("/pos/cart");
-            }}
-          >
-            <Feather name="shopping-cart" size={18} color="#fff" />
-            <Text style={styles.nextBtnText}>{t('common.next') || 'Next'}</Text>
+          <TouchableOpacity style={S.nextBtn} onPress={() => { setSelectedProducts({}); router.push("/pos/cart"); }}>
+            <LinearGradient colors={[D.heroA, D.heroAccent]} style={S.nextBtnInner}>
+              <Feather name="shopping-cart" size={15} color="#fff" />
+              <Text style={S.nextBtnTxt}>{t("common.next") || "Commander"}</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
 
-      <Modal
-        visible={isResetModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsResetModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <Text style={[styles.modalTitle, { color: C.text }]}>{t('products.resetStock')}</Text>
-            <Text style={[styles.modalSubtitle, { color: C.textSecondary }]}>
-              {t('products.resetConfirm')}
-            </Text>
+      {/* ── Filter Modal ── */}
+      <Modal visible={showFilterModal} transparent animationType="fade" onRequestClose={() => setShowFilterModal(false)}>
+        <View style={S.overlay}>
+          <View style={S.sheet}>
+            <View style={S.handle} />
+            <View style={S.sheetHeaderRow}>
+              <Text style={S.sheetTitle}>{t("products.filter") || "Filtres"}</Text>
+              <TouchableOpacity style={S.sheetClose} onPress={() => setShowFilterModal(false)}>
+                <Feather name="x" size={16} color={D.inkSoft} />
+              </TouchableOpacity>
+            </View>
+            <Text style={S.sectionLbl}>{t("products.stockStatus") || "Statut du stock"}</Text>
+            <View style={S.chipsRow}>
+              {([
+                { val: "inStock",    label: t("products.inStock") || "En stock",  color: D.emerald, bg: D.emeraldBg, icon: "check-circle" },
+                { val: "outOfStock", label: t("products.outOfStock") || "Rupture", color: D.rose,   bg: D.roseBg,   icon: "x-circle" },
+                { val: "all",        label: t("products.all") || "Tous",           color: D.blue,   bg: D.blueBg,   icon: "layers" },
+              ] as const).map((chip) => (
+                <TouchableOpacity
+                  key={chip.val}
+                  style={[S.chip, stockFilter === chip.val && { borderColor: chip.color, backgroundColor: chip.bg }]}
+                  onPress={() => setStockFilter(chip.val)}
+                >
+                  <Feather name={chip.icon as any} size={13} color={stockFilter === chip.val ? chip.color : D.inkGhost} />
+                  <Text style={[S.chipTxt, stockFilter === chip.val && { color: chip.color }]}>{chip.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={S.applyBtn} onPress={() => setShowFilterModal(false)}>
+              <LinearGradient colors={[D.heroA, D.heroAccent]} style={S.applyInner}>
+                <Text style={S.applyTxt}>{t("common.apply") || "Appliquer"}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: C.surface, color: C.textPrimary, borderColor: C.border }]}
-              placeholder={t('auth.password')}
-              placeholderTextColor={C.textMuted}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-
-            <View style={styles.modalActions}>
+      {/* ── Reset Modal ── */}
+      <Modal visible={isResetModalVisible} transparent animationType="fade" onRequestClose={() => setIsResetModalVisible(false)}>
+        <View style={S.overlay}>
+          <View style={[S.sheet, { alignItems: "center" }]}>
+            <View style={S.handle} />
+            <View style={S.dangerCircle}><Feather name="trash-2" size={26} color={D.rose} /></View>
+            <Text style={[S.sheetTitle, { marginBottom: 8 }]}>{t("products.dropProducts") || "Supprimer tout"}</Text>
+            <Text style={S.sheetDesc}>{t("products.dropConfirm") || "Supprimer tous les produits de la base locale ?"}</Text>
+            <View style={S.btnRow}>
+              <TouchableOpacity style={S.cancelBtn} onPress={() => setIsResetModalVisible(false)}>
+                <Text style={S.cancelTxt}>{t("common.cancel")}</Text>
+              </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: C.border }]}
-                onPress={() => {
+                style={S.dangerBtn}
+                onPress={async () => {
+                  setProducts([]);
+                  await AsyncStorage.setItem("@bizpos_products", JSON.stringify([]));
                   setIsResetModalVisible(false);
-                  setPassword("");
+                  Toast.show(t("products.droppedSuccess") || "Tous les produits supprimés", {
+                    duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.emerald,
+                  });
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 }}
               >
-                <Text style={[styles.modalBtnText, { color: C.text }]}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: C.danger }]}
-                onPress={handleResetStock}
-              >
-                <Text style={styles.modalBtnText}>{t('products.resetStock')}</Text>
+                <Text style={S.dangerTxt}>{t("products.dropProducts") || "Supprimer"}</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      <Modal
-        visible={showFilterModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowFilterModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: C.surface, borderColor: C.border }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: C.text }]}>{t('products.filter') || 'Filter'}</Text>
-              <TouchableOpacity onPress={() => setShowFilterModal(false)} style={styles.modalCloseBtn}>
-                <Feather name="x" size={20} color={C.text} />
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={[styles.filterSectionTitle, { color: C.textSecondary }]}>{t('products.stockStatus') || 'Stock Status'}</Text>
-            
-            <View style={styles.filterRow}>
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: stockFilter === "inStock" ? C.success : C.background, borderColor: stockFilter === "inStock" ? C.success : C.border }
-                ]}
-                onPress={() => setStockFilter("inStock")}
-              >
-                <Feather name="package" size={14} color={stockFilter === "inStock" ? "#fff" : C.text} />
-                <Text style={[styles.filterChipText, { color: stockFilter === "inStock" ? "#fff" : C.text }]}>
-                  {t('products.inStock') || 'In Stock'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: stockFilter === "outOfStock" ? C.danger : C.background, borderColor: stockFilter === "outOfStock" ? C.danger : C.border }
-                ]}
-                onPress={() => setStockFilter("outOfStock")}
-              >
-                <Feather name="package" size={14} color={stockFilter === "outOfStock" ? "#fff" : C.danger} />
-                <Text style={[styles.filterChipText, { color: stockFilter === "outOfStock" ? "#fff" : C.danger }]}>
-                  {t('products.outOfStock') || 'Out of Stock'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.filterChip,
-                  { backgroundColor: stockFilter === "all" ? C.primary : C.background, borderColor: stockFilter === "all" ? C.primary : C.border }
-                ]}
-                onPress={() => setStockFilter("all")}
-              >
-                <Feather name="layers" size={14} color={stockFilter === "all" ? "#fff" : C.text} />
-                <Text style={[styles.filterChipText, { color: stockFilter === "all" ? "#fff" : C.text }]}>
-                  {t('products.all') || 'All'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-            
-            <Text style={[styles.filterSectionTitle, { color: C.textSecondary, marginTop: 16 }]}>{t('products.category') || 'Category'}</Text>
-            
-            <TouchableOpacity
-              style={[
-                styles.filterOption,
-                { backgroundColor: !selectedCategory ? C.primary + '20' : C.background, borderColor: !selectedCategory ? C.primary : C.border }
-              ]}
-              onPress={() => {
-                setSelectedCategory(null);
-              }}
-            >
-              <Text style={[styles.filterOptionText, { color: !selectedCategory ? C.primary : C.text }]}>
-                {t('products.allCategories') || 'All Categories'}
-              </Text>
-              {!selectedCategory && <Feather name="check" size={18} color={C.primary} />}
-            </TouchableOpacity>
-            
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.filterOption,
-                  { backgroundColor: selectedCategory === cat ? C.primary + '20' : C.background, borderColor: selectedCategory === cat ? C.primary : C.border }
-                ]}
-                onPress={() => {
-                  setSelectedCategory(cat);
-                }}
-              >
-                <Text style={[styles.filterOptionText, { color: selectedCategory === cat ? C.primary : C.text }]}>
-                  {cat}
-                </Text>
-                {selectedCategory === cat && <Feather name="check" size={18} color={C.primary} />}
+      {/* ── Camera ── */}
+      <Modal visible={scanning} animationType="slide">
+        <View style={{ flex: 1, backgroundColor: "#000" }}>
+          <CameraView style={StyleSheet.absoluteFill} onBarcodeScanned={handleQRScan} barcodeScannerSettings={{ barcodeTypes: ["qr"] }} />
+          <TouchableOpacity style={S.closeCam} onPress={() => setScanning(false)}>
+            <Feather name="x" size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={S.camOverlay}>
+            <Text style={S.camTxt}>{t("products.scanQRCode") || "Scanner le QR des prix"}</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Sync sheet ── */}
+      <Modal visible={showSyncSheet} transparent animationType="slide" onRequestClose={() => setShowSyncSheet(false)}>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowSyncSheet(false)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+          </Pressable>
+          <View style={S.syncSheet}>
+            <View style={S.handle} />
+            <Text style={[S.sheetTitle, { marginBottom: 20 }]}>{t("products.syncOptions") || "Options de sync"}</Text>
+            {[
+              { icon: "cloud",    color: D.blue,   bg: D.blueBg,    label: t("products.syncSupabase") || "Sync depuis le serveur", desc: t("products.syncSupabaseDesc") || "Produits, contacts et ventes", onPress: () => { setShowSyncSheet(false); syncData(); }, disabled: isSyncing },
+              { icon: "maximize", color: D.emerald, bg: D.emeraldBg, label: t("products.syncQRCode") || "Scanner QR Prix",          desc: t("products.syncQRCodeDesc") || "Mettre à jour les prix",         onPress: () => { setShowSyncSheet(false); startScanning(); }, disabled: false },
+              { icon: "trash-2",  color: D.rose,   bg: D.roseBg,    label: t("products.dropProducts") || "Supprimer tout",         desc: t("products.dropProductsDesc") || "Vider la base locale",         onPress: () => { setShowSyncSheet(false); setIsResetModalVisible(true); }, disabled: false },
+            ].map((opt, i) => (
+              <TouchableOpacity key={i} style={S.syncOpt} onPress={opt.onPress} disabled={opt.disabled}>
+                <View style={[S.syncOptIcon, { backgroundColor: opt.bg }]}>
+                  <Feather name={opt.icon as any} size={20} color={opt.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={S.syncOptLabel}>{opt.label}</Text>
+                  <Text style={S.syncOptDesc}>{opt.desc}</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={D.inkGhost} />
               </TouchableOpacity>
             ))}
-            
-            <TouchableOpacity
-              style={[styles.modalBtn, { backgroundColor: C.primary, marginTop: 16 }]}
-              onPress={() => {
-                setShowFilterModal(false);
-              }}
-            >
-              <Text style={styles.modalBtnText}>{t('common.apply') || 'Apply'}</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -590,505 +518,123 @@ export default function ProductsScreen() {
         type={alertConfig.type}
         onClose={() => setAlertConfig({ ...alertConfig, visible: false })}
       />
-    </LinearGradient>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const S = StyleSheet.create({
   screen: { flex: 1 },
-  headerActionsWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  cartBtnHeader: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  syncIndicator: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  syncIndicatorText: {
-    color: "#fff",
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  headerLeftPlaceholder: {
-    width: 44,
-  },
-  cartBtn: {
-    width: 44,
-    height: 44,
-    justifyContent: "center",
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  cartBadge: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 1,
-    borderWidth: 2,
-  },
-  cartBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
-  headerTitleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerSubtitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 40,
-    borderWidth: 1,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-  },
+
+  hero: { overflow: "hidden" },
+  blob1: { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: D.heroAccent, opacity: 0.1, top: -60, right: -60 },
+  blob2: { position: "absolute", width: 110, height: 110, borderRadius: 55, backgroundColor: D.heroGlow, opacity: 0.07, bottom: 10, left: -30 },
+
+  hBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", justifyContent: "center", alignItems: "center" },
+  cartBadge: { position: "absolute", top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 9, backgroundColor: D.rose, justifyContent: "center", alignItems: "center", zIndex: 1 },
+  cartBadgeTxt: { color: "#fff", fontSize: 9, fontWeight: "700" },
+
+  toolbar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 8, paddingBottom: 10, gap: 8 },
+  countChip: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.14)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  countChipTxt: { color: "#fff", fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  viewToggle: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 9, overflow: "hidden" },
+  toggleBtn: { padding: 7 },
+  toggleActive: { backgroundColor: "#fff" },
+  filterBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.14)", justifyContent: "center", alignItems: "center" },
+  filterBtnActive: { backgroundColor: "#fff" },
+
+  searchWrap: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 14, paddingHorizontal: 14, height: 42, marginHorizontal: 16, marginBottom: 14 },
+  searchInput: { flex: 1, color: D.ink, fontSize: 14, fontFamily: "Inter_400Regular" },
+
+  syncBanner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 8, backgroundColor: D.violetBg, borderBottomWidth: 1, borderBottomColor: D.borderFocus },
+  syncBannerTxt: { color: D.heroAccent, fontSize: 13, fontFamily: "Inter_500Medium" },
+
+  list: { flex: 1 },
   listContent: { padding: 12 },
-  productCardDisabled: {
-    opacity: 0.6,
-  },
-  productCardSelected: {
-    borderColor: Colors.success,
-    borderWidth: 2,
-  },
-  selectedBadge: {
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  selectedBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-  },
-  checkmarkOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderBottomLeftRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  decrementBtn: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.card,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  selectedInfo: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 10,
-  },
-  selectedCount: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-  },
-  selectedTotal: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    marginTop: 2,
-  },
-  nextBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-  nextBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-  },
-  productMain: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  priceContainer: {
-    alignItems: "flex-start",
-    width: 100,
-  },
-  priceValue: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    marginBottom: 4,
-  },
-  stockBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  stockText: {
-    color: "#fff",
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-  },
-  productCenter: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 8,
-  },
-  productName: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  imageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  productImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  placeholderImage: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 100,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 20,
-    padding: 24,
-    width: "100%",
-    maxWidth: 400,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: "Inter_700Bold",
-    marginBottom: 8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  modalInput: {
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    marginBottom: 20,
-  },
-  modalActions: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  modalBtn: {
-    flex: 1,
-    height: 48,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBtnText: {
-    color: "#fff",
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-  },
-  listItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  listItemImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  listProductImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  listItemContent: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  listItemName: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 4,
-  },
-  listItemPrice: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    marginBottom: 4,
-  },
-  listItemStockBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  listItemStockText: {
-    color: "#fff",
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-  },
-  listItemActions: {
-    marginLeft: 8,
-  },
-  listItemQty: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: Colors.background,
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 4,
-  },
-  listItemQtyBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  listItemQtyText: {
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-  },
-  listItemAddText: {
-    fontSize: 20,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textSecondary,
-  },
-  filterOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  filterOptionText: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-  },
-  filterSectionTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 10,
-    textTransform: "uppercase",
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 8,
-  },
-  filterChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  gridCard: {
-    flexDirection: "column",
-    flex: 1,
-    margin: 6,
-  },
-  gridImageContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    borderRadius: 12,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    marginBottom: 8,
-  },
-  gridProductImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "cover",
-  },
-  gridContent: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  gridProductName: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: 6,
-    lineHeight: 18,
-  },
-  gridPriceValue: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    marginBottom: 6,
-  },
-  gridStockBadge: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  gridStockText: {
-    color: "#fff",
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-  },
-  gridSelectedBadge: {
-    alignSelf: "flex-start",
-    marginTop: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  gridSelectedBadgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-  },
+
+  // Grid
+  gridCard: { flex: 1, margin: 5, backgroundColor: D.card, borderRadius: 18, borderWidth: 1, borderColor: D.border, overflow: "hidden", elevation: 2, shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
+  gridCardSelected: { borderColor: D.emerald, borderWidth: 2 },
+  cardDisabled: { opacity: 0.45 },
+  gridImgWrap: { width: "100%", aspectRatio: 1, backgroundColor: D.bg, justifyContent: "center", alignItems: "center" },
+  gridImg: { width: "100%", height: "100%", resizeMode: "cover" },
+  imgPlaceholder: { flex: 1, width: "100%", justifyContent: "center", alignItems: "center", backgroundColor: D.bg },
+  checkBadge: { position: "absolute", top: 7, right: 7, width: 20, height: 20, borderRadius: 10, backgroundColor: D.emerald, justifyContent: "center", alignItems: "center" },
+  outOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: D.rose + "E0", paddingVertical: 3, alignItems: "center" },
+  outOverlayTxt: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  gridInfo: { padding: 10, gap: 4 },
+  gridName: { color: D.ink, fontSize: 13, fontFamily: "Inter_600SemiBold", lineHeight: 17, marginBottom: 2 },
+  gridPrice: { color: D.heroAccent, fontSize: 16, fontFamily: "Inter_700Bold" },
+  gridCurrency: { fontSize: 10, color: D.inkSoft, fontFamily: "Inter_400Regular" },
+  gridFooter: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 4 },
+  stockPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
+  stockDot: { width: 5, height: 5, borderRadius: 3 },
+  stockTxt: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  qtyBadge: { backgroundColor: D.violetBg, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
+  qtyBadgeTxt: { color: D.heroAccent, fontSize: 11, fontFamily: "Inter_700Bold" },
+  minusBtn: { position: "absolute", bottom: 9, right: 9, width: 24, height: 24, borderRadius: 12, backgroundColor: D.rose, justifyContent: "center", alignItems: "center", elevation: 3 },
+
+  // List
+  listItem: { flexDirection: "row", alignItems: "center", backgroundColor: D.card, borderRadius: 16, borderWidth: 1, borderColor: D.border, padding: 12, marginBottom: 8, overflow: "hidden", elevation: 1, shadowColor: D.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 1, shadowRadius: 3 },
+  listItemSelected: { borderColor: D.emerald, borderWidth: 2 },
+  listAccent: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3, backgroundColor: D.emerald },
+  listImgWrap: { width: 52, height: 52, borderRadius: 12, backgroundColor: D.bg, overflow: "hidden", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: D.border },
+  listImg: { width: "100%", height: "100%", resizeMode: "cover" },
+  listCheckBadge: { position: "absolute", top: 0, right: 0, width: 16, height: 16, borderBottomLeftRadius: 7, backgroundColor: D.emerald, justifyContent: "center", alignItems: "center" },
+  listBody: { flex: 1, marginLeft: 12, gap: 3 },
+  listName: { color: D.ink, fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  listPrice: { color: D.heroAccent, fontSize: 14, fontFamily: "Inter_700Bold" },
+  listCurrency: { fontSize: 10, color: D.inkSoft },
+  listRight: { marginLeft: 10 },
+  listQtyRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  listMinusBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: D.rose, justifyContent: "center", alignItems: "center" },
+  listQtyTxt: { color: D.ink, fontSize: 14, fontFamily: "Inter_700Bold" },
+  listAddBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: D.violetBg, borderWidth: 1, borderColor: D.borderFocus, justifyContent: "center", alignItems: "center" },
+
+  // Empty
+  emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
+  emptyIcon: { width: 68, height: 68, borderRadius: 20, backgroundColor: D.violetBg, justifyContent: "center", alignItems: "center", marginBottom: 4 },
+  emptyTitle: { color: D.ink, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  emptyDesc: { color: D.inkSoft, fontSize: 13 },
+
+  // Bottom bar
+  bottomBar: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 12, gap: 12, backgroundColor: D.surface, borderTopWidth: 1, borderTopColor: D.border, elevation: 8, shadowColor: "#000", shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.07, shadowRadius: 8 },
+  selInfo: { flex: 1, backgroundColor: D.bg, borderRadius: 12, padding: 10, borderWidth: 1, borderColor: D.border },
+  selCount: { color: D.inkSoft, fontSize: 11, fontFamily: "Inter_400Regular" },
+  selTotal: { color: D.emerald, fontSize: 18, fontFamily: "Inter_700Bold", marginTop: 2 },
+  nextBtn: { borderRadius: 14, overflow: "hidden" },
+  nextBtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 20 },
+  nextBtnTxt: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  // Modals
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  sheet: { backgroundColor: D.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 24, paddingBottom: 36, borderTopWidth: 1, borderColor: D.border },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: D.border, alignSelf: "center", marginBottom: 20 },
+  sheetHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  sheetTitle: { color: D.ink, fontSize: 18, fontFamily: "Inter_700Bold" },
+  sheetClose: { width: 30, height: 30, borderRadius: 15, backgroundColor: D.bg, justifyContent: "center", alignItems: "center" },
+  sectionLbl: { color: D.inkSoft, fontSize: 10, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 },
+  chipsRow: { flexDirection: "row", gap: 8, marginBottom: 24 },
+  chip: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, paddingVertical: 11, borderRadius: 12, backgroundColor: D.bg, borderWidth: 1, borderColor: D.border },
+  chipTxt: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: D.inkSoft },
+  applyBtn: { borderRadius: 14, overflow: "hidden" },
+  applyInner: { height: 50, justifyContent: "center", alignItems: "center" },
+  applyTxt: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  dangerCircle: { width: 60, height: 60, borderRadius: 18, backgroundColor: D.roseBg, justifyContent: "center", alignItems: "center", marginBottom: 14 },
+  sheetDesc: { color: D.inkSoft, fontSize: 14, textAlign: "center", lineHeight: 22, marginBottom: 24 },
+  btnRow: { flexDirection: "row", gap: 12, width: "100%" },
+  cancelBtn: { flex: 1, height: 48, borderRadius: 13, backgroundColor: D.bg, borderWidth: 1, borderColor: D.border, justifyContent: "center", alignItems: "center" },
+  cancelTxt: { color: D.inkSoft, fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  dangerBtn: { flex: 1, height: 48, borderRadius: 13, backgroundColor: D.rose, justifyContent: "center", alignItems: "center" },
+  dangerTxt: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  closeCam: { position: "absolute", top: 50, right: 20, zIndex: 10, width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "center", alignItems: "center" },
+  camOverlay: { position: "absolute", bottom: 100, left: 0, right: 0, alignItems: "center" },
+  camTxt: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold", backgroundColor: "rgba(0,0,0,0.7)", paddingHorizontal: 22, paddingVertical: 10, borderRadius: 22 },
+
+  syncSheet: { backgroundColor: D.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 20, paddingBottom: 40, borderTopWidth: 1, borderColor: D.border },
+  syncOpt: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: D.bg, borderWidth: 1, borderColor: D.border, borderRadius: 14, padding: 14, marginBottom: 10 },
+  syncOptIcon: { width: 46, height: 46, borderRadius: 13, justifyContent: "center", alignItems: "center" },
+  syncOptLabel: { color: D.ink, fontSize: 14, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
+  syncOptDesc: { color: D.inkSoft, fontSize: 12 },
 });
