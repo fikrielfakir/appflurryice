@@ -1,5 +1,6 @@
 {
   "common": {
+    "complete": "إكمال",
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
@@ -255,6 +256,7 @@
     "adjustment": "تعديل"
   },
   "pos": {
+    "saleDeleted": "تم حذف البيع",
     "walkInCustomer": "عميل عادي",
     "cart": "السلة",
     "checkout": "الدفع",
@@ -351,7 +353,7 @@
   },
   "settings": {
     "title": "الإعدادات",
-    "screen": "إعدادات الشاشة",
+    "screen": "إعدادات",
     "fullScreen": "ملء الشاشة",
     "fullScreenDesc": "إخفاء شريط الحالة لمزيد من المساحة",
     "keepScreenOn": "إبقاء الشاشة مضاءة",

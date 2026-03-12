@@ -15,10 +15,9 @@ import { usePrintInvoice, PrinterDevice } from '@/hooks/usePrintInvoice';
 import Colors from '@/constants/colors';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useTranslation } from 'react-i18next';
+import Toast from 'react-native-root-toast';
 
 const C = Colors.dark;
-
-import Toast from 'react-native-root-toast';
 
 export default function PrinterSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -27,10 +26,13 @@ export default function PrinterSettingsScreen() {
     currentPrinter,
     isScanning,
     isConnecting,
+    isPrinting,
+    isSuccess,
     availablePrinters,
     scanPrinters,
     connectPrinter,
     disconnectPrinter,
+    printTest,
     error,
   } = usePrintInvoice();
 
@@ -52,6 +54,7 @@ export default function PrinterSettingsScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedPrinter(printer);
     await connectPrinter(printer);
+    Toast.show(`Connecté à ${printer.name}`, { duration: Toast.durations.SHORT });
   };
 
   const handleDisconnect = async () => {
@@ -62,8 +65,14 @@ export default function PrinterSettingsScreen() {
   const confirmDisconnect = async () => {
     await disconnectPrinter();
     setSelectedPrinter(null);
-    Toast.show("Imprimante déconnectée", { duration: Toast.durations.SHORT });
+    Toast.show('Imprimante déconnectée', { duration: Toast.durations.SHORT });
     setShowDisconnectConfirm(false);
+  };
+
+  const handlePrintTest = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    await printTest();
+    Toast.show('Test envoyé à l\'imprimante', { duration: Toast.durations.SHORT });
   };
 
   const renderPrinter = ({ item }: { item: PrinterDevice }) => (
@@ -75,7 +84,11 @@ export default function PrinterSettingsScreen() {
       onPress={() => handleConnect(item)}
     >
       <View style={styles.printerIcon}>
-        <Feather name="printer" size={24} color={selectedPrinter?.id === item.id ? C.gold : C.textSecondary} />
+        <Feather
+          name="printer"
+          size={24}
+          color={selectedPrinter?.id === item.id ? C.gold : C.textSecondary}
+        />
       </View>
       <View style={styles.printerInfo}>
         <Text style={styles.printerName}>{item.name}</Text>
@@ -92,6 +105,7 @@ export default function PrinterSettingsScreen() {
 
   return (
     <View style={styles.screen}>
+      {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color="#fff" />
@@ -101,6 +115,7 @@ export default function PrinterSettingsScreen() {
       </View>
 
       <View style={styles.content}>
+        {/* Connection Status */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>État de connexion</Text>
           <View style={styles.statusCard}>
@@ -116,6 +131,32 @@ export default function PrinterSettingsScreen() {
                   <Text style={styles.statusLabel}>Statut:</Text>
                   <Text style={[styles.statusValue, { color: '#4CAF50' }]}>Connectée</Text>
                 </View>
+
+                {/* Print Test Button */}
+                <TouchableOpacity
+                  style={[styles.testBtn, isPrinting && styles.btnDisabled]}
+                  onPress={handlePrintTest}
+                  disabled={isPrinting}
+                >
+                  {isPrinting ? (
+                    <>
+                      <ActivityIndicator size="small" color="#000" />
+                      <Text style={styles.testBtnText}>Impression...</Text>
+                    </>
+                  ) : isSuccess ? (
+                    <>
+                      <Feather name="check-circle" size={16} color="#000" />
+                      <Text style={styles.testBtnText}>Succès!</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Feather name="printer" size={16} color="#000" />
+                      <Text style={styles.testBtnText}>Imprimer test</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {/* Disconnect Button */}
                 <TouchableOpacity style={styles.disconnectBtn} onPress={handleDisconnect}>
                   <Feather name="x-circle" size={16} color={C.danger} />
                   <Text style={styles.disconnectText}>Déconnecter</Text>
@@ -133,6 +174,7 @@ export default function PrinterSettingsScreen() {
           </View>
         </View>
 
+        {/* Error */}
         {error && (
           <View style={styles.errorCard}>
             <Feather name="alert-circle" size={20} color={C.danger} />
@@ -140,6 +182,7 @@ export default function PrinterSettingsScreen() {
           </View>
         )}
 
+        {/* Available Printers */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Imprimantes disponibles</Text>
@@ -167,7 +210,9 @@ export default function PrinterSettingsScreen() {
               <View style={styles.emptyState}>
                 <Feather name="bluetooth" size={40} color={C.textMuted} />
                 <Text style={styles.emptyText}>
-                  {isScanning ? 'Recherche en cours...' : 'Appuyez sur Scanner pour trouver des imprimantes'}
+                  {isScanning
+                    ? 'Recherche en cours...'
+                    : 'Appuyez sur Scanner pour trouver des imprimantes'}
                 </Text>
               </View>
             }
@@ -175,22 +220,20 @@ export default function PrinterSettingsScreen() {
           />
         </View>
 
+        {/* Info */}
         <View style={styles.infoSection}>
           <View style={styles.infoRow}>
             <Feather name="info" size={16} color={C.textMuted} />
-            <Text style={styles.infoText}>
-              Largeur du papier: 58mm (384 points)
-            </Text>
+            <Text style={styles.infoText}>Largeur du papier: 58mm (48 colonnes)</Text>
           </View>
           <View style={styles.infoRow}>
             <Feather name="info" size={16} color={C.textMuted} />
-            <Text style={styles.infoText}>
-              Compatible ESC/POS via Bluetooth BLE
-            </Text>
+            <Text style={styles.infoText}>Compatible ESC/POS via Bluetooth BLE</Text>
           </View>
         </View>
       </View>
 
+      {/* Loading overlay when connecting */}
       {isConnecting && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={C.gold} />
@@ -201,7 +244,7 @@ export default function PrinterSettingsScreen() {
       <ConfirmModal
         visible={showDisconnectConfirm}
         title={t('printer.disconnect') || 'Déconnecter'}
-        message={t('printer.disconnectConfirm') || 'Voulez-vous déconnecter l\'imprimante?'}
+        message={t('printer.disconnectConfirm') || "Voulez-vous déconnecter l'imprimante?"}
         confirmText={t('printer.disconnect') || 'Déconnecter'}
         cancelText={t('common.cancel') || 'Annuler'}
         type="danger"
@@ -264,12 +307,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: C.border,
     alignItems: 'center',
+    gap: 8,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   statusLabel: {
     fontSize: 14,
@@ -294,20 +338,41 @@ const styles = StyleSheet.create({
     color: C.textMuted,
     marginTop: 4,
   },
+  testBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    backgroundColor: C.gold,
+    gap: 8,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  testBtnText: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#000',
+  },
+  btnDisabled: {
+    opacity: 0.6,
+  },
   disconnectBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
     backgroundColor: C.danger + '20',
+    gap: 6,
+    width: '100%',
+    justifyContent: 'center',
   },
   disconnectText: {
     fontSize: 14,
     fontFamily: 'Inter_600SemiBold',
     color: C.danger,
-    marginLeft: 6,
   },
   errorCard: {
     flexDirection: 'row',

@@ -61,7 +61,8 @@ function SaleCard({
         paymentMethod:  sale.paymentMethod,
         date:           sale.date,
         itemsJson:      JSON.stringify(sale.items),
-        discount:       "0",
+        discount:       (sale.discount || 0).toString(),
+        returnAmount:   (sale.returnAmount || 0).toString(),
       },
     });
   };

@@ -26,7 +26,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { title: t("tabs.reports"),    icon: "bar-chart-2",  route: "/(tabs)/reports"  },
     { title: t("tabs.contacts"),   icon: "users",        route: "/(tabs)/contacts" },
     { title: t("tabs.debts"),      icon: "alert-circle", route: "/(tabs)/debts"    },
-    { title: t("settings.screen"), icon: "monitor",      route: "/settings/screen" },
+    { title: t("settings.screen"), icon: "settings",     route: "/settings/screen" },
     { title: t("settings.sync"),   icon: "cloud",        route: "/settings/sync"   },
   ];
 

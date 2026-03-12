@@ -66,6 +66,7 @@ export interface Sale {
   paid: number;
   discount: number;
   shippingFee: number;
+  returnAmount?: number;
   date: string;
   status: "paid" | "partial" | "due";
   items: SaleItem[];
@@ -571,98 +572,107 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.expenses, JSON.stringify(updated));
   }
 
-  async function addTransfer(transfer: Transfer) {
-    const updatedProducts = products.map(p => {
-      // Match by productId first (most reliable), then by SKU
-      const item = transfer.items.find(it => it.productId === p.id || (it.sku && it.sku === p.sku));
-      if (!item) return p;
+  // ─── FIXED addTransfer ───────────────────────────────────────────────────────
+// Drop-in replacement for addTransfer inside AppProvider
+// Fixes: transfer_in QR scans not updating stock
 
-      let newStock = p.stock ?? 0;
-      const fromLoc = (transfer.from || "").toLowerCase();
-      const toLoc = (transfer.to || "").toLowerCase();
-      const ref = (transfer.ref || "").toLowerCase();
+async function addTransfer(transfer: Transfer) {
+  const ref = (transfer.ref || '').toLowerCase();
 
-      const isTruck = (loc: string) =>
-        loc.includes("truck") ||
-        loc.includes("vehicle") ||
-        loc.includes("cam 01") ||
-        loc.includes("0199-a-44");
+  // ── Determine transfer direction from ref prefix ──────────────────────────
+  // "TR-OUT..."= Transfer OUT       (manual truck dispatch)
+  // anything else → Transfer IN     (QR scan from warehouse → truck)
+  const isDefiniteIn  = !ref.startsWith('tr-out');
+  const isDefiniteOut = ref.startsWith('tr-out');
 
-      const isStorage = (loc: string) =>
-        loc.includes("produits finis") ||
-        loc.includes("main store") ||
-        loc.includes("main warehouse") ||
-        loc.includes("warehouse") ||
-        loc.includes("storage");
+  const isTruck = (loc: string) =>
+    loc.includes('truck') ||
+    loc.includes('vehicle') ||
+    loc.includes('cam 01') ||
+    loc.includes('0199-a-44');
 
-      // QR Code Scan = Transfer IN (always increase stock)
-      // QR codes start with "ST" reference
-      if (ref.startsWith("st")) {
-        // Transfer IN from external source - increase stock
-        newStock += item.qty;
-      }
-      // Transfer OUT (TR-OUT) - decrease stock
-      else if (ref.startsWith("tr-out")) {
-        // Transfer OUT to truck - decrease stock
-        newStock -= item.qty;
-      }
-      // Original logic for other cases
-      else {
-        // If transferring to truck (transfer OUT) - decrease stock
-        if (isTruck(toLoc)) {
-          newStock -= item.qty;
-        }
-        // If transferring from truck back to storage (return/transfer IN) - increase stock
-        else if (isTruck(fromLoc) && isStorage(toLoc)) {
-          newStock += item.qty;
-        }
-        // If transferring from storage to storage - decrease from, increase to
-        else if (isStorage(fromLoc) && isStorage(toLoc)) {
-          newStock -= item.qty;
-        }
-        // Default: if from is storage, decrease stock
-        else if (isStorage(fromLoc)) {
-          newStock -= item.qty;
-        }
-      }
+  const isStorage = (loc: string) =>
+    loc.includes('produits finis') ||
+    loc.includes('main store') ||
+    loc.includes('main warehouse') ||
+    loc.includes('warehouse') ||
+    loc.includes('storage');
 
-      return { ...p, stock: Math.max(0, newStock) };
-    });
+  const fromLoc = (transfer.from || '').toLowerCase();
+  const toLoc   = (transfer.to   || '').toLowerCase();
 
-    const ref = (transfer.ref || "").toLowerCase();
-    const isTransferOut = ref.startsWith("tr-out");
-    const isTransferIn = ref.startsWith("st");
+  // ── Compute stock delta for each item ─────────────────────────────────────
+  // +qty = stock increases (transfer IN)
+  // -qty = stock decreases (transfer OUT)
+  const getQtyDelta = (item: TransferItem): number => {
+    if (isDefiniteIn)  return +item.qty;   // QR scan always adds stock
+    if (isDefiniteOut) return -item.qty;   // TR-OUT always removes stock
 
-    const transferTransactions: Transaction[] = transfer.items.map(item => {
-      const product = products.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
-      const updatedProduct = updatedProducts.find(p => p.id === item.productId || (item.sku && p.sku === item.sku));
+    // Fallback: location-based logic
+    if (isTruck(toLoc))                          return -item.qty; // going to truck
+    if (isTruck(fromLoc) && isStorage(toLoc))    return +item.qty; // return from truck
+    if (isStorage(fromLoc) && isStorage(toLoc))  return -item.qty; // storage-to-storage
+    if (isStorage(fromLoc))                      return -item.qty; // default out
+    return 0;
+  };
 
-      const txType: Transaction["type"] = isTransferOut ? "transfer_out" : "transfer_in";
-      const txQty = isTransferOut ? -item.qty : +item.qty;
+  // ── Build updated products list ───────────────────────────────────────────
+  const updatedProducts = products.map(p => {
+    const item = transfer.items.find(
+      it => it.productId === p.id || (it.sku && it.sku === p.sku)
+    );
+    if (!item) return p;
 
-      return {
-        id: genId(),
-        date: transfer.date,
-        referenceNo: transfer.ref,
-        type: txType,
-        productId: product?.id || item.productId || '',
-        productName: item.name,
-        quantity: txQty,
-        remainingStock: updatedProduct?.stock || 0,
-        transferId: transfer.id,
-      };
-    });
-    const updatedTransactions = [...transferTransactions, ...transactions];
-    setTransactions(updatedTransactions);
-    AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
+    const delta    = getQtyDelta(item);
+    const newStock = Math.max(0, (p.stock ?? 0) + delta);
 
-    const updatedTransfers = [transfer, ...transfers];
-    setTransfers(updatedTransfers);
-    await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
+    console.log(
+      `[Transfer] ${p.name}: stock ${p.stock} ${delta >= 0 ? '+' : ''}${delta} → ${newStock} (ref: ${transfer.ref})`
+    );
 
-    setProducts(updatedProducts);
-    await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
-  }
+    return { ...p, stock: newStock };
+  });
+
+  // ── Build transaction records ─────────────────────────────────────────────
+  const now = new Date().toISOString();
+
+  const transferTransactions: Transaction[] = transfer.items.map(item => {
+    const product = products.find(
+      p => p.id === item.productId || (item.sku && p.sku === item.sku)
+    );
+    const updatedProduct = updatedProducts.find(
+      p => p.id === item.productId || (item.sku && p.sku === item.sku)
+    );
+
+    const delta   = getQtyDelta(item);
+    const txType: Transaction['type'] = delta >= 0 ? 'transfer_in' : 'transfer_out';
+
+    return {
+      id: genId(),
+      date: transfer.date || now,
+      referenceNo: transfer.ref,
+      type: txType,
+      productId: product?.id || item.productId || '',
+      productName: item.name,
+      quantity: delta,                           // signed: +qty or -qty
+      remainingStock: updatedProduct?.stock ?? 0,
+      transferId: transfer.id,
+    };
+  });
+
+  // ── Persist everything ────────────────────────────────────────────────────
+  const updatedTransactions = [...transferTransactions, ...transactions];
+  setTransactions(updatedTransactions);
+  AsyncStorage.setItem(KEYS.transactions, JSON.stringify(updatedTransactions));
+
+  const updatedTransfers = [transfer, ...transfers];
+  setTransfers(updatedTransfers);
+  await AsyncStorage.setItem(KEYS.transfers, JSON.stringify(updatedTransfers));
+
+  // ✅ Products must be set LAST so remainingStock in transactions is accurate
+  setProducts(updatedProducts);
+  await AsyncStorage.setItem(KEYS.products, JSON.stringify(updatedProducts));
+}
 
   function addToCart(product: Product, qty = 1) {
     setCart(prev => {

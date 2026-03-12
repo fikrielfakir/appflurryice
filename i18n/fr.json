@@ -253,6 +253,7 @@
     "adjustment": "Ajust"
   },
   "pos": {
+    "saleDeleted": "Vente supprimée",
     "walkInCustomer": "Client de passage",
     "cart": "Panier",
     "checkout": "Paiement",

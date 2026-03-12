@@ -53,6 +53,7 @@ export default function InvoiceScreen() {
     paid: parseFloat(params.paid?.replace(/,/g, "") || "0"),
     discount: parseFloat(params.discount || "0"),
     shippingFee: 0,
+    returnAmount: parseFloat(params.returnAmount?.replace(/,/g, "") || "0"),
     status: (params.status as "paid" | "partial" | "due") || "paid",
     paymentMethod: params.paymentMethod || "cash",
     date: params.date || new Date().toISOString(),

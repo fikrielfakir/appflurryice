@@ -1,5 +1,6 @@
 {
   "common": {
+    "complete": "Complete",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -255,6 +256,7 @@
     "adjustment": "Adj"
   },
   "pos": {
+    "saleDeleted": "Sale removed",
     "cart": "Cart",
     "checkout": "Checkout",
     "customer": "Customer",

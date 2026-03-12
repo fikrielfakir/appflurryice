@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   Platform, Modal,
 } from "react-native";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useApp, Contact } from "@/context/AppContext";
-import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTranslation } from "react-i18next";
 import Toast from "react-native-root-toast";
 import { D } from "@/constants/theme";
@@ -26,33 +26,26 @@ export default function CustomerScreen() {
   const params = useLocalSearchParams<{ discount: string; subtotal: string; total: string }>();
   const { contacts, addContact } = useApp();
 
-  const [search, setSearch]                   = useState("");
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanning, setScanning] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [verified, setVerified]               = useState(false);
+  const [verified, setVerified] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const [newName, setNewName]                 = useState("");
-  const [newPhone, setNewPhone]               = useState("");
-  const [showQrConfirm, setShowQrConfirm]     = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
-  const customers = useMemo(
-    () => contacts.filter((c) => c.type === "customer" || c.type === "lead"),
-    [contacts]
-  );
+  const customers = contacts.filter((c) => c.type === "customer" || c.type === "lead");
 
-  const filtered = useMemo(
-    () => customers.filter((c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) || c.phone.includes(search)
-    ),
-    [customers, search]
-  );
+  const avatarColor = selectedContact
+    ? AVATAR_COLORS[customers.indexOf(selectedContact) % AVATAR_COLORS.length]
+    : D.heroAccent;
 
   function selectCustomer(contact: Contact) {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSelectedContact(contact);
     setVerified(true);
-    setSearch("");
   }
 
   function handleWalkIn() {
@@ -85,9 +78,37 @@ export default function CustomerScreen() {
     Toast.show(t("customer.customerAdded"), { duration: Toast.durations.SHORT });
   }
 
-  const avatarColor = selectedContact
-    ? AVATAR_COLORS[customers.indexOf(selectedContact) % AVATAR_COLORS.length]
-    : D.heroAccent;
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
+    setScanning(false);
+    
+    const customer = customers.find((c) => c.id === data);
+    
+    if (customer) {
+      selectCustomer(customer);
+      Toast.show(`${customer.name}`, { duration: Toast.durations.SHORT });
+    } else {
+      Toast.show(t("customer.noCustomersFound"), { duration: Toast.durations.SHORT, backgroundColor: D.rose });
+    }
+  };
+
+  if (!permission) {
+    return <View style={[S.screen, { backgroundColor: D.bg }]} />;
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={[S.screen, { backgroundColor: D.bg, justifyContent: "center", alignItems: "center", padding: 40 }]}>
+        <View style={S.permIcon}>
+          <Feather name="camera-off" size={30} color={D.inkSoft} />
+        </View>
+        <Text style={S.permTitle}>Camera required</Text>
+        <Text style={S.permDesc}>Allow camera access to scan QR codes.</Text>
+        <TouchableOpacity style={S.permBtn} onPress={requestPermission}>
+          <Text style={S.permBtnTxt}>Allow</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[S.screen, { backgroundColor: D.bg }]}>
@@ -104,9 +125,7 @@ export default function CustomerScreen() {
             <Feather name="chevron-left" size={20} color="rgba(255,255,255,0.9)" />
           </TouchableOpacity>
           <Text style={S.navTitle}>{t("customer.title")}</Text>
-          <TouchableOpacity style={S.hBtn} onPress={() => setAddModalVisible(true)}>
-            <Feather name="user-plus" size={17} color="rgba(255,255,255,0.9)" />
-          </TouchableOpacity>
+          <View style={S.hBtn} />
         </View>
 
         {/* Hero sub */}
@@ -121,7 +140,7 @@ export default function CustomerScreen() {
       {/* ── Body ── */}
       <View style={S.body}>
 
-        {/* Customer info / search */}
+        {/* Customer info */}
         <View style={S.card}>
           <View style={S.cardTitleRow}>
             <Text style={S.cardTitle}>{t("customer.customerInfo")}</Text>
@@ -153,59 +172,9 @@ export default function CustomerScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            /* Search */
-            <View style={S.searchWrap}>
-              <Feather name="search" size={14} color={D.inkSoft} style={{ marginRight: 8 }} />
-              <TextInput
-                style={S.searchInput}
-                value={search}
-                onChangeText={setSearch}
-                placeholder={t("customer.search")}
-                placeholderTextColor={D.inkGhost}
-              />
-              {search ? (
-                <TouchableOpacity onPress={() => setSearch("")}>
-                  <Feather name="x" size={14} color={D.inkSoft} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
+            <Text style={S.noSelectionText}>Scan QR code to select customer</Text>
           )}
         </View>
-
-        {/* Search results dropdown */}
-        {!verified && search.length > 0 && (
-          <View style={S.resultsCard}>
-            {filtered.length === 0 ? (
-              <View style={S.noResultsRow}>
-                <Feather name="search" size={14} color={D.inkGhost} />
-                <Text style={S.noResultsTxt}>{t("customer.noCustomersFound")}</Text>
-              </View>
-            ) : (
-              filtered.slice(0, 5).map((c, i) => {
-                const col = AVATAR_COLORS[customers.indexOf(c) % AVATAR_COLORS.length];
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[S.resultRow, i > 0 && S.resultRowBorder]}
-                    onPress={() => selectCustomer(c)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[S.resultAvatar, { backgroundColor: col + "18" }]}>
-                      <Text style={[S.resultInitial, { color: col }]}>
-                        {c.name.slice(0, 2).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={S.resultName}>{c.name}</Text>
-                      <Text style={S.resultPhone}>{c.phone}</Text>
-                    </View>
-                    <Feather name="chevron-right" size={15} color={D.inkGhost} />
-                  </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
-        )}
 
         {/* Verified confirmation banner */}
         {verified && selectedContact && (
@@ -217,7 +186,7 @@ export default function CustomerScreen() {
           </View>
         )}
 
-        {/* QR / warning section */}
+        {/* QR section */}
         {!verified && (
           <View style={S.card}>
             <View style={S.qrBlock}>
@@ -225,21 +194,14 @@ export default function CustomerScreen() {
                 <Feather name="maximize" size={28} color={D.heroAccent} />
               </View>
               <Text style={S.qrTitle}>{t("customer.quickSelection")}</Text>
-              <Text style={S.qrSub}>{t("customer.scanQrSub")}</Text>
-              <TouchableOpacity style={S.qrBtn} onPress={() => setShowQrConfirm(true)} activeOpacity={0.85}>
+              <Text style={S.qrSub}>Scan customer QR code</Text>
+              <TouchableOpacity style={S.qrBtn} onPress={() => setScanning(true)} activeOpacity={0.85}>
                 <LinearGradient colors={[D.heroA, D.heroAccent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={S.qrBtnInner}>
                   <Feather name="camera" size={15} color="#fff" />
                   <Text style={S.qrBtnTxt}>{t("customer.scanQrCode")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-
-            {!selectedContact && (
-              <View style={S.warningBox}>
-                <Feather name="alert-triangle" size={13} color={D.amber} />
-                <Text style={S.warningTxt}>{t("customer.selectToProceed")}</Text>
-              </View>
-            )}
           </View>
         )}
       </View>
@@ -247,18 +209,8 @@ export default function CustomerScreen() {
       {/* ── Bottom actions ── */}
       <View style={[S.bottomActions, { paddingBottom: insets.bottom + 12 }]}>
 
-        {/* Add customer */}
-        <TouchableOpacity style={S.addBtn} onPress={() => setAddModalVisible(true)}>
-          <Feather name="user-plus" size={15} color={D.heroAccent} />
-          <Text style={S.addBtnTxt}>{t("customer.addCustomer")}</Text>
-        </TouchableOpacity>
-
         <View style={S.actionRow}>
           {/* Walk-in */}
-          <TouchableOpacity style={S.walkInBtn} onPress={handleWalkIn} activeOpacity={0.85}>
-            <Feather name="shopping-bag" size={15} color={D.inkSoft} />
-            <Text style={S.walkInTxt}>{t("customer.walkInSkip")}</Text>
-          </TouchableOpacity>
 
           {/* Proceed (only when verified) */}
           {verified && (
@@ -332,18 +284,32 @@ export default function CustomerScreen() {
         </View>
       </Modal>
 
-      {/* QR info confirm */}
-      <ConfirmModal
-        visible={showQrConfirm}
-        title={t("customer.qrScanner") || "QR Scanner"}
-        message={t("customer.qrScannerDesc") || "Camera-based QR scanning available on physical devices."}
-        confirmText={t("common.ok") || "OK"}
-        cancelText={t("common.cancel") || "Cancel"}
-        type="info"
-        icon="camera"
-        onConfirm={() => setShowQrConfirm(false)}
-        onCancel={() => setShowQrConfirm(false)}
-      />
+      {/* ── Camera scanner ── */}
+      {scanning && (
+        <View style={StyleSheet.absoluteFill}>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            onBarcodeScanned={handleBarCodeScanned}
+            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          >
+            <View style={S.camOverlay}>
+              <View style={{ flex: 1 }} />
+              <View style={S.camMiddle}>
+                <View style={{ flex: 1 }} />
+                <View style={S.camFocus} />
+                <View style={{ flex: 1 }} />
+              </View>
+              <View style={[{ flex: 1 }, S.camBottom]}>
+                <Text style={S.camHint}>Scan customer QR code</Text>
+                <TouchableOpacity style={S.camCancel} onPress={() => setScanning(false)}>
+                  <Feather name="x" size={18} color="#fff" />
+                  <Text style={S.camCancelTxt}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </CameraView>
+        </View>
+      )}
     </View>
   );
 }
@@ -384,14 +350,7 @@ const S = StyleSheet.create({
   cardTitleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardTitle:    { fontSize: 13, fontFamily: "Inter_600SemiBold", color: D.inkSoft, textTransform: "uppercase", letterSpacing: 0.6 },
 
-  // Search
-  searchWrap: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: D.bg, borderRadius: 12,
-    borderWidth: 1, borderColor: D.border,
-    paddingHorizontal: 12, height: 44,
-  },
-  searchInput: { flex: 1, color: D.ink, fontFamily: "Inter_400Regular", fontSize: 14 },
+  noSelectionText: { fontSize: 14, color: D.inkSoft, textAlign: "center", paddingVertical: 10 },
 
   // Verified box
   verifiedBox: {
@@ -416,22 +375,6 @@ const S = StyleSheet.create({
   verifiedBannerIcon: { width: 30, height: 30, borderRadius: 9, justifyContent: "center", alignItems: "center" },
   verifiedBannerTxt:  { fontSize: 14, fontFamily: "Inter_600SemiBold", color: D.emerald },
 
-  // Search results
-  resultsCard: {
-    backgroundColor: D.card,
-    borderRadius: 16, borderWidth: 1, borderColor: D.border, overflow: "hidden",
-    elevation: 2, shadowColor: D.shadow,
-    shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6,
-  },
-  noResultsRow: { flexDirection: "row", alignItems: "center", gap: 8, padding: 16, justifyContent: "center" },
-  noResultsTxt: { fontSize: 13, fontFamily: "Inter_400Regular", color: D.inkSoft },
-  resultRow:    { flexDirection: "row", alignItems: "center", padding: 12, gap: 10 },
-  resultRowBorder: { borderTopWidth: 1, borderTopColor: D.border },
-  resultAvatar: { width: 40, height: 40, borderRadius: 12, justifyContent: "center", alignItems: "center" },
-  resultInitial:{ fontSize: 14, fontFamily: "Inter_700Bold" },
-  resultName:   { fontSize: 14, fontFamily: "Inter_600SemiBold", color: D.ink },
-  resultPhone:  { fontSize: 11, fontFamily: "Inter_400Regular", color: D.inkSoft, marginTop: 1 },
-
   // QR block
   qrBlock:   { alignItems: "center", gap: 8 },
   qrIconBox: { width: 68, height: 68, borderRadius: 20, justifyContent: "center", alignItems: "center" },
@@ -440,14 +383,6 @@ const S = StyleSheet.create({
   qrBtn:     { borderRadius: 12, overflow: "hidden", marginTop: 4 },
   qrBtnInner:{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, paddingVertical: 11 },
   qrBtnTxt:  { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
-
-  // Warning
-  warningBox: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    backgroundColor: D.amberBg, borderRadius: 10,
-    padding: 10, borderWidth: 1, borderColor: D.amber + "30",
-  },
-  warningTxt: { fontSize: 12, fontFamily: "Inter_400Regular", color: D.amber, flex: 1 },
 
   // Bottom actions
   bottomActions: {
@@ -496,4 +431,20 @@ const S = StyleSheet.create({
   modalSaveBtn:    { flex: 1, borderRadius: 12, overflow: "hidden" },
   modalSaveBtnInner: { height: 48, justifyContent: "center", alignItems: "center" },
   modalSaveTxt:    { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
+
+  // Camera
+  camOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
+  camMiddle:  { flexDirection: "row", height: 280 },
+  camFocus:   { width: 280, height: 280, borderWidth: 2, borderColor: D.heroAccent, borderRadius: 18 },
+  camBottom:  { justifyContent: "flex-end", alignItems: "center", paddingBottom: 100, gap: 16 },
+  camHint:    { color: "rgba(255,255,255,0.8)", fontSize: 14, fontFamily: "Inter_500Medium" },
+  camCancel:  { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "rgba(255,255,255,0.18)", paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+  camCancelTxt: { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  // Permission
+  permIcon:  { width: 72, height: 72, borderRadius: 22, backgroundColor: D.bg, justifyContent: "center", alignItems: "center", marginBottom: 18, borderWidth: 1, borderColor: D.border },
+  permTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: D.ink, marginBottom: 8 },
+  permDesc:  { fontSize: 14, fontFamily: "Inter_400Regular", color: D.inkSoft, textAlign: "center", lineHeight: 22, marginBottom: 28 },
+  permBtn:   { borderRadius: 14, overflow: "hidden" },
+  permBtnTxt:{ color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });

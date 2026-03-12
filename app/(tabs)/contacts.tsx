@@ -163,7 +163,7 @@ export default function ContactsScreen() {
       if (addedCount > 0) {
         const all = [...contacts, ...newContacts];
         setContacts(all);
-        await AsyncStorage.setItem("@bizpos_contacts", JSON.stringify(all));
+        await AsyncStorage.setItem("bizpos_contacts", JSON.stringify(all));
         Toast.show(`${addedCount} ${t("contacts.added") || "contacts ajoutés"}`, { duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.emerald });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {

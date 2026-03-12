@@ -10,7 +10,6 @@ export default function POSLayout() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="products" />
       <Stack.Screen name="cart" />
       <Stack.Screen name="customer" />
       <Stack.Screen name="payment" />

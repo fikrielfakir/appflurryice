@@ -19,7 +19,9 @@
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
         "NSBluetoothPeripheralUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
-        "UIBackgroundModes": ["bluetooth-central"]
+        "UIBackgroundModes": [
+          "bluetooth-central"
+        ]
       }
     },
     "android": {
@@ -50,7 +52,8 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
