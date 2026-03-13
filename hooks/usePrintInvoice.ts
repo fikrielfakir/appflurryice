@@ -230,57 +230,58 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   doc += ESC_BOLD_ON + `FACTURE #${sale.invoiceNumber}` + ESC_BOLD_OFF + LF;
   doc += DASHES + LF;
 
-  // ── Meta + Bill-to (side by side) ─────────────────────────────────────────
+  // ── Meta + Bill-to (side by side, separated by |) ─────────────────────────
+  // Left col = 20 chars (label 10 + value 10), sep = '|', right col = 19 chars
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Date:', 10)      + padEnd(dateStr, 10)                          + ESC_BOLD_ON + 'FACTURE A:' + ESC_BOLD_OFF + LF;
-  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10) + sale.customerName.slice(0, 20) + LF;
-  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)    + (sale.customerPhone || '').slice(0, 20) + LF;
+  doc += padEnd('Date:', 10)      + padEnd(dateStr.slice(0, 10), 10)                    + '|' + ESC_BOLD_ON + 'CLIENT:' + ESC_BOLD_OFF + sale.customerName.slice(0, 12) + LF;
+  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10)      + '|' + (sale.customerPhone || '').slice(0, 19) + LF;
+  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)         + '|' + LF;
   doc += DASHES + LF;
 
   // ── Items header ──────────────────────────────────────────────────────────
   doc += ESC_BOLD_ON;
-  doc += padEnd('ARTICLE', 20)
-       + padEnd('QTE', 5)
-       + padStart('P.U.', 7)
-       + padStart('TOTAL', 8) + LF;
+  doc += padEnd('ARTICLE', 18)
+       + padEnd('QTE', 4)
+       + padStart('P.U.', 9)
+       + padStart('TOTAL', 9) + LF;
   doc += ESC_BOLD_OFF;
   doc += DASHES + LF;
 
   // ── Items rows ────────────────────────────────────────────────────────────
   for (const item of sale.items) {
     const lineTotal = item.qty * item.price;
-    const name = item.name.slice(0, 19);
-    doc += padEnd(name, 20)
-         + padEnd(String(item.qty), 5)
-         + padStart(fmt(item.price), 7)
-         + padStart(fmt(lineTotal), 8) + LF;
+    const name = item.name.slice(0, 17);
+    doc += padEnd(name, 18)
+         + padEnd(String(item.qty), 4)
+         + padStart(fmt(item.price), 9)
+         + padStart(fmt(lineTotal), 9) + LF;
   }
   doc += DASHES + LF;
 
   // ── Subtotal / discount ───────────────────────────────────────────────────
-  doc += padEnd('Sous-total:', 28) + padStart(`${fmt(subtotal)} MAD`, 12) + LF;
+  doc += padEnd('Sous-total:', 22) + padStart(`${fmt(subtotal)} MAD`, 18) + LF;
   if (sale.discount > 0) {
     const disc = subtotal * sale.discount / 100;
-    doc += padEnd(`Remise (${sale.discount}%):`, 28) + padStart(`- ${fmt(disc)} MAD`, 12) + LF;
+    doc += padEnd(`Remise (${sale.discount}%):`, 22) + padStart(`- ${fmt(disc)} MAD`, 18) + LF;
   }
   if (returnAmt > 0) {
-    doc += padEnd('Retour marchandise:', 28) + padStart(`- ${fmt(returnAmt)} MAD`, 12) + LF;
+    doc += padEnd('Retour march.:', 22) + padStart(`- ${fmt(returnAmt)} MAD`, 18) + LF;
   }
 
   // ── Grand total ───────────────────────────────────────────────────────────
   doc += DASHES + LF;
   doc += ESC_ALIGN_CENTER;
   doc += ESC_BOLD_ON + ESC_DOUBLE_ON;
-  doc += `TOTAL:${fmt(sale.amount)} MAD`;
+  doc += `TOTAL: ${fmt(sale.amount)} MAD`;
   doc += ESC_DOUBLE_OFF + ESC_BOLD_OFF + LF;
   doc += DASHES + LF;
 
   // ── Payment summary ───────────────────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Paye:', 28) + padStart(`${fmt(sale.paid)} MAD`, 12) + LF;
+  doc += padEnd('Paye:', 22) + padStart(`${fmt(sale.paid)} MAD`, 18) + LF;
   if (remaining > 0) {
     doc += ESC_BOLD_ON;
-    doc += padEnd('Reste a payer:', 28) + padStart(`${fmt(remaining)} MAD`, 12) + LF;
+    doc += padEnd('Reste a payer:', 22) + padStart(`${fmt(remaining)} MAD`, 18) + LF;
     doc += ESC_BOLD_OFF;
   }
 
