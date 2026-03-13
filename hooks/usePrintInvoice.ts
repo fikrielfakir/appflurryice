@@ -528,12 +528,13 @@ export async function buildInvoiceHtml(sale: Sale): Promise<string> {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Core BT sender
+// Thermal printers close the socket after every cut, so we always connect
+// fresh per job and disconnect when done. Retries once on connection failure.
 // ─────────────────────────────────────────────────────────────────────────────
 async function sendEscPosToPrinter(
   escPos: string,
   html: string,
   printer: PrinterDevice | null,
-  btDevice: any | null,
   btLib: any | null,
 ): Promise<void> {
   if (!btLib || !printer) {
@@ -541,22 +542,32 @@ async function sendEscPosToPrinter(
     return;
   }
 
-  let device = btDevice;
-  if (!device) {
-    device = await btLib.connectToDevice(printer.id);
-  } else {
-    const ok = await device.isConnected().catch(() => false);
-    if (!ok) device = await btLib.connectToDevice(printer.id);
+  // Connect fresh — never reuse a stale socket
+  let device: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      device = await btLib.connectToDevice(printer.id);
+      break;
+    } catch {
+      if (attempt === 2) throw new Error(ERROR_MESSAGES.CONNECTION_FAILED);
+      await new Promise(r => setTimeout(r, 1200));
+    }
   }
 
-  const BYTE_CHUNK = 504; // multiple of 3 so every base64 chunk aligns cleanly
-  for (let i = 0; i < escPos.length; i += BYTE_CHUNK) {
-    const slice = escPos.slice(i, i + BYTE_CHUNK);
-    let bin = '';
-    for (let j = 0; j < slice.length; j++) {
-      bin += String.fromCharCode(slice.charCodeAt(j) & 0xFF);
+  try {
+    const BYTE_CHUNK = 504; // multiple of 3 → base64 chunks with no padding splits
+    for (let i = 0; i < escPos.length; i += BYTE_CHUNK) {
+      const slice = escPos.slice(i, i + BYTE_CHUNK);
+      let bin = '';
+      for (let j = 0; j < slice.length; j++) {
+        bin += String.fromCharCode(slice.charCodeAt(j) & 0xFF);
+      }
+      await device.write(btoa(bin), 'base64');
     }
-    await device.write(btoa(bin), 'base64');
+    // Small delay so the printer finishes receiving before we disconnect
+    await new Promise(r => setTimeout(r, 500));
+  } finally {
+    try { await device.disconnect(); } catch {}
   }
 }
 
