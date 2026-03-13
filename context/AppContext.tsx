@@ -71,6 +71,7 @@ export interface Sale {
   status: "paid" | "partial" | "due";
   items: SaleItem[];
   paymentMethod: string;
+  vendeur: string;
   note?: string;
 }
 

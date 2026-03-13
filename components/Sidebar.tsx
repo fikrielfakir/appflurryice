@@ -15,6 +15,7 @@ const ITEM_ACCENTS: Record<string, { color: string; bg: string }> = {
   "/(tabs)/debts":    { color: D.rose,    bg: D.roseBg },
   "/settings/screen": { color: D.violet,  bg: D.violetBg },
   "/settings/sync":   { color: D.amber,   bg: D.amberBg },
+  "/settings/print-queue": { color: D.heroAccent, bg: D.violetBg },
 };
 
 export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
@@ -28,6 +29,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { title: t("tabs.debts"),      icon: "alert-circle", route: "/(tabs)/debts"    },
     { title: t("settings.screen"), icon: "settings",     route: "/settings/screen" },
     { title: t("settings.sync"),   icon: "cloud",        route: "/settings/sync"   },
+    { title: "File d'impression",  icon: "printer",     route: "/settings/print-queue" },
   ];
 
   if (!isOpen) return null;

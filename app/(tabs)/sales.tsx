@@ -63,6 +63,7 @@ function SaleCard({
         itemsJson:      JSON.stringify(sale.items),
         discount:       (sale.discount || 0).toString(),
         returnAmount:   (sale.returnAmount || 0).toString(),
+        vendeur:        sale.vendeur || "",
       },
     });
   };

@@ -106,6 +106,7 @@ export default function PaymentScreen() {
       items:         cart.map((ci) => ({ name: ci.product.name, qty: ci.qty, price: ci.product.price })),
       paymentMethod,
       note:          invoiceNote || undefined,
+      vendeur:       user || "Vendeur",
     });
 
     clearCart();

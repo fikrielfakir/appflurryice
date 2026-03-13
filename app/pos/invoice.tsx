@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  Platform, Share, Image, ActivityIndicator,
+  Platform, Share, Image, ActivityIndicator, Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -37,8 +37,9 @@ export default function InvoiceScreen() {
     isPreview?: string; vendeur: string;
   }>();
 
-  const { print, isConnecting, isPrinting, isSuccess, error, retry } = usePrintInvoice();
+  const { print, isConnecting, isPrinting, isSuccess, error, retry, state } = usePrintInvoice();
   const isPreview = params.isPreview === "true";
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const items: { name: string; qty: number; price: number }[] = params.itemsJson
@@ -58,6 +59,7 @@ export default function InvoiceScreen() {
     paymentMethod: params.paymentMethod || "cash",
     date: params.date || new Date().toISOString(),
     items: items.map((i) => ({ ...i, id: i.name })),
+    vendeur: params.vendeur || "",
   }), [params, items]);
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
@@ -80,6 +82,14 @@ export default function InvoiceScreen() {
     date: dateStr,
     items: items.map((i) => ({ n: i.name, q: i.qty, p: i.price })),
   });
+
+  useEffect(() => {
+    if (isConnecting || isPrinting || isSuccess || state === 'queued' || error) {
+      setShowPrintModal(true);
+    } else {
+      setShowPrintModal(false);
+    }
+  }, [isConnecting, isPrinting, isSuccess, error, state]);
 
   async function handleShare() {
     try {
@@ -289,10 +299,11 @@ export default function InvoiceScreen() {
             isSuccess && S.printBtnSuccess,
             !!error && S.printBtnError,
           ]}
-          onPress={() => {
+          onPress={async () => {
             if (isConnecting || isPrinting) return;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            print(sale);
+            router.back();
+            await print(sale);
           }}
           disabled={isConnecting || isPrinting}
           activeOpacity={0.85}
@@ -345,13 +356,63 @@ export default function InvoiceScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Error banner */}
-      {error && (
-        <View style={[S.errorBanner, { bottom: insets.bottom + 90 }]}>
-          <Feather name="alert-circle" size={15} color="#fff" />
-          <Text style={S.errorBannerTxt}>{error}</Text>
+      {/* Print Modal */}
+      <Modal visible={showPrintModal} transparent animationType="fade" statusBarTranslucent>
+        <View style={S.modalOverlay}>
+          <View style={S.modalContent}>
+            {state === 'queued' ? (
+              <>
+                <View style={[S.modalIcon, { backgroundColor: D.amberBg }]}>
+                  <Feather name="clock" size={32} color={D.amber} />
+                </View>
+                <Text style={S.modalTitle}>En attente</Text>
+                <Text style={S.modalSubtitle}>{error || "Impression enregistrée"}</Text>
+                <TouchableOpacity style={S.modalBtn} onPress={() => setShowPrintModal(false)}>
+                  <Text style={S.modalBtnTxt}>OK</Text>
+                </TouchableOpacity>
+              </>
+            ) : isConnecting || isPrinting ? (
+              <>
+                <ActivityIndicator size="large" color={D.heroAccent} />
+                <Text style={S.modalTitle}>Impression...</Text>
+                <Text style={S.modalSubtitle}>Veuillez patienter</Text>
+              </>
+            ) : isSuccess ? (
+              <>
+                <View style={[S.modalIcon, { backgroundColor: D.emeraldBg }]}>
+                  <Feather name="check" size={32} color={D.emerald} />
+                </View>
+                <Text style={S.modalTitle}>Imprimé!</Text>
+                <TouchableOpacity style={S.modalBtn} onPress={() => setShowPrintModal(false)}>
+                  <Text style={S.modalBtnTxt}>OK</Text>
+                </TouchableOpacity>
+              </>
+            ) : error ? (
+              <>
+                <View style={[S.modalIcon, { backgroundColor: D.roseBg }]}>
+                  <Feather name="alert-circle" size={32} color={D.rose} />
+                </View>
+                <Text style={S.modalTitle}>Erreur</Text>
+                <Text style={S.modalSubtitle}>{error}</Text>
+                <View style={S.modalBtnRow}>
+                  <TouchableOpacity 
+                    style={[S.modalBtn, S.modalBtnCancel]} 
+                    onPress={() => setShowPrintModal(false)}
+                  >
+                    <Text style={S.modalBtnCancelTxt}>Fermer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[S.modalBtn, S.modalBtnRetry]} 
+                    onPress={() => { setShowPrintModal(false); retry(); }}
+                  >
+                    <Text style={S.modalBtnTxt}>Réessayer</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : null}
+          </View>
         </View>
-      )}
+      </Modal>
     </View>
   );
 }
@@ -492,4 +553,17 @@ const S = StyleSheet.create({
     elevation: 8,
   },
   errorBannerTxt: { flex: 1, fontSize: 13, fontFamily: "Inter_500Medium", color: "#fff" },
+
+  // Print Modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center" },
+  modalContent: { backgroundColor: D.surface, borderRadius: 20, padding: 32, alignItems: "center", width: "80%", maxWidth: 300 },
+  modalIcon: { width: 64, height: 64, borderRadius: 32, justifyContent: "center", alignItems: "center", marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: D.ink, marginBottom: 8 },
+  modalSubtitle: { fontSize: 14, color: D.inkSoft, textAlign: "center", marginBottom: 20 },
+  modalBtnRow: { flexDirection: "row", gap: 12, marginTop: 8 },
+  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  modalBtnCancel: { backgroundColor: D.bg, borderWidth: 1, borderColor: D.border },
+  modalBtnCancelTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: D.inkSoft },
+  modalBtnRetry: { backgroundColor: D.heroAccent },
+  modalBtnTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "#fff" },
 });
