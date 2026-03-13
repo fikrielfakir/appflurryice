@@ -545,9 +545,14 @@ async function sendEscPosToPrinter(
     if (!ok) device = await btLib.connectToDevice(printer.id);
   }
 
-  const CHUNK = 512;
-  for (let i = 0; i < escPos.length; i += CHUNK) {
-    await device.write(escPos.slice(i, i + CHUNK));
+  const BYTE_CHUNK = 504; // multiple of 3 so every base64 chunk aligns cleanly
+  for (let i = 0; i < escPos.length; i += BYTE_CHUNK) {
+    const slice = escPos.slice(i, i + BYTE_CHUNK);
+    let bin = '';
+    for (let j = 0; j < slice.length; j++) {
+      bin += String.fromCharCode(slice.charCodeAt(j) & 0xFF);
+    }
+    await device.write(btoa(bin), 'base64');
   }
 }
 
