@@ -230,17 +230,11 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   doc += ESC_BOLD_ON + `FACTURE #${sale.invoiceNumber}` + ESC_BOLD_OFF + LF;
   doc += DASHES + LF;
 
-  // ── Meta ──────────────────────────────────────────────────────────────────
+  // ── Meta + Bill-to (side by side) ─────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Date:', 16) + dateStr + LF;
-  doc += padEnd('Vendeur:', 16) + (sale.vendeur || '-') + LF;
-  doc += padEnd('Reglement:', 16) + sale.paymentMethod + LF;
-  doc += DASHES + LF;
-
-  // ── Bill-to ───────────────────────────────────────────────────────────────
-  doc += ESC_BOLD_ON + 'FACTURE A:' + ESC_BOLD_OFF + LF;
-  doc += sale.customerName + LF;
-  if (sale.customerPhone) doc += sale.customerPhone + LF;
+  doc += padEnd('Date:', 10)      + padEnd(dateStr, 10)                          + ESC_BOLD_ON + 'FACTURE A:' + ESC_BOLD_OFF + LF;
+  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10) + sale.customerName.slice(0, 20) + LF;
+  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)    + (sale.customerPhone || '').slice(0, 20) + LF;
   doc += DASHES + LF;
 
   // ── Items header ──────────────────────────────────────────────────────────
