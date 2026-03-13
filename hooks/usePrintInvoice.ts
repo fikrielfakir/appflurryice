@@ -232,15 +232,16 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
 
   // ── Meta ──────────────────────────────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += ESC_BOLD_ON + 'FACTURE A:' + ESC_BOLD_OFF + LF + padEnd('Date:', 16) + dateStr + LF;
-  doc += sale.customerName + LF + padEnd('Vendeur:', 16) + (sale.vendeur || '-') + LF;
-  if (sale.customerPhone) {
-    doc += sale.customerPhone + LF;
-  }
+  doc += padEnd('Date:', 16) + dateStr + LF;
+  doc += padEnd('Vendeur:', 16) + (sale.vendeur || '-') + LF;
   doc += padEnd('Reglement:', 16) + sale.paymentMethod + LF;
   doc += DASHES + LF;
 
   // ── Bill-to ───────────────────────────────────────────────────────────────
+  doc += ESC_BOLD_ON + 'FACTURE A:' + ESC_BOLD_OFF + LF;
+  doc += sale.customerName + LF;
+  if (sale.customerPhone) doc += sale.customerPhone + LF;
+  doc += DASHES + LF;
 
   // ── Items header ──────────────────────────────────────────────────────────
   doc += ESC_BOLD_ON;
@@ -263,29 +264,29 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   doc += DASHES + LF;
 
   // ── Subtotal / discount ───────────────────────────────────────────────────
-  doc += padEnd('Sous-total:', 28) + padStart(`${fmt(subtotal)} MAD`, 12) + LF;
+  doc += padEnd('Sous-total:', 28) + padStart(`MAD ${fmt(subtotal)}`, 12) + LF;
   if (sale.discount > 0) {
     const disc = subtotal * sale.discount / 100;
-    doc += padEnd(`Remise (${sale.discount}%):`, 28) + padStart(`- ${fmt(disc)} MAD`, 12) + LF;
+    doc += padEnd(`Remise (${sale.discount}%):`, 28) + padStart(`-MAD ${fmt(disc)}`, 12) + LF;
   }
   if (returnAmt > 0) {
-    doc += padEnd('Retour marchandise:', 28) + padStart(`- ${fmt(returnAmt)} MAD`, 12) + LF;
+    doc += padEnd('Retour marchandise:', 28) + padStart(`-MAD ${fmt(returnAmt)}`, 12) + LF;
   }
 
   // ── Grand total ───────────────────────────────────────────────────────────
   doc += DASHES + LF;
   doc += ESC_ALIGN_CENTER;
   doc += ESC_BOLD_ON + ESC_DOUBLE_ON;
-  doc += `TOTAL:${fmt(sale.amount)} MAD`;
+  doc += `TOTAL: MAD ${fmt(sale.amount)}`;
   doc += ESC_DOUBLE_OFF + ESC_BOLD_OFF + LF;
   doc += DASHES + LF;
 
   // ── Payment summary ───────────────────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Paye:', 28) + padStart(`${fmt(sale.paid)} MAD`, 12) + LF;
+  doc += padEnd('Paye:', 28) + padStart(`MAD ${fmt(sale.paid)}`, 12) + LF;
   if (remaining > 0) {
     doc += ESC_BOLD_ON;
-    doc += padEnd('Reste a payer:', 28) + padStart(`${fmt(remaining)} MAD`, 12) + LF;
+    doc += padEnd('Reste a payer:', 28) + padStart(`MAD ${fmt(remaining)}`, 12) + LF;
     doc += ESC_BOLD_OFF;
   }
 
