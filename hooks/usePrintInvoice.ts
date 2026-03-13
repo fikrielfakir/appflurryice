@@ -383,7 +383,9 @@ function buildEscPosDailySummary(data: DailySummaryData): string {
 // HTML invoice builder (for exportPdf / system print dialog)
 // ─────────────────────────────────────────────────────────────────────────────
 export async function buildInvoiceHtml(sale: Sale): Promise<string> {
-  const logoTag = ``;
+  const logoTag = LOGO_B64
+    ? `<div style="text-align:center;margin-bottom:8px;"><img src="${LOGO_B64}" style="max-width:180px;height:auto;" /></div>`
+    : ``;
 
   const dateStr = new Date(sale.date).toLocaleDateString('fr-MA', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -460,6 +462,7 @@ export async function buildInvoiceHtml(sale: Sale): Promise<string> {
   </style>
 </head>
 <body>
+  ${logoTag}
   <div class="inv-title">FACTURE #${sale.invoiceNumber}</div>
   <div class="kv"><span class="kv-label">Date</span><span class="kv-value">${dateStr}</span></div>
   <div class="kv"><span class="kv-label">Règlement</span><span class="kv-value">${sale.paymentMethod}</span></div>
