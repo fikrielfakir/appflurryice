@@ -213,6 +213,15 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
     sale.status === 'paid'    ? 'PAYE'    :
     sale.status === 'partial' ? 'PARTIEL' : 'IMPAYE';
 
+  // ── Summary line helper (label left, value right, total 40 chars) ─────────
+  const TOTAL_WIDTH = 40;
+  const summaryLine = (label: string, value: string, bold = false): string => {
+    const line = padEnd(label, TOTAL_WIDTH - value.length) + value;
+    return bold
+      ? ESC_BOLD_ON + line + ESC_BOLD_OFF + LF
+      : line + LF;
+  };
+
   let doc = '';
   doc += ESC_INIT;
   doc += ESC_ALIGN_CENTER;
@@ -222,7 +231,6 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   if (logoCmd) {
     doc += logoCmd + LF;
   } else {
-    // Fallback: text store name
     doc += ESC_DOUBLE_ON + 'FLURRY' + ESC_DOUBLE_OFF + LF;
   }
 
@@ -231,19 +239,18 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   doc += DASHES + LF;
 
   // ── Meta + Bill-to (side by side, separated by |) ─────────────────────────
-  // Left col = 20 chars (label 10 + value 10), sep = '|', right col = 19 chars
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Date:', 10)      + padEnd(dateStr.slice(0, 10), 10)                    + '|' + ESC_BOLD_ON + 'CLIENT:' + ESC_BOLD_OFF + sale.customerName.slice(0, 12) + LF;
-  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10)      + '|' + (sale.customerPhone || '').slice(0, 19) + LF;
-  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)         + '|' + LF;
+  doc += padEnd('Date:', 10)      + padEnd(dateStr.slice(0, 10), 10) + '  |  ' + ESC_BOLD_ON + 'CLIENT: ' + ESC_BOLD_OFF + sale.customerName.slice(0, 12) + LF;
+  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10) + '  |  ' + (sale.customerPhone || '').slice(0, 19) + LF;
+  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)    + '  |  ' + LF;
   doc += DASHES + LF;
 
   // ── Items header ──────────────────────────────────────────────────────────
   doc += ESC_BOLD_ON;
   doc += padEnd('ARTICLE', 18)
-       + padEnd('QTE', 4)
-       + padStart('P.U.', 9)
-       + padStart('TOTAL', 9) + LF;
+       + '  ' + padEnd('QTE', 4)
+       + '  ' + padStart('P.U.', 7)
+       + '  ' + padStart('TOTAL', 7) + LF;
   doc += ESC_BOLD_OFF;
   doc += DASHES + LF;
 
@@ -252,20 +259,23 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
     const lineTotal = item.qty * item.price;
     const name = item.name.slice(0, 17);
     doc += padEnd(name, 18)
-         + padEnd(String(item.qty), 4)
-         + padStart(fmt(item.price), 9)
-         + padStart(fmt(lineTotal), 9) + LF;
+         + '  ' + padEnd(String(item.qty), 4)
+         + '  ' + padStart(fmt(item.price), 7)
+         + '  ' + padStart(fmt(lineTotal), 7) + LF;
   }
   doc += DASHES + LF;
 
-  // ── Subtotal / discount ───────────────────────────────────────────────────
-  doc += padEnd('Sous-total:', 22) + padStart(`${fmt(subtotal)} MAD`, 18) + LF;
+  // ── Subtotal / discount / return ──────────────────────────────────────────
+  doc += ESC_ALIGN_LEFT;
+  doc += summaryLine('Sous-total:', `${fmt(subtotal)} MAD`);
+
   if (sale.discount > 0) {
     const disc = subtotal * sale.discount / 100;
-    doc += padEnd(`Remise (${sale.discount}%):`, 22) + padStart(`- ${fmt(disc)} MAD`, 18) + LF;
+    doc += summaryLine(`Remise (${sale.discount}%):`, `- ${fmt(disc)} MAD`);
   }
+
   if (returnAmt > 0) {
-    doc += padEnd('Retour march.:', 22) + padStart(`- ${fmt(returnAmt)} MAD`, 18) + LF;
+    doc += summaryLine('Retour march.:', `- ${fmt(returnAmt)} MAD`);
   }
 
   // ── Grand total ───────────────────────────────────────────────────────────
@@ -278,11 +288,10 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
 
   // ── Payment summary ───────────────────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Paye:', 22) + padStart(`${fmt(sale.paid)} MAD`, 18) + LF;
+  doc += summaryLine('Paye:', `${fmt(sale.paid)} MAD`);
+
   if (remaining > 0) {
-    doc += ESC_BOLD_ON;
-    doc += padEnd('Reste a payer:', 22) + padStart(`${fmt(remaining)} MAD`, 18) + LF;
-    doc += ESC_BOLD_OFF;
+    doc += summaryLine('Reste a payer:', `${fmt(remaining)} MAD`, true);
   }
 
   // ── Status ────────────────────────────────────────────────────────────────
@@ -295,7 +304,7 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   doc += 'Merci pour votre confiance!' + LF;
   doc += LF + LF + LF;
   doc += ESC_FEED_CUT;
-
+  doc += DOTS + LF;
   return doc;
 }
 
