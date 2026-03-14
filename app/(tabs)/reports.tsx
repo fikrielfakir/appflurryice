@@ -6,6 +6,7 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
+  Modal,
   ListRenderItemInfo,
   TextInput,
 } from "react-native";
@@ -174,10 +175,12 @@ export default function ReportsScreen() {
   const { t } = useTranslation();
 
   const [filter, setFilter] = useState<FilterKey>("daily");
-  const [activeTab, setActiveTab] = useState<"metrics" | "sales" | "transactions">("metrics");
+  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [summaryClientFilter, setSummaryClientFilter] = useState<string>("all");
 
   const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
     useReportMetrics(sales, transactions, products, filter);
@@ -239,7 +242,9 @@ export default function ReportsScreen() {
     periodLabel,
     vendorName:     userProfile?.name || userProfile?.username,
     truckLabel:     config.truckLocation,
-  }), [financials, truckStock, filteredSales.length, periodLabel, userProfile, config]);
+    sales:          filteredSales,
+    clientFilter:   summaryClientFilter !== "all" ? summaryClientFilter : undefined,
+  }), [financials, truckStock, filteredSales, periodLabel, userProfile, config, summaryClientFilter]);
 
   // ── Filter pills config ──────────────────────────────────────────────────
   const FILTERS: { key: FilterKey; label: string }[] = [
@@ -270,7 +275,7 @@ export default function ReportsScreen() {
   }, []);
 
   const handleTabChange = useCallback(
-    (tab: "metrics" | "sales" | "transactions") => {
+    (tab: "metrics" | "transactions") => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setActiveTab(tab);
     },

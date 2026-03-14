@@ -32,6 +32,8 @@ export interface DailySummaryData {
   periodLabel: string;
   vendorName?: string;
   truckLabel?: string;
+  sales?: Sale[];        // full list for detailed line-item print
+  clientFilter?: string; // filter to one client (empty = all)
 }
 
 export interface UsePrintInvoiceReturn {
@@ -365,7 +367,7 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
 
   const RIGHT_COL_WIDTH = 42;
   const valueLine = (label: string, value: string, bold = false): string => {
-    const valueStr =   value + ' MAD';
+    const valueStr = value + ' MAD';
     const spaces = RIGHT_COL_WIDTH - label.length - valueStr.length;
     const line = label + ' '.repeat(Math.max(1, spaces)) + valueStr + LF;
     return bold ? ESC_BOLD_ON + line + ESC_BOLD_OFF : line;
@@ -374,6 +376,27 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   const metaLine = (label: string, value: string): string => {
     return padEnd(label, 14) + value + LF;
   };
+
+  // ── Compute filtered sales ─────────────────────────────────────────────────
+  let filteredSales: Sale[] | undefined = data.sales;
+  if (filteredSales && data.clientFilter) {
+    const cf = data.clientFilter.toLowerCase();
+    filteredSales = filteredSales.filter(
+      s => (s.customerName || '').toLowerCase() === cf,
+    );
+  }
+
+  // Recompute totals from filtered list (if we have sales data)
+  const totalSales     = filteredSales
+    ? filteredSales.reduce((s, x) => s + x.amount, 0)
+    : data.totalSales;
+  const cashCollected  = filteredSales
+    ? filteredSales.reduce((s, x) => s + x.paid, 0)
+    : data.cashCollected;
+  const customerCredit = filteredSales
+    ? filteredSales.reduce((s, x) => s + Math.max(0, x.amount - x.paid), 0)
+    : data.customerCredit;
+  const salesCount     = filteredSales ? filteredSales.length : data.salesCount;
 
   let doc = ESC_INIT;
 
@@ -395,18 +418,47 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   doc += metaLine('Periode:', data.periodLabel);
   if (data.vendorName) doc += metaLine('Vendeur:', data.vendorName);
   if (data.truckLabel) doc += metaLine('Camion:', data.truckLabel);
+  if (data.clientFilter) doc += metaLine('Client:', data.clientFilter);
   doc += DASHES + LF;
 
+  // ── Detail des ventes ──────────────────────────────────────────────────────
+  if (filteredSales && filteredSales.length > 0) {
+    // Column widths: invoice(9) + client(17) + amount(10) + status(4) = 40
+    const statusAbbr = (s: Sale) => {
+      if (s.status === 'paid')    return 'PAYE';
+      if (s.status === 'partial') return 'PART';
+      return 'IMP ';
+    };
+    doc += ESC_BOLD_ON + 'DETAIL DES VENTES:' + ESC_BOLD_OFF + LF;
+    doc += DASHES + LF;
+    // Header row
+    doc += padEnd('#Fact.', 9)
+         + padEnd('Client', 17)
+         + padStart('Montant', 10)
+         + '  Stat' + LF;
+    doc += DASHES + LF;
+    for (const sale of filteredSales) {
+      const inv    = ('#' + (sale.invoiceNumber ?? sale.id).slice(0, 7)).padEnd(9);
+      const client = (sale.clientName || 'N/A').slice(0, 17).padEnd(17);
+      const amount = padStart(fmt(sale.amount), 10);
+      const stat   = statusAbbr(sale);
+      doc += inv + client + amount + '  ' + stat + LF;
+    }
+    doc += DASHES + LF;
+  }
+
   // ── Financier ──────────────────────────────────────────────────────────────
-  doc += valueLine('Total ventes:', fmt(data.totalSales), true);
+  doc += valueLine('Total ventes:', fmt(totalSales), true);
   doc += DASHES + LF;
-  doc += valueLine('Encaisse:', fmt(data.cashCollected));
-  doc += valueLine('Credit clients:', fmt(data.customerCredit));
+  doc += valueLine('Encaisse:', fmt(cashCollected));
+  doc += valueLine('Credit clients:', fmt(customerCredit));
   doc += DASHES + LF;
 
   // ── Stock & activite ───────────────────────────────────────────────────────
-  doc += valueLine('Stock restant:', fmt(data.stockValue));
-  doc += valueLine('Nb. factures:', String(data.salesCount));
+  if (!data.clientFilter) {
+    doc += valueLine('Stock restant:', fmt(data.stockValue));
+  }
+  doc += valueLine('Nb. factures:', String(salesCount));
   doc += DASHES + LF;
 
   // ── Footer ─────────────────────────────────────────────────────────────────
