@@ -7,6 +7,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ListRenderItemInfo,
+  TextInput,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,7 +17,7 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { useApp } from "@/context/AppContext";
-import { Transaction } from "@/context/AppContext";
+import { Transaction, Sale } from "@/context/AppContext";
 import { AppHeader } from "@/components/common/AppHeader";
 import { MetricCard } from "@/components/reports/MetricCard";
 import { TransactionRow } from "@/components/reports/TransactionRow";
@@ -77,6 +78,95 @@ function EmptyTransactions({ label }: { label: string }) {
   );
 }
 
+// ── Sale row sub-component ────────────────────────────────────────────────────
+function SaleRow({ sale, isLast }: { sale: Sale; isLast: boolean }) {
+  const remaining = sale.amount - sale.paid;
+  const statusColor =
+    sale.status === "paid"    ? D.emerald :
+    sale.status === "partial" ? D.amber   : D.rose;
+  const statusBg =
+    sale.status === "paid"    ? D.emeraldBg :
+    sale.status === "partial" ? D.amberBg   : D.roseBg;
+  const statusLabel =
+    sale.status === "paid"    ? "Payé"    :
+    sale.status === "partial" ? "Partiel" : "Impayé";
+
+  const dateStr = new Date(sale.date).toLocaleDateString("fr-MA", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+  });
+
+  return (
+    <View style={[SR.row, !isLast && SR.rowBorder]}>
+      <View style={SR.leftCol}>
+        <Text style={SR.invoiceNum}>#{sale.invoiceNumber}</Text>
+        <Text style={SR.clientName} numberOfLines={1}>{sale.customerName}</Text>
+        <Text style={SR.date}>{dateStr}</Text>
+      </View>
+      <View style={SR.rightCol}>
+        <Text style={SR.amount}>MAD {fmt(sale.amount)}</Text>
+        {remaining > 0 && (
+          <Text style={SR.remaining}>reste MAD {fmt(remaining)}</Text>
+        )}
+        <View style={[SR.badge, { backgroundColor: statusBg }]}>
+          <Text style={[SR.badgeTxt, { color: statusColor }]}>{statusLabel}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const SR = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: D.border },
+  leftCol:  { flex: 1, marginRight: 10 },
+  rightCol: { alignItems: "flex-end", gap: 3 },
+  invoiceNum: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: D.ink,
+    letterSpacing: -0.2,
+  },
+  clientName: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: D.inkMid,
+    marginTop: 2,
+    maxWidth: 180,
+  },
+  date: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: D.inkGhost,
+    marginTop: 2,
+  },
+  amount: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: D.ink,
+    letterSpacing: -0.3,
+  },
+  remaining: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: D.rose,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginTop: 2,
+  },
+  badgeTxt: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
@@ -84,11 +174,43 @@ export default function ReportsScreen() {
   const { t } = useTranslation();
 
   const [filter, setFilter] = useState<FilterKey>("daily");
-  const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
+  const [activeTab, setActiveTab] = useState<"metrics" | "sales" | "transactions">("metrics");
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [clientFilter, setClientFilter] = useState<string>("all");
+  const [clientSearch, setClientSearch] = useState("");
 
   const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
     useReportMetrics(sales, transactions, products, filter);
+
+  // ── Unique client list from filteredSales ────────────────────────────────
+  const uniqueClients = useMemo(() => {
+    const names = Array.from(new Set(filteredSales.map(s => s.customerName))).sort();
+    return names;
+  }, [filteredSales]);
+
+  // ── Sales filtered by selected client + search ───────────────────────────
+  const clientFilteredSales = useMemo(() => {
+    let list = filteredSales;
+    if (clientFilter !== "all") {
+      list = list.filter(s => s.customerName === clientFilter);
+    }
+    if (clientSearch.trim()) {
+      const q = clientSearch.trim().toLowerCase();
+      list = list.filter(s =>
+        s.customerName.toLowerCase().includes(q) ||
+        s.invoiceNumber.toLowerCase().includes(q)
+      );
+    }
+    return list.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredSales, clientFilter, clientSearch]);
+
+  // ── Client-filtered totals ───────────────────────────────────────────────
+  const clientTotals = useMemo(() => {
+    const total   = clientFilteredSales.reduce((s, x) => s + x.amount, 0);
+    const paid    = clientFilteredSales.reduce((s, x) => s + x.paid, 0);
+    const remaining = total - paid;
+    return { total, paid, remaining };
+  }, [clientFilteredSales]);
 
   const {
     printDailySummary,
@@ -148,12 +270,17 @@ export default function ReportsScreen() {
   }, []);
 
   const handleTabChange = useCallback(
-    (tab: "metrics" | "transactions") => {
+    (tab: "metrics" | "sales" | "transactions") => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setActiveTab(tab);
     },
     []
   );
+
+  const handleClientFilter = useCallback((name: string) => {
+    Haptics.selectionAsync();
+    setClientFilter(name);
+  }, []);
 
   const handleOpenPrint = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -263,27 +390,125 @@ export default function ReportsScreen() {
 
       {/* ── Tab bar ── */}
       <View style={S.tabBar}>
-        {(["metrics", "transactions"] as const).map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[S.tabBtn, activeTab === tab && S.tabBtnActive]}
-            onPress={() => handleTabChange(tab)}
-          >
-            <Feather
-              name={tab === "metrics" ? "pie-chart" : "list"}
-              size={14}
-              color={activeTab === tab ? D.heroAccent : D.inkSoft}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={[S.tabTxt, activeTab === tab && S.tabTxtActive]}>
-              {tab === "metrics" ? t("reports.metrics") : t("reports.logs")}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {(["metrics", "sales", "transactions"] as const).map((tab) => {
+          const icon = tab === "metrics" ? "pie-chart" : tab === "sales" ? "shopping-bag" : "list";
+          const label = tab === "metrics" ? t("reports.metrics") : tab === "sales" ? "Ventes" : t("reports.logs");
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[S.tabBtn, activeTab === tab && S.tabBtnActive]}
+              onPress={() => handleTabChange(tab)}
+            >
+              <Feather
+                name={icon}
+                size={14}
+                color={activeTab === tab ? D.heroAccent : D.inkSoft}
+                style={{ marginRight: 5 }}
+              />
+              <Text style={[S.tabTxt, activeTab === tab && S.tabTxtActive]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* ── Content ── */}
-      {activeTab === "metrics" ? (
+      {activeTab === "sales" ? (
+        <View style={S.txContainer}>
+          {/* Search bar */}
+          <View style={S.searchWrap}>
+            <Feather name="search" size={15} color={D.inkSoft} style={{ marginRight: 8 }} />
+            <TextInput
+              style={S.searchInput}
+              placeholder="Rechercher client ou facture…"
+              placeholderTextColor={D.inkGhost}
+              value={clientSearch}
+              onChangeText={setClientSearch}
+              returnKeyType="search"
+            />
+            {clientSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setClientSearch("")}>
+                <Feather name="x" size={15} color={D.inkSoft} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Client filter pills */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={S.clientScrollWrap}
+            contentContainerStyle={S.clientScrollContent}
+          >
+            <TouchableOpacity
+              style={[S.clientPill, clientFilter === "all" && S.clientPillActive]}
+              onPress={() => handleClientFilter("all")}
+            >
+              <Text style={[S.clientPillTxt, clientFilter === "all" && S.clientPillTxtActive]}>
+                Tous ({filteredSales.length})
+              </Text>
+            </TouchableOpacity>
+            {uniqueClients.map(name => {
+              const count = filteredSales.filter(s => s.customerName === name).length;
+              return (
+                <TouchableOpacity
+                  key={name}
+                  style={[S.clientPill, clientFilter === name && S.clientPillActive]}
+                  onPress={() => handleClientFilter(name)}
+                >
+                  <Text style={[S.clientPillTxt, clientFilter === name && S.clientPillTxtActive]}
+                    numberOfLines={1}
+                  >
+                    {name} ({count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Totals strip */}
+          {clientFilteredSales.length > 0 && (
+            <View style={S.totalStrip}>
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Total</Text>
+                <Text style={[S.totalStripVal, { color: D.ink }]}>MAD {fmt(clientTotals.total)}</Text>
+              </View>
+              <View style={S.totalStripDivider} />
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Encaissé</Text>
+                <Text style={[S.totalStripVal, { color: D.emerald }]}>MAD {fmt(clientTotals.paid)}</Text>
+              </View>
+              <View style={S.totalStripDivider} />
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Reste</Text>
+                <Text style={[S.totalStripVal, { color: D.rose }]}>MAD {fmt(clientTotals.remaining)}</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Sales list */}
+          {clientFilteredSales.length === 0 ? (
+            <EmptyTransactions label="Aucune vente trouvée" />
+          ) : (
+            <View style={S.txCard}>
+              <FlatList
+                data={clientFilteredSales}
+                keyExtractor={s => s.id}
+                renderItem={({ item, index }) => (
+                  <SaleRow sale={item} isLast={index === clientFilteredSales.length - 1} />
+                )}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
+                initialNumToRender={20}
+                maxToRenderPerBatch={30}
+                windowSize={10}
+                removeClippedSubviews
+              />
+            </View>
+          )}
+        </View>
+      ) : activeTab === "metrics" ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -636,6 +861,93 @@ const S = StyleSheet.create({
   statusCount: { fontSize: 24, fontFamily: "Inter_700Bold" },
   statusLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: D.inkSoft },
   statusPct:   { fontSize: 10, fontFamily: "Inter_400Regular", color: D.inkGhost },
+
+  // Search
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    backgroundColor: D.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: D.border,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: D.ink,
+  },
+
+  // Client filter pills
+  clientScrollWrap: { flexGrow: 0 },
+  clientScrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 8,
+    flexDirection: "row",
+  },
+  clientPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: D.surface,
+    borderWidth: 1,
+    borderColor: D.border,
+    maxWidth: 160,
+  },
+  clientPillActive: {
+    backgroundColor: D.heroAccent,
+    borderColor: D.heroAccent,
+  },
+  clientPillTxt: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: D.inkMid,
+  },
+  clientPillTxtActive: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+  },
+
+  // Totals strip
+  totalStrip: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginBottom: 10,
+    backgroundColor: D.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: D.border,
+    overflow: "hidden",
+  },
+  totalStripItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    gap: 3,
+  },
+  totalStripDivider: {
+    width: 1,
+    backgroundColor: D.border,
+    marginVertical: 8,
+  },
+  totalStripLbl: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: D.inkGhost,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  totalStripVal: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -0.3,
+  },
 
   // Transactions
   txContainer: { flex: 1 },
