@@ -31,10 +31,10 @@ const AVATAR_COLORS = [D.heroAccent, D.emerald, D.blue, D.amber, D.rose, D.viole
 
 // ── Sale Card ─────────────────────────────────────────────────────────────────
 function SaleCard({
-  sale, index, onDelete, onShare, onReturn, t,
+  sale, index, onDelete, onShare, t,
 }: {
   sale: Sale; index: number;
-  onDelete: () => void; onShare: () => void; onReturn: () => void; t: any;
+  onDelete: () => void; onShare: () => void; t: any;
 }) {
   const due = sale.amount - sale.paid;
   const meta = statusMeta(sale.status, t);
@@ -116,6 +116,12 @@ function SaleCard({
 
         {/* ── Meta chips ── */}
         <View style={S.metaRow}>
+          {sale.discount && sale.discount > 0 ? (
+            <View style={[S.metaChip, { backgroundColor: D.emeraldBg }]}>
+              <Feather name="percent" size={11} color={D.emerald} />
+              <Text style={[S.metaChipTxt, { color: D.emerald }]}>{sale.discount}%</Text>
+            </View>
+          ) : null}
           <View style={S.metaChip}>
             <Feather name="credit-card" size={11} color={D.inkSoft} />
             <Text style={S.metaChipTxt}>{sale.paymentMethod}</Text>
@@ -152,9 +158,6 @@ function SaleCard({
 
         {/* ── Actions ── */}
         <View style={S.actions}>
-          <TouchableOpacity style={[S.actionBtn, { backgroundColor: D.amberBg }]} onPress={onReturn}>
-            <Feather name="corner-up-left" size={15} color={D.amber} />
-          </TouchableOpacity>
           {sale.customerPhone ? (
             <TouchableOpacity style={[S.actionBtn, { backgroundColor: D.emeraldBg }]} onPress={handleCall}>
               <Feather name="phone" size={15} color={D.emerald} />
@@ -165,9 +168,6 @@ function SaleCard({
           </TouchableOpacity>
           <TouchableOpacity style={[S.actionBtn, { backgroundColor: D.violetBg }]} onPress={handlePrint}>
             <Feather name="printer" size={15} color={D.violet} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[S.actionBtn, { backgroundColor: D.blueBg }]} onPress={handleEdit}>
-            <Feather name="edit-2" size={15} color={D.blue} />
           </TouchableOpacity>
           <TouchableOpacity style={[S.actionBtn, { backgroundColor: D.roseBg }]} onPress={onDelete}>
             <Feather name="trash-2" size={15} color={D.rose} />
@@ -349,10 +349,6 @@ export default function SalesScreen() {
               setShowDeleteConfirm(true);
             }}
             onShare={() => handleShare(item)}
-            onReturn={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setShowReturnConfirm(true);
-            }}
           />
         )}
         ListEmptyComponent={

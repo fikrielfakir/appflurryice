@@ -82,6 +82,21 @@ export interface SaleItem {
   productId?: string;
 }
 
+export interface DebtSettlement {
+  id: string;
+  saleId: string;
+  customerName: string;
+  customerPhone: string;
+  vendorName: string;
+  date: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  isPartial: boolean;
+  settlementDate: string;
+}
+
 export interface Transaction {
   id: string;
   date: string;
@@ -140,6 +155,7 @@ interface AppContextValue {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   transfers: Transfer[];
+  debtSettlements: DebtSettlement[];
   cart: CartItem[];
   config: AppConfig;
   updateConfig: (updates: Partial<AppConfig>) => void;
@@ -149,6 +165,8 @@ interface AppContextValue {
   logout: () => void;
   addSale: (sale: Omit<Sale, "id" | "date" | "invoiceNumber">) => Sale;
   deleteSale: (id: string) => void;
+  updateSalePayment: (saleId: string, additionalPaid: number) => void;
+  addDebtSettlement: (settlement: Omit<DebtSettlement, "id" | "settlementDate">) => void;
   addContact: (contact: Omit<Contact, "id" | "date">) => void;
   deleteContact: (id: string) => void;
   updateContact: (id: string, updates: Partial<Omit<Contact, "id" | "date">>) => void;
@@ -183,6 +201,7 @@ const KEYS = {
   expenses: "bizpos_expenses",
   transfers: "bizpos_transfers",
   products: "bizpos_products",
+  debtSettlements: "bizpos_debt_settlements",
   initialDataLoaded: "bizpos_initial_data_loaded",
   themeMode: "bizpos_theme_mode",
   config: "bizpos_app_config",
@@ -241,6 +260,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [debtSettlements, setDebtSettlements] = useState<DebtSettlement[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -269,6 +289,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         savedExpenses,
         savedTransfers,
         savedProducts,
+        savedDebtSettlements,
         initialDataLoaded,
         configRaw,
       ] = await Promise.all([
@@ -280,6 +301,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.expenses),
         AsyncStorage.getItem(KEYS.transfers),
         AsyncStorage.getItem(KEYS.products),
+        AsyncStorage.getItem(KEYS.debtSettlements),
         AsyncStorage.getItem(KEYS.initialDataLoaded),
         AsyncStorage.getItem(KEYS.config),
       ]);
@@ -305,6 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setExpenses(savedExpenses ? JSON.parse(savedExpenses) : []);
       setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
       setProducts(savedProducts ? JSON.parse(savedProducts) : []);
+      setDebtSettlements(savedDebtSettlements ? JSON.parse(savedDebtSettlements) : []);
 
       const lastSync = await syncService.getLastSyncTime();
       setLastSyncTime(lastSync);
@@ -573,6 +596,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.expenses, JSON.stringify(updated));
   }
 
+  async function addDebtSettlement(settlement: Omit<DebtSettlement, "id" | "settlementDate">) {
+    const newSettlement: DebtSettlement = {
+      ...settlement,
+      id: genId(),
+      settlementDate: new Date().toISOString(),
+    };
+    const updated = [newSettlement, ...debtSettlements];
+    setDebtSettlements(updated);
+    await AsyncStorage.setItem(KEYS.debtSettlements, JSON.stringify(updated));
+  }
+
   // ─── FIXED addTransfer ───────────────────────────────────────────────────────
 // Drop-in replacement for addTransfer inside AppProvider
 // Fixes: transfer_in QR scans not updating stock
@@ -694,6 +728,27 @@ async function addTransfer(transfer: Transfer) {
 
   function clearCart() { setCart([]); }
 
+  function updateSalePayment(saleId: string, additionalPaid: number) {
+    setSales(prev => {
+      const sale = prev.find(s => s.id === saleId);
+      if (!sale) return prev;
+      
+      const newPaid = sale.paid + additionalPaid;
+      const newStatus: "paid" | "partial" | "due" = 
+        newPaid >= sale.amount ? "paid" : 
+        newPaid > 0 ? "partial" : "due";
+      
+      const updated = prev.map(s => 
+        s.id === saleId 
+          ? { ...s, paid: newPaid, status: newStatus }
+          : s
+      );
+      
+      AsyncStorage.setItem(KEYS.sales, JSON.stringify(updated));
+      return updated;
+    });
+  }
+
   // ── Computed totals ───────────────────────────────────────────────────────────
 
   const totalSales = useMemo(() => sales.reduce((s, x) => s + x.amount, 0), [sales]);
@@ -706,11 +761,12 @@ async function addTransfer(transfer: Transfer) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, transactions, contacts, setContacts, expenses, products, transfers, cart, config, updateConfig, setProducts,
+    sales, transactions, contacts, setContacts, expenses, products, transfers, debtSettlements, cart, config, updateConfig, setProducts,
     setupFromQR,
     completeSetup,
     login, logout,
-    addSale, deleteSale,
+    addSale, deleteSale, updateSalePayment,
+    addDebtSettlement,
     addContact, deleteContact, updateContact,
     addExpense, deleteExpense,
     addTransfer,
@@ -724,7 +780,7 @@ async function addTransfer(transfer: Transfer) {
     isLoading, isSyncing, isSidebarOpen, setIsSidebarOpen, syncData, lastSyncTime,
   }), [
     activeUser, userProfile, needsSetup,
-    sales, transactions, contacts, expenses, products, transfers, cart, config,
+    sales, transactions, contacts, expenses, products, transfers, debtSettlements, cart, config,
     totalSales, totalExpenses, totalDue, netProfit,
     isLoading, isSyncing, isSidebarOpen, lastSyncTime,
   ]);

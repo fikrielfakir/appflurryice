@@ -1,7 +1,12 @@
 import { useMemo } from "react";
 import { Sale, Transaction, Product } from "@/context/AppContext";
 
-export type FilterKey = "daily" | "weekly" | "monthly" | "all";
+export type FilterKey = "daily" | "weekly" | "monthly" | "all" | "custom";
+
+export interface DateRange {
+  start: Date;
+  end: Date;
+}
 
 function getDateBoundary(filter: FilterKey): Date | null {
   if (filter === "all") return null;
@@ -17,9 +22,18 @@ function getDateBoundary(filter: FilterKey): Date | null {
 
 function filterByDate<T extends { date: string }>(
   items: T[],
-  filter: FilterKey
+  filter: FilterKey,
+  dateRange?: DateRange
 ): T[] {
   if (filter === "all") return items;
+  if (filter === "custom" && dateRange) {
+    const start = new Date(dateRange.start.getFullYear(), dateRange.start.getMonth(), dateRange.start.getDate());
+    const end = new Date(dateRange.end.getFullYear(), dateRange.end.getMonth(), dateRange.end.getDate(), 23, 59, 59);
+    return items.filter((item) => {
+      const d = new Date(item.date);
+      return d >= start && d <= end;
+    });
+  }
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const boundary = getDateBoundary(filter);
@@ -69,16 +83,17 @@ export function useReportMetrics(
   sales: Sale[],
   transactions: Transaction[],
   products: Product[],
-  filter: FilterKey
+  filter: FilterKey,
+  dateRange?: DateRange
 ): ReportMetrics {
   const filteredSales = useMemo(
-    () => filterByDate(sales, filter),
-    [sales, filter]
+    () => filterByDate(sales, filter, dateRange),
+    [sales, filter, dateRange]
   );
 
   const filteredTransactions = useMemo(
-    () => filterByDate(transactions, filter),
-    [transactions, filter]
+    () => filterByDate(transactions, filter, dateRange),
+    [transactions, filter, dateRange]
   );
 
   const financials = useMemo<ReportFinancials>(() => {

@@ -58,7 +58,7 @@ export default function PaymentScreen() {
   const topInset      = Platform.OS === "web" ? 67 : insets.top;
   const paidNum       = parseFloat(paidAmount.replace(/,/g, "") || "0");
   const returnNum     = parseFloat(returnAmount || "0");
-  const totalWithReturn = totalAmount - returnNum;
+  const totalWithReturn = finalTotal - returnNum;
   const remaining     = Math.max(0, totalWithReturn - paidNum);
   const change        = Math.max(0, paidNum - totalWithReturn);
   const saleStatus    = paidNum >= totalWithReturn ? "paid" : paidNum > 0 ? "partial" : "due";

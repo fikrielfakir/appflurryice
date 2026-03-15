@@ -9,6 +9,9 @@ import {
   Modal,
   ListRenderItemInfo,
   TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -23,7 +26,7 @@ import { AppHeader } from "@/components/common/AppHeader";
 import { MetricCard } from "@/components/reports/MetricCard";
 import { TransactionRow } from "@/components/reports/TransactionRow";
 import { DailySummaryModal } from "@/components/reports/DailySummaryModal";
-import { useReportMetrics, FilterKey } from "@/hooks/useReportMetrics";
+import { useReportMetrics, FilterKey, DateRange } from "@/hooks/useReportMetrics";
 import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 import { D } from "@/constants/theme";
 
@@ -81,6 +84,7 @@ function EmptyTransactions({ label }: { label: string }) {
 
 // ── Sale row sub-component ────────────────────────────────────────────────────
 function SaleRow({ sale, isLast }: { sale: Sale; isLast: boolean }) {
+  const { t } = useTranslation();
   const remaining = sale.amount - sale.paid;
   const statusColor =
     sale.status === "paid"    ? D.emerald :
@@ -89,8 +93,8 @@ function SaleRow({ sale, isLast }: { sale: Sale; isLast: boolean }) {
     sale.status === "paid"    ? D.emeraldBg :
     sale.status === "partial" ? D.amberBg   : D.roseBg;
   const statusLabel =
-    sale.status === "paid"    ? "Payé"    :
-    sale.status === "partial" ? "Partiel" : "Impayé";
+    sale.status === "paid"    ? t("reports.paid")    :
+    sale.status === "partial" ? t("reports.partial") : t("reports.due");
 
   const dateStr = new Date(sale.date).toLocaleDateString("fr-MA", {
     day: "2-digit", month: "2-digit", year: "2-digit",
@@ -177,19 +181,31 @@ export default function ReportsScreen() {
   const [filter, setFilter] = useState<FilterKey>("daily");
   const [activeTab, setActiveTab] = useState<"metrics" | "transactions">("metrics");
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<"start" | "end">("start");
+  const [tempStartDate, setTempStartDate] = useState(new Date());
+  const [tempEndDate, setTempEndDate] = useState(new Date());
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [clientSearch, setClientSearch] = useState("");
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [summaryClientFilter, setSummaryClientFilter] = useState<string>("all");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
-    useReportMetrics(sales, transactions, products, filter);
+    useReportMetrics(sales, transactions, products, filter, dateRange);
 
   // ── Unique client list from filteredSales ────────────────────────────────
   const uniqueClients = useMemo(() => {
     const names = Array.from(new Set(filteredSales.map(s => s.customerName))).sort();
     return names;
   }, [filteredSales]);
+
+  // ── Filtered client list for dropdown ─────────────────────────────────────
+  const filteredClients = useMemo(() => {
+    if (!clientSearch.trim()) return uniqueClients;
+    const q = clientSearch.toLowerCase().trim();
+    return uniqueClients.filter(name => name.toLowerCase().includes(q));
+  }, [uniqueClients, clientSearch]);
 
   // ── Sales filtered by selected client + search ───────────────────────────
   const clientFilteredSales = useMemo(() => {
@@ -224,14 +240,19 @@ export default function ReportsScreen() {
   } = usePrintInvoice();
 
   const periodLabel = useMemo(() => {
+    if (filter === "custom" && dateRange) {
+      const fmt = (d: Date) => d.toLocaleDateString("fr-MA", { day: "2-digit", month: "2-digit" });
+      return `${fmt(dateRange.start)} - ${fmt(dateRange.end)}`;
+    }
     const map: Record<FilterKey, string> = {
       daily:   "Aujourd'hui",
       weekly:  "Cette semaine",
-      monthly: "Ce mois",
+      monthly: "Ce mois-ci",
       all:     "Tout",
+      custom:  "Personnalisé",
     };
     return map[filter];
-  }, [filter]);
+  }, [filter, dateRange]);
 
   const summaryData = useMemo(() => ({
     totalSales:     financials.totalRevenue,
@@ -244,7 +265,8 @@ export default function ReportsScreen() {
     truckLabel:     config.truckLocation,
     sales:          filteredSales,
     clientFilter:   summaryClientFilter !== "all" ? summaryClientFilter : undefined,
-  }), [financials, truckStock, filteredSales, periodLabel, userProfile, config, summaryClientFilter]);
+    dateRange:      dateRange,
+  }), [financials, truckStock, filteredSales, periodLabel, userProfile, config, summaryClientFilter, dateRange]);
 
   // ── Filter pills config ──────────────────────────────────────────────────
   const FILTERS: { key: FilterKey; label: string }[] = [
@@ -252,6 +274,7 @@ export default function ReportsScreen() {
     { key: "weekly",  label: t("reports.weekly") },
     { key: "monthly", label: t("reports.monthly") },
     { key: "all",     label: t("reports.all") },
+    { key: "custom",  label: t("reports.custom") || "Date" },
   ];
 
   // ── FlatList keyExtractor & renderItem (stable references) ───────────────
@@ -271,7 +294,40 @@ export default function ReportsScreen() {
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleFilterChange = useCallback((key: FilterKey) => {
     Haptics.selectionAsync();
-    setFilter(key);
+    if (key === "custom") {
+      setShowDatePicker(true);
+    } else {
+      setFilter(key);
+      setDateRange(undefined);
+    }
+  }, []);
+
+  const handleOpenDatePicker = useCallback(() => {
+    setDatePickerMode("start");
+    setTempStartDate(dateRange?.start || new Date());
+    setTempEndDate(dateRange?.end || new Date());
+    setShowDatePicker(true);
+  }, [dateRange]);
+
+  const handleDateChange = useCallback((event: any, selectedDate?: Date) => {
+    if (selectedDate) {
+      if (datePickerMode === "start") {
+        setTempStartDate(selectedDate);
+        setDatePickerMode("end");
+      } else {
+        setTempEndDate(selectedDate);
+      }
+    }
+  }, [datePickerMode]);
+
+  const handleConfirmDateRange = useCallback(() => {
+    setDateRange({ start: tempStartDate, end: tempEndDate });
+    setFilter("custom");
+    setShowDatePicker(false);
+  }, [tempStartDate, tempEndDate]);
+
+  const handleCancelDatePicker = useCallback(() => {
+    setShowDatePicker(false);
   }, []);
 
   const handleTabChange = useCallback(
@@ -285,6 +341,7 @@ export default function ReportsScreen() {
   const handleClientFilter = useCallback((name: string) => {
     Haptics.selectionAsync();
     setClientFilter(name);
+    setSummaryClientFilter(name);
   }, []);
 
   const handleOpenPrint = useCallback(() => {
@@ -395,9 +452,9 @@ export default function ReportsScreen() {
 
       {/* ── Tab bar ── */}
       <View style={S.tabBar}>
-        {(["metrics", "sales", "transactions"] as const).map((tab) => {
-          const icon = tab === "metrics" ? "pie-chart" : tab === "sales" ? "shopping-bag" : "list";
-          const label = tab === "metrics" ? t("reports.metrics") : tab === "sales" ? "Ventes" : t("reports.logs");
+        {(["metrics", "transactions"] as const).map((tab) => {
+          const icon = tab === "metrics" ? "pie-chart" : "list";
+          const label = tab === "metrics" ? t("reports.metrics") : t("reports.logs");
           return (
             <TouchableOpacity
               key={tab}
@@ -419,101 +476,7 @@ export default function ReportsScreen() {
       </View>
 
       {/* ── Content ── */}
-      {activeTab === "sales" ? (
-        <View style={S.txContainer}>
-          {/* Search bar */}
-          <View style={S.searchWrap}>
-            <Feather name="search" size={15} color={D.inkSoft} style={{ marginRight: 8 }} />
-            <TextInput
-              style={S.searchInput}
-              placeholder="Rechercher client ou facture…"
-              placeholderTextColor={D.inkGhost}
-              value={clientSearch}
-              onChangeText={setClientSearch}
-              returnKeyType="search"
-            />
-            {clientSearch.length > 0 && (
-              <TouchableOpacity onPress={() => setClientSearch("")}>
-                <Feather name="x" size={15} color={D.inkSoft} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Client filter pills */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={S.clientScrollWrap}
-            contentContainerStyle={S.clientScrollContent}
-          >
-            <TouchableOpacity
-              style={[S.clientPill, clientFilter === "all" && S.clientPillActive]}
-              onPress={() => handleClientFilter("all")}
-            >
-              <Text style={[S.clientPillTxt, clientFilter === "all" && S.clientPillTxtActive]}>
-                Tous ({filteredSales.length})
-              </Text>
-            </TouchableOpacity>
-            {uniqueClients.map(name => {
-              const count = filteredSales.filter(s => s.customerName === name).length;
-              return (
-                <TouchableOpacity
-                  key={name}
-                  style={[S.clientPill, clientFilter === name && S.clientPillActive]}
-                  onPress={() => handleClientFilter(name)}
-                >
-                  <Text style={[S.clientPillTxt, clientFilter === name && S.clientPillTxtActive]}
-                    numberOfLines={1}
-                  >
-                    {name} ({count})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Totals strip */}
-          {clientFilteredSales.length > 0 && (
-            <View style={S.totalStrip}>
-              <View style={S.totalStripItem}>
-                <Text style={S.totalStripLbl}>Total</Text>
-                <Text style={[S.totalStripVal, { color: D.ink }]}>MAD {fmt(clientTotals.total)}</Text>
-              </View>
-              <View style={S.totalStripDivider} />
-              <View style={S.totalStripItem}>
-                <Text style={S.totalStripLbl}>Encaissé</Text>
-                <Text style={[S.totalStripVal, { color: D.emerald }]}>MAD {fmt(clientTotals.paid)}</Text>
-              </View>
-              <View style={S.totalStripDivider} />
-              <View style={S.totalStripItem}>
-                <Text style={S.totalStripLbl}>Reste</Text>
-                <Text style={[S.totalStripVal, { color: D.rose }]}>MAD {fmt(clientTotals.remaining)}</Text>
-              </View>
-            </View>
-          )}
-
-          {/* Sales list */}
-          {clientFilteredSales.length === 0 ? (
-            <EmptyTransactions label="Aucune vente trouvée" />
-          ) : (
-            <View style={S.txCard}>
-              <FlatList
-                data={clientFilteredSales}
-                keyExtractor={s => s.id}
-                renderItem={({ item, index }) => (
-                  <SaleRow sale={item} isLast={index === clientFilteredSales.length - 1} />
-                )}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
-                initialNumToRender={20}
-                maxToRenderPerBatch={30}
-                windowSize={10}
-                removeClippedSubviews
-              />
-            </View>
-          )}
-        </View>
-      ) : activeTab === "metrics" ? (
+      {activeTab === "metrics" ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
@@ -545,128 +508,61 @@ export default function ReportsScreen() {
             </MetricsRow>
           </View>
 
-          {/* Financial summary section */}
+          {/* Client filter dropdown */}
           <View style={S.section}>
             <SectionHeader
-              title={t("reports.financialSummary")}
-              dotColor={D.emerald}
+              title={t("reports.filterByClient")}
+              dotColor={D.heroAccent}
             />
-            <MetricsRow>
-              <MetricCard
-                label={t("reports.revenue")}
-                value={`MAD ${fmt(financials.totalRevenue)}`}
-                icon="trending-up"
-                color={D.emerald}
-                bg={D.emeraldBg}
-                sub={`${filteredSales.length} ${t("tabs.sales")}`}
-              />
-              <MetricCard
-                label={t("reports.cashCollected")}
-                value={`MAD ${fmt(financials.cashCollected)}`}
-                icon="check-circle"
-                color={D.teal}
-                bg={D.tealBg}
-                sub={`${Math.round(financials.collectionRate)}% ${t("reports.collected")}`}
-              />
-            </MetricsRow>
-
-            <View style={[S.metricsRow, { marginTop: 12 }]}>
-              <MetricCard
-                label={t("reports.customerCredit")}
-                value={`MAD ${fmt(financials.customerCredit)}`}
-                icon="clock"
-                color={D.amber}
-                bg={D.amberBg}
-                sub={`${statusCounts.due} ${t("reports.unpaid")}`}
-              />
-              <MetricCard
-                label={t("reports.avgSaleValue")}
-                value={`MAD ${fmt(financials.avgSaleValue)}`}
-                icon="bar-chart-2"
-                color={D.orange}
-                bg={D.orangeBg}
-                sub={t("reports.perInvoice")}
-              />
-            </View>
+            <TouchableOpacity
+              style={S.dropdownTrigger}
+              onPress={() => setShowClientDropdown(true)}
+            >
+              <View style={S.dropdownTriggerContent}>
+                <Feather name="users" size={16} color={D.heroAccent} />
+                <Text style={S.dropdownTriggerText}>
+                  {clientFilter === "all" 
+                    ? `${t("reports.allClients")} (${filteredSales.length})` 
+                    : `${clientFilter} (${filteredSales.filter(s => s.customerName === clientFilter).length})`}
+                </Text>
+              </View>
+              <Feather name="chevron-down" size={18} color={D.inkSoft} />
+            </TouchableOpacity>
           </View>
 
-          {/* Sales by status section */}
-          <View style={S.section}>
-            <SectionHeader
-              title={t("reports.salesByStatus")}
-              dotColor={D.violet}
-            />
-
-            <View style={S.progressBarWrap}>
-              <View
-                style={[
-                  S.progressSeg,
-                  {
-                    flex: statusCounts.paid / statusCounts.total,
-                    backgroundColor: D.emerald,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  S.progressSeg,
-                  {
-                    flex: statusCounts.partial / statusCounts.total,
-                    backgroundColor: D.amber,
-                  },
-                ]}
-              />
-              <View
-                style={[
-                  S.progressSeg,
-                  {
-                    flex: statusCounts.due / statusCounts.total,
-                    backgroundColor: D.rose,
-                  },
-                ]}
-              />
+          {/* Totals strip */}
+          {clientFilteredSales.length > 0 && (
+            <View style={S.totalStrip}>
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Total</Text>
+                <Text style={[S.totalStripVal, { color: D.ink }]}>MAD {fmt(clientTotals.total)}</Text>
+              </View>
+              <View style={S.totalStripDivider} />
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Encaissé</Text>
+                <Text style={[S.totalStripVal, { color: D.emerald }]}>MAD {fmt(clientTotals.paid)}</Text>
+              </View>
+              <View style={S.totalStripDivider} />
+              <View style={S.totalStripItem}>
+                <Text style={S.totalStripLbl}>Reste</Text>
+                <Text style={[S.totalStripVal, { color: D.rose }]}>MAD {fmt(clientTotals.remaining)}</Text>
+              </View>
             </View>
+          )}
 
-            <View style={S.statusRow}>
-              {[
-                {
-                  label: t("reports.paid"),
-                  count: statusCounts.paid,
-                  color: D.emerald,
-                  bg: D.emeraldBg,
-                },
-                {
-                  label: t("reports.partial"),
-                  count: statusCounts.partial,
-                  color: D.amber,
-                  bg: D.amberBg,
-                },
-                {
-                  label: t("reports.due"),
-                  count: statusCounts.due,
-                  color: D.rose,
-                  bg: D.roseBg,
-                },
-              ].map((s) => (
-                <View
-                  key={s.label}
-                  style={[S.statusCard, { borderTopColor: s.color }]}
-                >
-                  <View
-                    style={[S.statusIconWrap, { backgroundColor: s.bg }]}
-                  >
-                    <Text style={[S.statusCount, { color: s.color }]}>
-                      {s.count}
-                    </Text>
-                  </View>
-                  <Text style={S.statusLabel}>{s.label}</Text>
-                  <Text style={S.statusPct}>
-                    {Math.round((s.count / statusCounts.total) * 100)}%
-                  </Text>
-                </View>
-              ))}
+          {/* Sales list */}
+          {clientFilteredSales.length === 0 ? (
+            <EmptyTransactions label={t("reports.noSales")} />
+          ) : (
+            <View style={S.section}>
+              <SectionHeader title={t("reports.salesList")} dotColor={D.heroAccent} />
+              <View style={S.txCard}>
+                {clientFilteredSales.map((sale, index) => (
+                  <SaleRow key={sale.id} sale={sale} isLast={index === clientFilteredSales.length - 1} />
+                ))}
+              </View>
             </View>
-          </View>
+          )}
         </ScrollView>
       ) : (
         /* ── Transactions tab: FlatList for performance ── */
@@ -697,6 +593,118 @@ export default function ReportsScreen() {
           )}
         </View>
       )}
+
+      {/* ── Client Dropdown Modal ── */}
+      <Modal visible={showClientDropdown} transparent animationType="slide" onRequestClose={() => { setShowClientDropdown(false); setClientSearch(""); }}>
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={S.overlay}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => { setShowClientDropdown(false); setClientSearch(""); }} />
+          <View style={S.sheet}>
+            <View style={S.handle} />
+            <View style={S.sheetHeader}>
+              <Text style={S.sheetTitle}>{t("reports.selectClient")}</Text>
+              <TouchableOpacity onPress={() => { setShowClientDropdown(false); setClientSearch(""); }}>
+                <Feather name="x" size={20} color={D.inkSoft} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Search Input */}
+            <View style={S.searchWrap}>
+              <Feather name="search" size={15} color={D.inkSoft} style={{ marginRight: 8 }} />
+              <TextInput
+                style={S.searchInput}
+                placeholder={t("reports.searchClient")}
+                placeholderTextColor={D.inkGhost}
+                value={clientSearch}
+                onChangeText={setClientSearch}
+                autoFocus
+              />
+              {clientSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setClientSearch("")}>
+                  <Feather name="x" size={15} color={D.inkSoft} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView style={S.dropdownList} showsVerticalScrollIndicator={false}>
+              <TouchableOpacity
+                style={S.dropdownItem}
+                onPress={() => { handleClientFilter("all"); setShowClientDropdown(false); setClientSearch(""); }}
+              >
+                <Text style={S.dropdownItemText}>{t("reports.allClients")}</Text>
+                <Text style={S.dropdownItemCount}>({filteredSales.length})</Text>
+              </TouchableOpacity>
+              {filteredClients.length === 0 ? (
+                <View style={S.emptySearch}>
+                  <Text style={S.emptySearchText}>{t("reports.noClientFound")}</Text>
+                </View>
+              ) : (
+                filteredClients.map(name => {
+                  const count = filteredSales.filter(s => s.customerName === name).length;
+                  return (
+                    <TouchableOpacity
+                      key={name}
+                      style={S.dropdownItem}
+                      onPress={() => { handleClientFilter(name); setShowClientDropdown(false); setClientSearch(""); }}
+                    >
+                      <Text style={S.dropdownItemText}>{name}</Text>
+                      <Text style={S.dropdownItemCount}>({count})</Text>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Date Range Picker Modal ── */}
+      <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={handleCancelDatePicker}>
+        <Pressable style={S.modalBackdrop} onPress={handleCancelDatePicker} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={S.datePickerContainer}>
+          <View style={S.datePickerContent}>
+            <View style={S.datePickerHeader}>
+              <Text style={S.datePickerTitle}>{t("reports.selectDateRange") || "Sélectionner la période"}</Text>
+              <TouchableOpacity onPress={handleCancelDatePicker}>
+                <Feather name="x" size={20} color={D.ink} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={S.datePickerRow}>
+              <View style={S.datePickerField}>
+                <Text style={S.datePickerLabel}>{t("reports.startDate") || "Date début"}</Text>
+                <TouchableOpacity style={S.datePickerButton} onPress={() => { setDatePickerMode("start"); }}>
+                  <Feather name="calendar" size={16} color={D.heroAccent} />
+                  <Text style={S.datePickerText}>
+                    {tempStartDate.toLocaleDateString("fr-MA", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={S.datePickerField}>
+                <Text style={S.datePickerLabel}>{t("reports.endDate") || "Date fin"}</Text>
+                <TouchableOpacity style={S.datePickerButton} onPress={() => { setDatePickerMode("end"); }}>
+                  <Feather name="calendar" size={16} color={D.heroAccent} />
+                  <Text style={S.datePickerText}>
+                    {tempEndDate.toLocaleDateString("fr-MA", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={S.datePickerButtons}>
+              <TouchableOpacity style={S.datePickerCancelBtn} onPress={handleCancelDatePicker}>
+                <Text style={S.datePickerCancelTxt}>{t("common.cancel") || "Annuler"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={S.datePickerConfirmBtn} onPress={handleConfirmDateRange}>
+                <Text style={S.datePickerConfirmTxt}>{t("common.confirm") || "Confirmer"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* ── Daily Summary Print Modal ── */}
       <DailySummaryModal
@@ -989,5 +997,185 @@ const S = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_500Medium",
     color: D.inkSoft,
+  },
+
+  // Dropdown
+  dropdownTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: D.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 14,
+  },
+  dropdownTriggerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  dropdownTriggerText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: D.ink,
+  },
+  dropdownList: {
+    backgroundColor: D.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: D.border,
+    marginTop: 8,
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: D.ink,
+  },
+  dropdownItemCount: {
+    fontSize: 12,
+    color: D.inkSoft,
+  },
+
+  // Modal
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: "70%",
+  },
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: D.border,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: D.ink,
+  },
+
+  // Empty search
+  emptySearch: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptySearchText: {
+    fontSize: 14,
+    color: D.inkSoft,
+  },
+
+  // Date Picker Modal
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  datePickerContainer: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  datePickerContent: {
+    backgroundColor: D.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+  },
+  datePickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  datePickerTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: D.ink,
+  },
+  datePickerRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 20,
+  },
+  datePickerField: {
+    flex: 1,
+  },
+  datePickerLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: D.inkSoft,
+    marginBottom: 8,
+  },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: D.bg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: D.border,
+    padding: 12,
+  },
+  datePickerText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: D.ink,
+  },
+  datePickerButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  datePickerCancelBtn: {
+    flex: 1,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: D.surface,
+  },
+  datePickerCancelTxt: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: D.inkMid,
+  },
+  datePickerConfirmBtn: {
+    flex: 2,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: D.heroAccent,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  datePickerConfirmTxt: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#FFFFFF",
   },
 });

@@ -29,9 +29,9 @@ export default function DashboardScreen() {
 
   const QUICK_ACTIONS = [
     { title: t("dashboard.newSale"),    icon: "shopping-cart", color: D.heroAccent, bg: D.violetBg,  route: "/(tabs)/products"  },
-    { title: t("dashboard.addExpense"), icon: "minus-circle",  color: D.rose,       bg: D.roseBg,    route: "/(tabs)/expenses"  },
-    { title: t("tabs.contacts"),        icon: "users",         color: D.emerald,    bg: D.emeraldBg, route: "/(tabs)/contacts"  },
-    { title: t("tabs.reports"),         icon: "bar-chart-2",   color: D.blue,       bg: D.blueBg,    route: "/(tabs)/reports"   },
+    { title: t("tabs.debts"),         icon: "alert-circle",   color: D.rose,       bg: D.roseBg,    route: "/(tabs)/debts"   },
+    { title: t("tabs.contacts"),       icon: "users",         color: D.emerald,    bg: D.emeraldBg, route: "/(tabs)/contacts"  },
+    { title: t("tabs.reports"),        icon: "bar-chart-2",   color: D.blue,       bg: D.blueBg,    route: "/(tabs)/reports"   },
   ];
 
   function onRefresh() {

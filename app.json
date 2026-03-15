@@ -1,11 +1,11 @@
 {
   "expo": {
     "name": "BizPOS",
-    "slug": "my-app",
+    "slug": "bizpos",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "bizpos",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.myapp",
+      "bundleIdentifier": "com.bizpos.app",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
         "NSBluetoothPeripheralUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
@@ -25,7 +25,7 @@
       }
     },
     "android": {
-      "package": "com.myapp",
+      "package": "com.bizpos.app",
       "adaptiveIcon": {
         "backgroundColor": "#0B0F1A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -53,7 +53,8 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-asset"
+      "expo-asset",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -34,12 +34,14 @@ export interface DailySummaryData {
   truckLabel?: string;
   sales?: Sale[];        // full list for detailed line-item print
   clientFilter?: string; // filter to one client (empty = all)
+  dateRange?: { start: Date; end: Date };
 }
 
 export interface UsePrintInvoiceReturn {
   print: (sale: Sale) => Promise<void>;
   printTransfer: (transfer: Transfer) => Promise<void>;
   printDailySummary: (data: DailySummaryData) => Promise<void>;
+  printSettlement: (data: SettlementData) => Promise<void>;
   printTest: () => Promise<void>;
   exportPdf: (sale: Sale) => Promise<string | null>;
   isConnecting: boolean;
@@ -54,6 +56,18 @@ export interface UsePrintInvoiceReturn {
   disconnectPrinter: () => Promise<void>;
   isScanning: boolean;
   availablePrinters: PrinterDevice[];
+}
+
+export interface SettlementData {
+  customerName: string;
+  customerPhone: string;
+  vendorName: string;
+  date: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  isPartial: boolean;
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -72,19 +86,19 @@ const LOGO_ESC_POS_B64 = 'HXYwADAAYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 // ─────────────────────────────────────────────────────────────────────────────
 // ESC/POS constants
 // ─────────────────────────────────────────────────────────────────────────────
-const ESC_INIT         = '\x1b\x40';
-const ESC_ALIGN_LEFT   = '\x1b\x61\x00';
+const ESC_INIT = '\x1b\x40';
+const ESC_ALIGN_LEFT = '\x1b\x61\x00';
 const ESC_ALIGN_CENTER = '\x1b\x61\x01';
-const ESC_ALIGN_RIGHT  = '\x1b\x61\x02';
-const ESC_BOLD_ON      = '\x1b\x45\x01';
-const ESC_BOLD_OFF     = '\x1b\x45\x00';
-const ESC_DOUBLE_ON    = '\x1b\x21\x30';
-const ESC_DOUBLE_OFF   = '\x1b\x21\x00';
-const ESC_FEED_CUT     = '\x1d\x56\x41\x03';
-const LF               = '\n';
-const COL_WIDTH        = 40;
-const DASHES           = '-'.repeat(COL_WIDTH);
-const DOTS             = '- - - - - - - - - - - - - - - - - - - -';
+const ESC_ALIGN_RIGHT = '\x1b\x61\x02';
+const ESC_BOLD_ON = '\x1b\x45\x01';
+const ESC_BOLD_OFF = '\x1b\x45\x00';
+const ESC_DOUBLE_ON = '\x1b\x21\x30';
+const ESC_DOUBLE_OFF = '\x1b\x21\x00';
+const ESC_FEED_CUT = '\x1d\x56\x41\x03';
+const LF = '\n';
+const COL_WIDTH = 40;
+const DASHES = '-'.repeat(COL_WIDTH);
+const DOTS = '- - - - - - - - - - - - - - - - - - - -';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -103,6 +117,38 @@ function padStart(str: string, len: number): string {
   return ' '.repeat(len - str.length) + str;
 }
 
+function getFrenchPeriodLabel(periodLabel: string, dateRange?: { start: Date; end: Date }): string {
+  // If custom date range, format it in French
+  if (dateRange) {
+    const fmt = (d: Date) => {
+      const date = new Date(d);
+      return date.toLocaleDateString("fr-MA", { day: "2-digit", month: "2-digit", year: "numeric" });
+    };
+    return `${fmt(dateRange.start)} - ${fmt(dateRange.end)}`;
+  }
+  
+  const map: Record<string, string> = {
+    daily: "Aujourd'hui",
+    weekly: "Semaine",
+    monthly: "Mois",
+    all: "Tout",
+    Daily: "Aujourd'hui",
+    Weekly: "Semaine",
+    Monthly: "Mois",
+    All: "Tout",
+    // Add common variants
+    'Aujourd\'hui': "Aujourd'hui",
+    'Semaine': "Semaine",
+    'Mois': "Mois",
+    'Tout': "Tout",
+  };
+  if (map[periodLabel]) return map[periodLabel];
+
+  // If it looks like a date range or custom label, return as-is
+  // (already in French or untranslatable)
+  return periodLabel;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Logo: decode pre-rasterized ESC/POS binary from base64 (Option A — instant)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -110,7 +156,19 @@ function getPreRasterizedLogoCmd(): string {
   if (!LOGO_ESC_POS_B64) return '';
   try {
     const clean = LOGO_ESC_POS_B64.replace(/^data:image\/\w+;base64,/, '');
-    return atob(clean);
+    const binary = atob(clean);
+    // Minimum valid ESC/POS raster should have: header(8) + at least some data
+    if (binary.length < 100) return '';
+    
+    // Check for valid ESC/POS raster header: GS v 0 (0x1D 0x76 0x30 0x00)
+    const hasValidHeader = binary.charCodeAt(0) === 0x1D && 
+                           binary.charCodeAt(1) === 0x76 && 
+                           binary.charCodeAt(2) === 0x30 && 
+                           binary.charCodeAt(3) === 0x00;
+    
+    if (!hasValidHeader) return '';
+    
+    return binary;
   } catch {
     return '';
   }
@@ -127,7 +185,7 @@ async function buildEscPosLogoRuntime(base64: string): Promise<string> {
   if (_runtimeLogoCache !== null) return _runtimeLogoCache;
 
   try {
-    const clean    = base64.replace(/^data:image\/\w+;base64,/, '');
+    const clean = base64.replace(/^data:image\/\w+;base64,/, '');
     const TARGET_W = 384; // full width on 80mm @ 203dpi
 
     // Render a self-contained HTML page that:
@@ -207,12 +265,12 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   const dateStr = new Date(sale.date).toLocaleDateString('fr-MA', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
-  const subtotal  = sale.items.reduce((s, i) => s + i.qty * i.price, 0);
+  const subtotal = sale.items.reduce((s, i) => s + i.qty * i.price, 0);
   const remaining = sale.amount - sale.paid;
   const returnAmt = sale.returnAmount || 0;
   const statusLabel =
-    sale.status === 'paid'    ? 'PAYE'    :
-    sale.status === 'partial' ? 'PARTIEL' : 'IMPAYE';
+    sale.status === 'paid' ? 'PAYE' :
+      sale.status === 'partial' ? 'PARTIEL' : 'IMPAYE';
 
   // ── Summary line helper (label left, value right, total 40 chars) ─────────
   const TOTAL_WIDTH = 40;
@@ -243,7 +301,7 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
   if (logoCmd) {
     doc += logoCmd + LF;
   } else {
-    doc += ESC_DOUBLE_ON + 'FLURRY' + ESC_DOUBLE_OFF + LF;
+    doc += ESC_DOUBLE_ON + 'FLURRYICE' + ESC_DOUBLE_OFF + LF;
   }
   doc += DOTS + LF;
   doc += ESC_BOLD_ON + `FACTURE #${sale.invoiceNumber}` + ESC_BOLD_OFF + LF;
@@ -251,17 +309,17 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
 
   // ── Meta + Bill-to (side by side, separated by |) ─────────────────────────
   doc += ESC_ALIGN_LEFT;
-  doc += padEnd('Date:', 10)      + padEnd(dateStr.slice(0, 10), 10) + '  |  ' + ESC_BOLD_ON + 'CLIENT: ' + ESC_BOLD_OFF + sale.customerName.slice(0, 12) + LF;
-  doc += padEnd('Vendeur:', 10)   + padEnd((sale.vendeur || '-').slice(0, 10), 10) + '  |  ' + (sale.customerPhone || '').slice(0, 19) + LF;
-  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10)    + '  |  ' + LF;
+  doc += padEnd('Date:', 10) + padEnd(dateStr.slice(0, 10), 10) + '  |  ' + ESC_BOLD_ON + 'CLIENT: ' + ESC_BOLD_OFF + sale.customerName.slice(0, 12) + LF;
+  doc += padEnd('Vendeur:', 10) + padEnd((sale.vendeur || '-').slice(0, 10), 10) + '  |  ' + (sale.customerPhone || '').slice(0, 19) + LF;
+  doc += padEnd('Reglement:', 10) + padEnd(sale.paymentMethod.slice(0, 10), 10) + '  |  ' + LF;
   doc += DASHES + LF;
 
   // ── Items header ──────────────────────────────────────────────────────────
   doc += ESC_BOLD_ON;
   doc += padEnd('ARTICLE', 18)
-       + '   ' + padEnd('QTE', 4)
-       + '   ' + padStart('P.U.', 7)
-       + '   ' + padStart('TOTAL', 7) + LF;
+    + '   ' + padEnd('QTE', 4)
+    + '   ' + padStart('P.U.', 7)
+    + '   ' + padStart('TOTAL', 7) + LF;
   doc += ESC_BOLD_OFF;
   doc += DASHES + LF;
 
@@ -270,9 +328,9 @@ async function buildEscPosInvoice(sale: Sale): Promise<string> {
     const lineTotal = item.qty * item.price;
     const name = item.name.slice(0, 17);
     doc += padEnd(name, 18)
-         + '   ' + padEnd(String(item.qty), 4)
-         + '   ' + padStart(fmt(item.price), 7)
-         + '   ' + padStart(fmt(lineTotal), 7) + LF;
+      + '   ' + padEnd(String(item.qty), 4)
+      + '   ' + padStart(fmt(item.price), 7)
+      + '   ' + padStart(fmt(lineTotal), 7) + LF;
   }
   doc += DASHES + LF;
 
@@ -344,8 +402,8 @@ function buildEscPosTransfer(transfer: Transfer): string {
   for (const i of transfer.items) {
     const t = i.qty * (parseFloat(i.unit) || 0);
     doc += padEnd(i.name.slice(0, 21), 22)
-         + padEnd(String(i.qty), 6)
-         + padStart(`${fmt(t)} MAD`, 12) + LF;
+      + padEnd(String(i.qty), 6)
+      + padStart(`${fmt(t)} MAD`, 12) + LF;
   }
 
   doc += DASHES + LF;
@@ -358,6 +416,100 @@ function buildEscPosTransfer(transfer: Transfer): string {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ESC/POS settlement receipt builder
+// ─────────────────────────────────────────────────────────────────────────────
+async function buildEscPosSettlement(data: SettlementData): Promise<string> {
+  const today = new Date().toLocaleDateString('fr-MA', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  });
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-MA', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+  };
+
+  const RIGHT_COL_WIDTH = 44;
+  const row = (label: string, value: string): string => {
+    const spaces = RIGHT_COL_WIDTH - label.length - value.length;
+    return label + ' '.repeat(Math.max(1, spaces)) + value + LF;
+  };
+
+  let doc = ESC_INIT;
+  doc += ESC_ALIGN_CENTER;
+  
+  // Logo
+  const logoCmd = await getLogoEscPosCmd();
+  if (logoCmd) {
+    doc += logoCmd + LF;
+  } else {
+    doc += ESC_DOUBLE_ON + 'FLURRY' + ESC_DOUBLE_OFF + LF;
+  }
+  
+  doc += DOTS + LF;
+  doc += ESC_BOLD_ON + (data.isPartial ? 'REGLEMENT PARTIEL' : 'REGLEMENT NO PAYE') + ESC_BOLD_OFF + LF;
+  doc += DASHES + LF;
+
+  // Details
+  doc += ESC_ALIGN_LEFT;
+  doc += row('Client  :', data.customerName);
+  doc += row('Tel     :', data.customerPhone || '-');
+  doc += row('Vendeur :', data.vendorName || '-');
+  doc += row('Date    :', formatDate(data.date));
+  doc += row('Facture :', '#' + data.invoiceNumber);
+  doc += DASHES + LF;
+  
+  doc += row('Total Facture :', fmt(data.totalAmount) + ' MAD');
+  doc += row('Montant Paye  :', fmt(data.paidAmount) + ' MAD');
+  doc += DASHES + LF;
+  
+  doc += ESC_BOLD_ON + row('RESTE A PAYER :', fmt(data.remainingAmount) + ' MAD') + ESC_BOLD_OFF;
+  doc += DASHES + LF;
+  
+  doc += ESC_ALIGN_CENTER;
+  doc += 'Statut : ' + (data.isPartial ? 'PAIEMENT PARTIEL' : 'PAIEMENT NO PAYE') + LF;
+  doc += DASHES + LF;
+  doc += 'Merci pour votre confiance' + LF;
+  doc += LF + LF + LF + ESC_FEED_CUT;
+
+  return doc;
+}
+
+function getSettlementHtml(data: SettlementData): string {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('fr-MA', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+    });
+  };
+
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
+    <style>
+      body{width:384px;font-family:Arial,sans-serif;padding:12px 14px;}
+      h2{text-align:center;font-size:14px;font-weight:900;letter-spacing:1px;margin-bottom:8px;}
+      .kv{display:flex;justify-content:space-between;font-size:11px;margin:3px 0;}
+      .kv.bold span{font-weight:900;font-size:13px;}
+      hr{border:none;border-top:1px solid #ccc;margin:7px 0;}
+      .foot{text-align:center;font-size:9px;color:#888;margin-top:8px;}
+    </style></head><body>
+    <h2>${data.isPartial ? 'REGLEMENT PARTIEL' : 'REGLEMENT NO PAYE'}</h2><hr/>
+    <div class="kv"><span>Client</span><span>${data.customerName}</span></div>
+    <div class="kv"><span>Tel</span><span>${data.customerPhone || '-'}</span></div>
+    <div class="kv"><span>Vendeur</span><span>${data.vendorName || '-'}</span></div>
+    <div class="kv"><span>Date</span><span>${formatDate(data.date)}</span></div>
+    <div class="kv"><span>Facture</span><span>#${data.invoiceNumber}</span></div>
+    <hr/>
+    <div class="kv"><span>Total Facture</span><span>MAD ${fmt(data.totalAmount)}</span></div>
+    <div class="kv"><span>Montant Paye</span><span>MAD ${fmt(data.paidAmount)}</span></div>
+    <hr/>
+    <div class="kv bold"><span>RESTE A PAYER</span><span>MAD ${fmt(data.remainingAmount)}</span></div>
+    <hr/>
+    <div class="kv"><span>Statut</span><span>${data.isPartial ? 'PAIEMENT PARTIEL' : 'PAIEMENT NO PAYE'}</span></div>
+    <hr/>
+    <div class="foot">Merci pour votre confiance</div>
+    </body></html>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ESC/POS daily summary builder
 // ─────────────────────────────────────────────────────────────────────────────
 async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> {
@@ -365,9 +517,9 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
 
-  const RIGHT_COL_WIDTH = 42;
-  const valueLine = (label: string, value: string, bold = false): string => {
-    const valueStr = value + ' MAD';
+  const RIGHT_COL_WIDTH = 44;
+  const valueLine = (label: string, value: string, bold = false, noCurrency = false): string => {
+    const valueStr = noCurrency ? value : value + ' MAD';
     const spaces = RIGHT_COL_WIDTH - label.length - valueStr.length;
     const line = label + ' '.repeat(Math.max(1, spaces)) + valueStr + LF;
     return bold ? ESC_BOLD_ON + line + ESC_BOLD_OFF : line;
@@ -387,16 +539,16 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   }
 
   // Recompute totals from filtered list (if we have sales data)
-  const totalSales     = filteredSales
+  const totalSales = filteredSales
     ? filteredSales.reduce((s, x) => s + x.amount, 0)
     : data.totalSales;
-  const cashCollected  = filteredSales
+  const cashCollected = filteredSales
     ? filteredSales.reduce((s, x) => s + x.paid, 0)
     : data.cashCollected;
   const customerCredit = filteredSales
     ? filteredSales.reduce((s, x) => s + Math.max(0, x.amount - x.paid), 0)
     : data.customerCredit;
-  const salesCount     = filteredSales ? filteredSales.length : data.salesCount;
+  const salesCount = filteredSales ? filteredSales.length : data.salesCount;
 
   let doc = ESC_INIT;
 
@@ -406,7 +558,7 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   if (logoCmd) {
     doc += logoCmd + LF;
   } else {
-    doc += ESC_DOUBLE_ON + 'FLURRY' + ESC_DOUBLE_OFF + LF;
+    doc += ESC_DOUBLE_ON + 'FLURRYICE' + ESC_DOUBLE_OFF + LF;
   }
   doc += DOTS + LF;
   doc += ESC_BOLD_ON + 'RESUME JOURNALIER' + ESC_BOLD_OFF + LF;
@@ -415,7 +567,8 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   // ── Informations ───────────────────────────────────────────────────────────
   doc += ESC_ALIGN_LEFT;
   doc += metaLine('Date:', today);
-  doc += metaLine('Periode:', data.periodLabel);
+  const periodLabelFr = getFrenchPeriodLabel(data.periodLabel, data.dateRange);
+  doc += metaLine('Periode:', periodLabelFr);
   if (data.vendorName) doc += metaLine('Vendeur:', data.vendorName);
   if (data.truckLabel) doc += metaLine('Camion:', data.truckLabel);
   if (data.clientFilter) doc += metaLine('Client:', data.clientFilter);
@@ -425,7 +578,7 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   if (filteredSales && filteredSales.length > 0) {
     // Column widths: invoice(9) + client(17) + amount(10) + status(4) = 40
     const statusAbbr = (s: Sale) => {
-      if (s.status === 'paid')    return 'PAYE';
+      if (s.status === 'paid') return 'PAYE';
       if (s.status === 'partial') return 'PART';
       return 'IMP ';
     };
@@ -433,15 +586,15 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
     doc += DASHES + LF;
     // Header row
     doc += padEnd('#Fact.', 9)
-         + padEnd('Client', 17)
-         + padStart('Montant', 10)
-         + '  Stat' + LF;
+      + padEnd('Client', 17)
+      + padStart('Montant', 10)
+      + '  Stat' + LF;
     doc += DASHES + LF;
     for (const sale of filteredSales) {
-      const inv    = ('#' + (sale.invoiceNumber ?? sale.id).slice(0, 7)).padEnd(9);
-      const client = (sale.clientName || 'N/A').slice(0, 17).padEnd(17);
+      const inv = ('#' + (sale.invoiceNumber ?? sale.id).slice(0, 7)).padEnd(9);
+      const client = (sale.customerName || '-').slice(0, 17).padEnd(17);
       const amount = padStart(fmt(sale.amount), 10);
-      const stat   = statusAbbr(sale);
+      const stat = statusAbbr(sale);
       doc += inv + client + amount + '  ' + stat + LF;
     }
     doc += DASHES + LF;
@@ -458,13 +611,14 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   if (!data.clientFilter) {
     doc += valueLine('Stock restant:', fmt(data.stockValue));
   }
-  doc += valueLine('Nb. factures:', String(salesCount));
+  doc += valueLine('Nb. factures:', String(salesCount), false, true);
   doc += DASHES + LF;
 
   // ── Footer ─────────────────────────────────────────────────────────────────
   doc += ESC_ALIGN_CENTER;
   doc += DOTS + LF;
   doc += `Flurryice - ${today}` + LF;
+  doc += LF + LF + LF + ESC_FEED_CUT;
   doc += LF + LF + LF + ESC_FEED_CUT;
 
   return doc;
@@ -477,16 +631,16 @@ export async function buildInvoiceHtml(sale: Sale): Promise<string> {
   const dateStr = new Date(sale.date).toLocaleDateString('fr-MA', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   });
-  const subtotal  = sale.items.reduce((s, i) => s + i.qty * i.price, 0);
+  const subtotal = sale.items.reduce((s, i) => s + i.qty * i.price, 0);
   const remaining = sale.amount - sale.paid;
   const returnAmt = sale.returnAmount || 0;
 
   const statusLabel =
-    sale.status === 'paid'    ? 'PAYÉ'    :
-    sale.status === 'partial' ? 'PARTIEL' : 'IMPAYÉ';
+    sale.status === 'paid' ? 'PAYÉ' :
+      sale.status === 'partial' ? 'PARTIEL' : 'IMPAYÉ';
   const statusColor =
-    sale.status === 'paid'    ? '#059669' :
-    sale.status === 'partial' ? '#d97706' : '#e11d48';
+    sale.status === 'paid' ? '#059669' :
+      sale.status === 'partial' ? '#d97706' : '#e11d48';
 
   const itemRows = sale.items.map(item => `
     <tr>
@@ -623,9 +777,9 @@ async function sendEscPosToPrinter(
     console.log('Print already in progress, skipping...');
     return;
   }
-  
+
   isPrinting = true;
-  
+
   try {
     if (!btLib || !printer) {
       await Print.printAsync({ html, width: 384 });
@@ -657,7 +811,7 @@ async function sendEscPosToPrinter(
       // Small delay so the printer finishes receiving before we disconnect
       await new Promise(r => setTimeout(r, 500));
     } finally {
-      try { await device.disconnect(); } catch {}
+      try { await device.disconnect(); } catch { }
     }
   } finally {
     isPrinting = false;
@@ -669,12 +823,12 @@ async function sendEscPosToPrinter(
 // ─────────────────────────────────────────────────────────────────────────────
 export function usePrintInvoice(): UsePrintInvoiceReturn {
   const { sales } = useApp();
-  const [state, setState]               = useState<PrintState>('idle');
-  const [error, setError]               = useState<string | null>(null);
+  const [state, setState] = useState<PrintState>('idle');
+  const [error, setError] = useState<string | null>(null);
   const [currentPrinter, setCurrentPrinter] = useState<PrinterDevice | null>(null);
-  const [isScanning, setIsScanning]     = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [availablePrinters, setAvailablePrinters] = useState<PrinterDevice[]>([]);
-  const btLib    = useRef<any>(null);
+  const btLib = useRef<any>(null);
   const btDevice = useRef<any>(null);
 
   useEffect(() => {
@@ -682,7 +836,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     loadPrintQueue();
     import('react-native-bluetooth-classic')
       .then(lib => { btLib.current = lib.default; })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -697,7 +851,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
         const queue: PrintQueueItem[] = JSON.parse(queueData);
         if (queue.length > 0) processPrintQueue();
       }
-    } catch {}
+    } catch { }
   };
 
   const saveToPrintQueue = async (sale: Sale) => {
@@ -706,7 +860,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       const queue: PrintQueueItem[] = queueData ? JSON.parse(queueData) : [];
       queue.push({ id: Date.now().toString(), sale, type: 'invoice', createdAt: new Date().toISOString() });
       await AsyncStorage.setItem(PRINT_QUEUE_KEY, JSON.stringify(queue));
-    } catch {}
+    } catch { }
   };
 
   const processPrintQueue = async () => {
@@ -720,7 +874,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       for (const item of queue) {
         try {
           const escPos = await buildEscPosInvoice(item.sale);
-          const html   = await buildInvoiceHtml(item.sale);
+          const html = await buildInvoiceHtml(item.sale);
           await sendEscPosToPrinter(escPos, html, currentPrinter, btLib.current);
         } catch (e) {
           console.log('Queue print error:', e);
@@ -729,14 +883,14 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       await AsyncStorage.setItem(PRINT_QUEUE_KEY, JSON.stringify([]));
       setState('success');
       setTimeout(() => setState('idle'), 2000);
-    } catch {}
+    } catch { }
   };
 
   const loadSavedPrinter = async () => {
     try {
       const saved = await AsyncStorage.getItem(PRINTER_STORAGE_KEY);
       if (saved) setCurrentPrinter(JSON.parse(saved));
-    } catch {}
+    } catch { }
   };
 
   const requestPermissions = async (): Promise<boolean> => {
@@ -778,7 +932,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     setError(null);
     try {
       if (btDevice.current) {
-        try { await btDevice.current.disconnect(); } catch {}
+        try { await btDevice.current.disconnect(); } catch { }
         btDevice.current = null;
       }
       btDevice.current = await btLib.current.connectToDevice(printer.id);
@@ -794,7 +948,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
 
   const disconnectPrinter = useCallback(async () => {
     if (btDevice.current) {
-      try { await btDevice.current.disconnect(); } catch {}
+      try { await btDevice.current.disconnect(); } catch { }
       btDevice.current = null;
     }
     setCurrentPrinter(null);
@@ -816,7 +970,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
 
     try {
       const escPos = await buildEscPosInvoice(sale);
-      const html   = await buildInvoiceHtml(sale);
+      const html = await buildInvoiceHtml(sale);
       await sendEscPosToPrinter(escPos, html, currentPrinter, btLib.current);
       setState('success');
       processPrintQueue();
@@ -906,6 +1060,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       const today = new Date().toLocaleDateString('fr-MA', {
         day: '2-digit', month: '2-digit', year: 'numeric',
       });
+      const periodLabelFr = getFrenchPeriodLabel(data.periodLabel, data.dateRange);
       const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
         <style>
           body{width:384px;font-family:Arial,sans-serif;padding:12px 14px;}
@@ -917,7 +1072,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
         </style></head><body>
         <h2>RESUME JOURNALIER</h2><hr/>
         <div class="kv"><span>Date</span><span>${today}</span></div>
-        <div class="kv"><span>Période</span><span>${data.periodLabel}</span></div>
+        <div class="kv"><span>Période</span><span>${periodLabelFr}</span></div>
         ${data.vendorName ? `<div class="kv"><span>Vendeur</span><span>${data.vendorName}</span></div>` : ''}
         ${data.truckLabel ? `<div class="kv"><span>Camion</span><span>${data.truckLabel}</span></div>` : ''}
         <hr/>
@@ -940,6 +1095,23 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     }
   }, [currentPrinter]);
 
+  // ── printSettlement ─────────────────────────────────────────────────────────
+  const printSettlement = useCallback(async (data: SettlementData) => {
+    setState('printing');
+    setError(null);
+    try {
+      const escPos = await buildEscPosSettlement(data);
+      const html = getSettlementHtml(data);
+      await sendEscPosToPrinter(escPos, html, currentPrinter, btLib.current);
+      setState('success');
+      setTimeout(() => setState('idle'), 2500);
+    } catch (err: any) {
+      console.error('Print settlement error:', err);
+      setError(ERROR_MESSAGES.PRINT_FAILED);
+      setState('error');
+    }
+  }, [currentPrinter]);
+
   // ── printTest ─────────────────────────────────────────────────────────────
   const printTest = useCallback(async () => {
     setState('printing');
@@ -951,9 +1123,9 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       escPos += DASHES + LF;
       escPos += ESC_ALIGN_LEFT;
       escPos += padEnd('Imprimante:', 16) + (currentPrinter?.name ?? 'Systeme') + LF;
-      escPos += padEnd('MAC:', 16)        + (currentPrinter?.id   ?? 'N/A')     + LF;
-      escPos += padEnd('Papier:', 16)     + '80mm | ESC/POS'                    + LF;
-      escPos += padEnd('Logo:', 16)       + (LOGO_ESC_POS_B64 ? 'Pre-rasterise' : LOGO_B64 ? 'Runtime' : 'Desactive') + LF;
+      escPos += padEnd('MAC:', 16) + (currentPrinter?.id ?? 'N/A') + LF;
+      escPos += padEnd('Papier:', 16) + '80mm | ESC/POS' + LF;
+      escPos += padEnd('Logo:', 16) + (LOGO_ESC_POS_B64 ? 'Pre-rasterise' : LOGO_B64 ? 'Runtime' : 'Desactive') + LF;
       escPos += DASHES + LF;
       escPos += ESC_ALIGN_CENTER;
       escPos += ESC_BOLD_ON + 'BizPOS OK' + ESC_BOLD_OFF + LF;
@@ -986,11 +1158,12 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     print,
     printTransfer,
     printDailySummary,
+    printSettlement,
     printTest,
     exportPdf,
     isConnecting: state === 'connecting',
-    isPrinting:   state === 'printing',
-    isSuccess:    state === 'success',
+    isPrinting: state === 'printing',
+    isSuccess: state === 'success',
     error,
     retry,
     state,

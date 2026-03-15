@@ -11,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import { useTranslation } from "react-i18next";
 import { DailySummaryData } from "@/hooks/usePrintInvoice";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -177,8 +178,16 @@ export function DailySummaryModal({
   onClose,
 }: DailySummaryModalProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const today = formatDate(new Date());
   const isBusy = isPrinting || isConnecting;
+
+  // Get filtered sales based on client filter
+  const filteredSales = React.useMemo(() => {
+    if (!data.sales || data.sales.length === 0) return [];
+    if (!data.clientFilter) return data.sales;
+    return data.sales.filter(s => (s.customerName || '').toLowerCase() === (data.clientFilter || '').toLowerCase());
+  }, [data.sales, data.clientFilter]);
 
   const handlePrint = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -189,6 +198,24 @@ export function DailySummaryModal({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onClose();
   }, [onClose]);
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'paid': return t("reports.paid");
+      case 'partial': return t("reports.partial");
+      case 'due': return t("reports.due");
+      default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return D.emerald;
+      case 'partial': return D.amber;
+      case 'due': return D.rose;
+      default: return D.inkSoft;
+    }
+  };
 
   return (
     <Modal
@@ -290,6 +317,51 @@ export function DailySummaryModal({
 
             <Divider dashed />
 
+            {/* Sales Details */}
+            {filteredSales.length > 0 && (
+              <>
+                <View style={S.salesDetailsHeader}>
+                  <Text style={S.salesDetailsTitle}>{t("reports.salesDetails")}</Text>
+                  <Text style={S.salesDetailsCount}>({filteredSales.length})</Text>
+                </View>
+                <Divider />
+                
+                {/* Sales header */}
+                <View style={S.salesRowHeader}>
+                  <Text style={[S.salesCellHeader, S.salesCellInvoice]}>#</Text>
+                  <Text style={[S.salesCellHeader, S.salesCellCustomer]}>{t("reports.customer")}</Text>
+                  <Text style={[S.salesCellHeader, S.salesCellAmount]}>{t("reports.amount")}</Text>
+                  <Text style={[S.salesCellHeader, S.salesCellStatus]}>{t("reports.status")}</Text>
+                </View>
+                <Divider />
+                
+                {/* Sales rows */}
+                {filteredSales.slice(0, 10).map((sale, index) => (
+                  <View key={sale.id || index} style={S.salesRow}>
+                    <Text style={[S.salesCell, S.salesCellInvoice]}>#{String(sale.invoiceNumber || sale.id).slice(0, 6)}</Text>
+                    <Text style={[S.salesCell, S.salesCellCustomer]} numberOfLines={1}>
+                      {sale.customerName || '-'}
+                    </Text>
+                    <Text style={[S.salesCell, S.salesCellAmount]}>
+                      {fmtAmount(sale.amount)}
+                    </Text>
+                    <View style={[S.statusBadge, { backgroundColor: getStatusColor(sale.status) + '20' }]}>
+                      <Text style={[S.statusBadgeText, { color: getStatusColor(sale.status) }]}>
+                        {getStatusLabel(sale.status)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+                
+                {filteredSales.length > 10 && (
+                  <Text style={S.salesMore}>
+                    +{filteredSales.length - 10} {t("reports.more") || "autres"}
+                  </Text>
+                )}
+                <Divider />
+              </>
+            )}
+
             {/* Footer */}
             <Text style={S.receiptFooter}>
               Généré le {today} · BizPOS
@@ -365,6 +437,7 @@ const S = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    height: "85%",
     backgroundColor: D.bg,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
@@ -542,5 +615,67 @@ const S = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_700Bold",
     color: "#FFFFFF",
+  },
+
+  // Sales Details
+  salesDetailsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  salesDetailsTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: R.ink,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  salesDetailsCount: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: R.inkSoft,
+  },
+  salesRowHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  salesCellHeader: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: R.inkSoft,
+    textTransform: "uppercase",
+  },
+  salesCellInvoice: { width: 45 },
+  salesCellCustomer: { flex: 1 },
+  salesCellAmount: { width: 55, textAlign: "right" },
+  salesCellStatus: { width: 45, textAlign: "right" },
+  salesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+  },
+  salesCell: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: R.ink,
+  },
+  statusBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  statusBadgeText: {
+    fontSize: 7,
+    fontFamily: "Inter_600SemiBold",
+  },
+  salesMore: {
+    fontSize: 9,
+    fontFamily: "Inter_400Regular",
+    color: R.inkSoft,
+    textAlign: "center",
+    marginTop: 4,
   },
 });

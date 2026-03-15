@@ -13,27 +13,40 @@ import {
 import { View, ActivityIndicator } from "react-native";
 import { Colors } from "@/constants";
 import { loadSavedLanguage } from "@/i18n";
+import { RootSiblingParent } from 'react-native-root-siblings';
 import "@/i18n";
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { isLoggedIn, isLoading, needsSetup } = useApp();
+  const { isLoggedIn, isLoading: appLoading, needsSetup } = useApp();
   const theme = Colors;
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [isI18nReady, setIsI18nReady] = useState(false);
 
   useEffect(() => {
-    if (!isLoading) SplashScreen.hideAsync();
-  }, [isLoading]);
+    loadSavedLanguage().then(() => setIsI18nReady(true));
+  }, []);
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!fontsLoaded) {
+      SplashScreen.preventAutoHideAsync();
+    } else {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  const isReady = fontsLoaded && isI18nReady && !appLoading;
+
+  useEffect(() => {
+    if (isReady) {
       if (needsSetup) router.replace("/setup");
       else if (isLoggedIn) router.replace("/(tabs)");
       else router.replace("/login");
     }
-  }, [isLoggedIn, isLoading, needsSetup]);
+  }, [isLoggedIn, isReady, needsSetup]);
 
-  if (isLoading) {
+  if (!isReady) {
     return (
       <View style={{ flex: 1, backgroundColor: theme?.surface || "#F8F9FA", justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={theme?.primary || "#1C439C"} size="large" />
@@ -54,22 +67,7 @@ function RootLayoutNav() {
   );
 }
 
-import { RootSiblingParent } from 'react-native-root-siblings';
-
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
-  const [isI18nReady, setIsI18nReady] = useState(false);
-
-  useEffect(() => {
-    loadSavedLanguage().then(() => setIsI18nReady(true));
-  }, []);
-
-  useEffect(() => {
-    if (!fontsLoaded) SplashScreen.preventAutoHideAsync();
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded || !isI18nReady) return null;
-
   return (
     <ErrorBoundary>
       <RootSiblingParent>
