@@ -79,12 +79,18 @@ function prepareDirectories(timestamp) {
   console.log("Build:", timestamp);
 }
 
+function findDirs(pattern) {
+  const dirs = [];
+  if (fs.existsSync(pattern)) dirs.push(pattern);
+  return dirs;
+}
+
 function clearMetroCache() {
   console.log("Clearing Metro cache...");
 
   const cacheDirs = [
-    ...fs.globSync(".metro-cache"),
-    ...fs.globSync("node_modules/.cache/metro"),
+    ...findDirs(".metro-cache"),
+    ...findDirs("node_modules/.cache/metro"),
   ];
 
   for (const dir of cacheDirs) {
