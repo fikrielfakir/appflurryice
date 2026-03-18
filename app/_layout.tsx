@@ -29,33 +29,30 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (!fontsLoaded) {
-      SplashScreen.preventAutoHideAsync();
-    } else {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded) SplashScreen.hideAsync();
   }, [fontsLoaded]);
 
   const isReady = fontsLoaded && isI18nReady && !appLoading;
 
+  // Navigate once everything is ready
   useEffect(() => {
-    if (isReady) {
-      if (needsSetup) router.replace("/setup");
-      else if (isLoggedIn) router.replace("/(tabs)");
-      else router.replace("/login");
-    }
-  }, [isLoggedIn, isReady, needsSetup]);
-
-  if (!isReady) {
-    return (
-      <View style={{ flex: 1, backgroundColor: theme?.surface || "#F8F9FA", justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator color={theme?.primary || "#1C439C"} size="large" />
-      </View>
-    );
-  }
+    if (!isReady) return;
+    if (needsSetup) router.replace("/setup");
+    else if (isLoggedIn) router.replace("/(tabs)");
+    else router.replace("/login");
+  }, [isReady, needsSetup, isLoggedIn]);
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme?.surface || "#F8F9FA" } }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: theme?.surface || "#F8F9FA" },
+        // ✅ This prevents the screen content from rendering during transitions
+        animation: "none",
+      }}
+    >
+      {/* ✅ Index screen acts as a pure loading gate — no content flashes */}
+      <Stack.Screen name="index" />
       <Stack.Screen name="setup" />
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
