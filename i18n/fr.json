@@ -148,6 +148,8 @@
     "category": "Catégorie",
     "unit": "Unité",
     "sku": "SKU",
+    "brand": "Marque",
+    "brands": "Marques",
     "resetStock": "Réinitialiser le stock",
     "resetConfirm": "Êtes-vous sûr de vouloir réinitialiser tout le stock à 0?",
     "syncData": "Synchroniser",
@@ -346,7 +348,10 @@
     "amount": "Montant",
     "status": "Statut",
     "printPreview": "Aperçu avant impression",
-    "more": "autres"
+    "more": "autres",
+    "brand": "Marque",
+    "filterByBrand": "Filtrer par marque",
+    "allBrands": "Toutes les marques"
   },
   "pos": {
     "saleDeleted": "Vente supprimée",

@@ -149,6 +149,8 @@
     "category": "Category",
     "unit": "Unit",
     "sku": "SKU",
+    "brand": "Brand",
+    "brands": "Brands",
     "inStock": "In Stock",
     "outOfStock": "Out of Stock",
     "resetStock": "Reset Stock",
@@ -345,7 +347,10 @@
     "amount": "Amount",
     "status": "Status",
     "printPreview": "Print Preview",
-    "more": "more"
+    "more": "more",
+    "brand": "Brand",
+    "filterByBrand": "Filter by brand",
+    "allBrands": "All brands"
   },
   "pos": {
     "saleDeleted": "Sale removed",

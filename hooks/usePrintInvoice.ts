@@ -34,6 +34,7 @@ export interface DailySummaryData {
   truckLabel?: string;
   sales?: Sale[];        // full list for detailed line-item print
   clientFilter?: string; // filter to one client (empty = all)
+  brandFilter?: string;  // brand name for display in print/PDF header
   dateRange?: { start: Date; end: Date };
 }
 
@@ -535,11 +536,20 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
 
   // ── Compute filtered sales ─────────────────────────────────────────────────
   let filteredSales: Sale[] | undefined = data.sales;
-  if (filteredSales && data.clientFilter) {
-    const cf = data.clientFilter.toLowerCase();
-    filteredSales = filteredSales.filter(
-      s => (s.customerName || '').toLowerCase() === cf,
-    );
+  if (filteredSales) {
+    if (data.clientFilter) {
+      const cf = data.clientFilter.toLowerCase();
+      filteredSales = filteredSales.filter(
+        s => (s.customerName || '').toLowerCase() === cf,
+      );
+    }
+    // Brand filter: match brand name against product names in sale items
+    if (data.brandFilter) {
+      const brandLower = data.brandFilter.toLowerCase();
+      filteredSales = filteredSales.filter(s =>
+        s.items.some(item => (item.name || '').toLowerCase().includes(brandLower)),
+      );
+    }
   }
 
   // Recompute totals from filtered list (if we have sales data)
@@ -553,6 +563,8 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
     ? filteredSales.reduce((s, x) => s + Math.max(0, x.amount - x.paid), 0)
     : data.customerCredit;
   const salesCount = filteredSales ? filteredSales.length : data.salesCount;
+
+
 
   let doc = ESC_INIT;
 
@@ -576,6 +588,7 @@ async function buildEscPosDailySummary(data: DailySummaryData): Promise<string> 
   if (data.vendorName) doc += metaLine('Vendeur:', data.vendorName);
   if (data.truckLabel) doc += metaLine('Camion:', data.truckLabel);
   if (data.clientFilter) doc += metaLine('Client:', data.clientFilter);
+  if (data.brandFilter) doc += metaLine('Marque:', data.brandFilter);
   doc += DASHES + LF;
 
   // ── Detail des ventes ──────────────────────────────────────────────────────
@@ -1175,9 +1188,18 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       day: '2-digit', month: 'long', year: 'numeric',
     });
 
+    // Filter sales by brand if set
+    let displaySales = data.sales || [];
+    if (data.brandFilter) {
+      const brandLower = data.brandFilter.toLowerCase();
+      displaySales = displaySales.filter(s =>
+        s.items.some(item => (item.name || '').toLowerCase().includes(brandLower)),
+      );
+    }
+
     let salesRows = '';
-    if (data.sales && data.sales.length > 0) {
-      salesRows = data.sales.slice(0, 50).map(s => {
+    if (displaySales.length > 0) {
+      salesRows = displaySales.slice(0, 50).map(s => {
         const saleTime = new Date(s.date).toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit' });
         return `
         <tr>
@@ -1222,6 +1244,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
     <div class="kv"><span class="kv-label">Période</span><span class="kv-value">${data.periodLabel}</span></div>
     ${data.vendorName ? `<div class="kv"><span class="kv-label">Vendeur</span><span class="kv-value">${data.vendorName}</span></div>` : ''}
     ${data.truckLabel ? `<div class="kv"><span class="kv-label">Camion</span><span class="kv-value">${data.truckLabel}</span></div>` : ''}
+    ${data.brandFilter ? `<div class="kv"><span class="kv-label">Marque</span><span class="kv-value">${data.brandFilter}</span></div>` : ''}
   </div>
 
   <div class="metrics">
@@ -1246,7 +1269,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       <div class="metric-lbl">Valeur Stock (MAD)</div>
     </div>
     <div class="metric">
-      <div class="metric-val" style="color:#6C63FF;">${data.sales?.filter(s => s.status === 'paid').length || 0}</div>
+      <div class="metric-val" style="color:#6C63FF;">${displaySales.filter(s => s.status === 'paid').length || 0}</div>
       <div class="metric-lbl">Factures Payées</div>
     </div>
   </div>
@@ -1431,6 +1454,7 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
         <div class="kv"><span>Période</span><span>${periodLabelFr}</span></div>
         ${data.vendorName ? `<div class="kv"><span>Vendeur</span><span>${data.vendorName}</span></div>` : ''}
         ${data.truckLabel ? `<div class="kv"><span>Camion</span><span>${data.truckLabel}</span></div>` : ''}
+        ${data.brandFilter ? `<div class="kv"><span>Marque</span><span>${data.brandFilter}</span></div>` : ''}
         <hr/>
         <div class="kv bold"><span>Total ventes</span><span>MAD ${fmt(data.totalSales)}</span></div>
         <div class="kv"><span>Encaissé</span><span>MAD ${fmt(data.cashCollected)}</span></div>

@@ -22,6 +22,12 @@ export interface AppUser {
   created_at: string;
 }
 
+export interface Brand {
+  id: string;
+  name: string;
+  color?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -31,6 +37,7 @@ export interface Product {
   image?: string;
   sku?: string;
   stock: number;
+  brandId?: string;
 }
 
 export interface TransferItem {
@@ -173,6 +180,8 @@ interface AppContextValue {
   expenses: Expense[];
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  brands: Brand[];
+  setBrands: React.Dispatch<React.SetStateAction<Brand[]>>;
   transfers: Transfer[];
   debtSettlements: DebtSettlement[];
   cart: CartItem[];
@@ -186,10 +195,13 @@ interface AppContextValue {
   deleteSale: (id: string) => void;
   updateSalePayment: (saleId: string, additionalPaid: number) => void;
   addDebtSettlement: (settlement: Omit<DebtSettlement, "id" | "settlementDate">) => void;
-  updateProduct: (productId: string, updates: Partial<Pick<Product, "price" | "image">>) => void;
+  updateProduct: (productId: string, updates: Partial<Pick<Product, "price" | "image" | "brandId">>) => void;
   addContact: (contact: Omit<Contact, "id" | "date">) => void;
   deleteContact: (id: string) => void;
   updateContact: (id: string, updates: Partial<Omit<Contact, "id" | "date">>) => void;
+  addBrand: (brand: Omit<Brand, "id">) => void;
+  updateBrand: (id: string, updates: Partial<Omit<Brand, "id">>) => void;
+  deleteBrand: (id: string) => void;
   addExpense: (expense: Omit<Expense, "id" | "date">) => void;
   deleteExpense: (id: string) => void;
   addTransfer: (transfer: Transfer) => void;
@@ -222,6 +234,7 @@ const KEYS = {
   transfers: "bizpos_transfers",
   products: "bizpos_products",
   debtSettlements: "bizpos_debt_settlements",
+  brands: "bizpos_brands",
   initialDataLoaded: "bizpos_initial_data_loaded",
   themeMode: "bizpos_theme_mode",
   config: "bizpos_app_config",
@@ -278,6 +291,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [debtSettlements, setDebtSettlements] = useState<DebtSettlement[]>([]);
@@ -310,6 +324,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         savedTransfers,
         savedProducts,
         savedDebtSettlements,
+        savedBrands,
         initialDataLoaded,
         configRaw,
       ] = await Promise.all([
@@ -322,6 +337,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.transfers),
         AsyncStorage.getItem(KEYS.products),
         AsyncStorage.getItem(KEYS.debtSettlements),
+        AsyncStorage.getItem(KEYS.brands),
         AsyncStorage.getItem(KEYS.initialDataLoaded),
         AsyncStorage.getItem(KEYS.config),
       ]);
@@ -348,6 +364,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTransfers(savedTransfers ? JSON.parse(savedTransfers) : []);
       setProducts(savedProducts ? JSON.parse(savedProducts) : []);
       setDebtSettlements(savedDebtSettlements ? JSON.parse(savedDebtSettlements) : []);
+
+      // Brands: seed default if empty
+      const DEFAULT_BRANDS: Brand[] = [
+        { id: "brand_flurryice", name: "FlurryIce", color: "#1a3a2a" },
+        { id: "brand_coca", name: "Coca", color: "#dc2626" },
+        { id: "brand_henrys", name: "Henrys", color: "#2563eb" },
+      ];
+      if (savedBrands) {
+        setBrands(JSON.parse(savedBrands));
+      } else {
+        setBrands(DEFAULT_BRANDS);
+        await AsyncStorage.setItem(KEYS.brands, JSON.stringify(DEFAULT_BRANDS));
+      }
 
       const lastSync = await syncService.getLastSyncTime();
       setLastSyncTime(lastSync);
@@ -603,7 +632,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(updated));
   }
 
-  async function updateProduct(productId: string, updates: Partial<Pick<Product, "price" | "image">>) {
+  async function addBrand(brand: Omit<Brand, "id">) {
+    const newBrand: Brand = { ...brand, id: genId() };
+    const updated = [newBrand, ...brands];
+    setBrands(updated);
+    await AsyncStorage.setItem(KEYS.brands, JSON.stringify(updated));
+  }
+
+  async function updateBrand(id: string, updates: Partial<Omit<Brand, "id">>) {
+    const updated = brands.map(b => b.id === id ? { ...b, ...updates } : b);
+    setBrands(updated);
+    await AsyncStorage.setItem(KEYS.brands, JSON.stringify(updated));
+  }
+
+  async function deleteBrand(id: string) {
+    const updated = brands.filter(b => b.id !== id);
+    setBrands(updated);
+    await AsyncStorage.setItem(KEYS.brands, JSON.stringify(updated));
+  }
+
+  async function updateProduct(productId: string, updates: Partial<Pick<Product, "price" | "image" | "brandId">>) {
     const updated = products.map(p => 
       p.id === productId ? { ...p, ...updates } : p
     );
@@ -789,13 +837,14 @@ async function addTransfer(transfer: Transfer) {
     userProfile,
     isLoggedIn: !!activeUser,
     needsSetup,
-    sales, transactions, contacts, setContacts, expenses, products, transfers, debtSettlements, cart, config, updateConfig, setProducts,
+    sales, transactions, contacts, setContacts, expenses, products, brands, setBrands, transfers, debtSettlements, cart, config, updateConfig, setProducts,
     setupFromQR,
     completeSetup,
     login, logout,
     addSale, deleteSale, updateSalePayment,
     addDebtSettlement, updateProduct,
     addContact, deleteContact, updateContact,
+    addBrand, updateBrand, deleteBrand,
     addExpense, deleteExpense,
     addTransfer,
     resetAllStock: () => {

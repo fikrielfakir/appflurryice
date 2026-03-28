@@ -22,7 +22,7 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { useApp } from "@/context/AppContext";
-import { Transaction, Sale } from "@/context/AppContext";
+import { Transaction, Sale, Brand } from "@/context/AppContext";
 import { AppHeader } from "@/components/common/AppHeader";
 import { MetricCard } from "@/components/reports/MetricCard";
 import { TransactionRow } from "@/components/reports/TransactionRow";
@@ -202,7 +202,7 @@ const SR = StyleSheet.create({
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
-  const { sales, transactions, products, setIsSidebarOpen, userProfile, config } = useApp();
+  const { sales, transactions, products, brands, setIsSidebarOpen, userProfile, config } = useApp();
   const { t } = useTranslation();
 
   const [filter, setFilter] = useState<FilterKey>("daily");
@@ -217,9 +217,11 @@ export default function ReportsScreen() {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [summaryClientFilter, setSummaryClientFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [showBrandDropdown, setShowBrandDropdown] = useState(false);
 
   const { filteredSales, filteredTransactions, financials, statusCounts, truckStock } =
-    useReportMetrics(sales, transactions, products, filter, dateRange);
+    useReportMetrics(sales, transactions, products, filter, dateRange, brandFilter, clientFilter, brands);
 
   // ── Unique client list from filteredSales ────────────────────────────────
   const uniqueClients = useMemo(() => {
@@ -249,6 +251,23 @@ export default function ReportsScreen() {
     }
     return list.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredSales, clientFilter, clientSearch]);
+
+  // ── Unique brands with sales count ─────────────────────────────────────
+  const brandOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredSales.forEach(sale => {
+      sale.items.forEach(item => {
+        const product = products.find(p => p.id === (item.productId || ""));
+        if (product?.brandId) {
+          counts[product.brandId] = (counts[product.brandId] || 0) + 1;
+        }
+      });
+    });
+    return brands.map(b => ({
+      ...b,
+      count: counts[b.id] || 0,
+    }));
+  }, [brands, filteredSales, products]);
 
   // ── Client-filtered totals ───────────────────────────────────────────────
   const clientTotals = useMemo(() => {
@@ -293,8 +312,9 @@ export default function ReportsScreen() {
     truckLabel:     config.truckLocation,
     sales:          filteredSales,
     clientFilter:   summaryClientFilter !== "all" ? summaryClientFilter : undefined,
+    brandFilter:    brandFilter !== "all" ? brands.find(b => b.id === brandFilter)?.name : undefined,
     dateRange:      dateRange,
-  }), [financials, truckStock, filteredSales, periodLabel, userProfile, config, summaryClientFilter, dateRange]);
+  }), [financials, truckStock, filteredSales, periodLabel, userProfile, config, summaryClientFilter, dateRange, brandFilter, brands]);
 
   // ── Filter pills config ──────────────────────────────────────────────────
   const FILTERS: { key: FilterKey; label: string }[] = [
@@ -370,6 +390,12 @@ export default function ReportsScreen() {
     Haptics.selectionAsync();
     setClientFilter(name);
     setSummaryClientFilter(name);
+  }, []);
+
+  const handleBrandFilter = useCallback((id: string) => {
+    Haptics.selectionAsync();
+    setBrandFilter(id);
+    setShowBrandDropdown(false);
   }, []);
 
   const handleOpenPrint = useCallback(() => {
@@ -482,6 +508,22 @@ export default function ReportsScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          {/* Brand filter pill */}
+          <TouchableOpacity
+            style={[S.filterPill, brandFilter !== "all" && S.filterPillActive]}
+            onPress={() => setShowBrandDropdown(v => !v)}
+          >
+            {brandFilter !== "all" ? (
+              <>
+                <View style={[S.pillDot, { backgroundColor: brands.find(b => b.id === brandFilter)?.color || D.heroAccent }]} />
+                <Text style={[S.filterTxt, S.filterTxtActive]}>
+                  {brands.find(b => b.id === brandFilter)?.name || ""}
+                </Text>
+              </>
+            ) : (
+              <Text style={S.filterTxt}>{t("reports.brand") || "Marque"}</Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -693,6 +735,43 @@ export default function ReportsScreen() {
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ── Brand Filter Dropdown ── */}
+      <Modal visible={showBrandDropdown} transparent animationType="fade" onRequestClose={() => setShowBrandDropdown(false)}>
+        <Pressable style={S.modalBackdrop} onPress={() => setShowBrandDropdown(false)} />
+        <View style={S.brandDropdownSheet}>
+          <View style={S.handle} />
+          <View style={S.brandDropdownHeader}>
+            <Text style={S.datePickerTitle}>{t("reports.filterByBrand") || "Filtrer par marque"}</Text>
+            <TouchableOpacity onPress={() => setShowBrandDropdown(false)}>
+              <Feather name="x" size={20} color={D.ink} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={S.brandDropdownList} showsVerticalScrollIndicator={false}>
+            <TouchableOpacity
+              style={[S.brandOption, brandFilter === "all" && S.brandOptionActive]}
+              onPress={() => handleBrandFilter("all")}
+            >
+              <View style={[S.brandDotBig, { backgroundColor: D.inkGhost }]} />
+              <Text style={[S.brandOptionTxt, brandFilter === "all" && S.brandOptionTxtActive]}>
+                {t("reports.allBrands") || "Toutes les marques"}
+              </Text>
+              <Text style={S.brandOptionCount}>{filteredSales.length}</Text>
+            </TouchableOpacity>
+            {brandOptions.map(b => (
+              <TouchableOpacity
+                key={b.id}
+                style={[S.brandOption, brandFilter === b.id && S.brandOptionActive]}
+                onPress={() => handleBrandFilter(b.id)}
+              >
+                <View style={[S.brandDotBig, { backgroundColor: b.color || D.heroAccent }]} />
+                <Text style={[S.brandOptionTxt, brandFilter === b.id && S.brandOptionTxtActive]}>{b.name}</Text>
+                <Text style={S.brandOptionCount}>{b.count}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       </Modal>
 
       {/* ── Date Range Picker Modal ── */}
@@ -1124,6 +1203,65 @@ const S = StyleSheet.create({
   emptySearchText: {
     fontSize: 14,
     color: D.inkSoft,
+  },
+
+  // Brand filter
+  pillDot: {
+    width: 8, height: 8, borderRadius: 4, marginRight: 6,
+  },
+  brandDropdownSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: D.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 40,
+    maxHeight: "55%",
+  },
+  brandDropdownHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  brandDropdownList: {
+    backgroundColor: D.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: D.border,
+    maxHeight: 300,
+  },
+  brandOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: D.border,
+    gap: 12,
+  },
+  brandOptionActive: {
+    backgroundColor: D.bg,
+  },
+  brandDotBig: {
+    width: 12, height: 12, borderRadius: 6,
+  },
+  brandOptionTxt: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: D.ink,
+  },
+  brandOptionTxtActive: {
+    fontFamily: "Inter_700Bold",
+    color: D.heroAccent,
+  },
+  brandOptionCount: {
+    fontSize: 12,
+    color: D.inkSoft,
+    fontFamily: "Inter_500Medium",
   },
 
   // Date Picker Modal

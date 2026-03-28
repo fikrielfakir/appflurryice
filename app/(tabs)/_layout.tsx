@@ -32,7 +32,7 @@ function NativeTabLayout() {
         <Icon sf={{ default: "arrow.left.arrow.right", selected: "arrow.left.arrow.right" }} />
         <Label>{t('tabs.transfers')}</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="fuel/index">
+      <NativeTabs.Trigger name="fuel">
         <Icon sf={{ default: "fuelpump", selected: "fuelpump.fill" }} />
         <Label>{t('tabs.fuel')}</Label>
       </NativeTabs.Trigger>
@@ -97,7 +97,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         }}
       />
       <Tabs.Screen
-        name="products/index"
+        name="products"
         options={{
           title: t('tabs.products'),
           tabBarIcon: ({ color, size }) => (
@@ -108,7 +108,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         }}
       />
       <Tabs.Screen
-        name="transfers/index"
+        name="transfers"
         options={{
           title: t('tabs.transfers'),
           tabBarIcon: ({ color, size }) => (
@@ -119,7 +119,7 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         }}
       />
       <Tabs.Screen
-        name="fuel/index"
+        name="fuel"
         options={{
           title: t('tabs.fuel'),
           headerShown: false,
@@ -142,6 +142,9 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
         name="debts"
         options={{ href: null }}
       />
+      <Tabs.Screen name="transfers/index" options={{ href: null }} />
+      <Tabs.Screen name="products/index" options={{ href: null }} />
+      <Tabs.Screen name="fuel/index" options={{ href: null }} />
     </Tabs>
   );
 }

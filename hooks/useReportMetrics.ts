@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Sale, Transaction, Product } from "@/context/AppContext";
+import { Sale, Transaction, Product, Brand } from "@/context/AppContext";
 
 export type FilterKey = "daily" | "weekly" | "monthly" | "all" | "custom";
 
@@ -84,12 +84,31 @@ export function useReportMetrics(
   transactions: Transaction[],
   products: Product[],
   filter: FilterKey,
-  dateRange?: DateRange
+  dateRange?: DateRange,
+  brandId?: string,
+  clientName?: string,
+  brands?: Brand[],
 ): ReportMetrics {
-  const filteredSales = useMemo(
+  const dateFilteredSales = useMemo(
     () => filterByDate(sales, filter, dateRange),
     [sales, filter, dateRange]
   );
+
+  const filteredSales = useMemo(() => {
+    let result = dateFilteredSales;
+    if (clientName && clientName !== "all") {
+      result = result.filter(s => s.customerName === clientName);
+    }
+    if (brandId && brandId !== "all") {
+      const brandProductIds = new Set(
+        products.filter(p => p.brandId === brandId).map(p => p.id)
+      );
+      result = result.filter(s =>
+        s.items.some(item => brandProductIds.has(item.productId || ""))
+      );
+    }
+    return result;
+  }, [dateFilteredSales, clientName, brandId, products]);
 
   const filteredTransactions = useMemo(
     () => filterByDate(transactions, filter, dateRange),

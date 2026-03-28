@@ -45,28 +45,33 @@ export function FuelSummaryModal({ visible, onClose, filteredEntries, monthLabel
 
   const displayEntries = filteredEntries ?? defaultMonthEntries;
 
+  const sortedDisplayEntries = useMemo(
+    () => [...displayEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [displayEntries],
+  );
+
   const monthlyTotals = useMemo(() => {
-    const totalLiters = displayEntries.reduce((sum, e) => sum + e.liters, 0);
-    const totalCost = displayEntries.reduce((sum, e) => sum + e.totalCost, 0);
-    const avgConsumption = calcAvgConsumption(displayEntries);
+    const totalLiters = sortedDisplayEntries.reduce((sum, e) => sum + e.liters, 0);
+    const totalCost = sortedDisplayEntries.reduce((sum, e) => sum + e.totalCost, 0);
+    const avgConsumption = calcAvgConsumption(sortedDisplayEntries);
     return { totalLiters, totalCost, avgConsumption };
-  }, [displayEntries]);
+  }, [sortedDisplayEntries]);
 
   const monthLabel = monthLabelProp ?? now.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const isBusy = isPrinting || isConnecting;
 
   const onPrint = useCallback(async () => {
-    await printFuelReceipt(displayEntries, monthLabel);
-  }, [printFuelReceipt, displayEntries, monthLabel]);
+    await printFuelReceipt(sortedDisplayEntries, monthLabel);
+  }, [printFuelReceipt, sortedDisplayEntries, monthLabel]);
 
   const onShare = useCallback(async () => {
     try {
-      const totalLiters = displayEntries.reduce((sum, e) => sum + e.liters, 0);
-      const totalCost = displayEntries.reduce((sum, e) => sum + e.totalCost, 0);
-      const avgConsumption = calcAvgConsumption(displayEntries);
-      const avgPrice = calcAvgPricePerLiter(displayEntries);
-      const kmDriven = calcKmDriven(displayEntries);
-      const sortedEntries = [...displayEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const totalLiters = sortedDisplayEntries.reduce((sum, e) => sum + e.liters, 0);
+      const totalCost = sortedDisplayEntries.reduce((sum, e) => sum + e.totalCost, 0);
+      const avgConsumption = calcAvgConsumption(sortedDisplayEntries);
+      const avgPrice = calcAvgPricePerLiter(sortedDisplayEntries);
+      const kmDriven = calcKmDriven(sortedDisplayEntries);
+      const sortedEntries = sortedDisplayEntries;
 
       const entriesRows = sortedEntries.map(e => `
         <tr>
@@ -193,7 +198,7 @@ export function FuelSummaryModal({ visible, onClose, filteredEntries, monthLabel
       console.error("PDF share error:", e);
       Toast.show("Erreur lors de l'export PDF", { duration: 2000, backgroundColor: D.rose });
     }
-  }, [displayEntries, monthLabel]);
+  }, [sortedDisplayEntries, monthLabel]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
