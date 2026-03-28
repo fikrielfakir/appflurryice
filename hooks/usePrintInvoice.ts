@@ -1577,14 +1577,24 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       doc += padEnd('DATE', 6) + padEnd('STATION', 9) + padEnd('LITRES', 8) + padEnd('KM', 8) + padEnd('TOTAL', 12) + LF;
       doc += ESC_BOLD_OFF + DASHES + LF;
 
-      // Entries
+      // Entries — sort chronologically to compute consumption dynamically (avoids stale stored values)
+      const sortedAsc = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const dynamicConsumption: Map<string, number | undefined> = new Map();
+      sortedAsc.forEach((e, i) => {
+        if (i === 0) { dynamicConsumption.set(e.id, undefined); return; }
+        const prev = sortedAsc[i - 1];
+        const km = e.odometer - prev.odometer;
+        dynamicConsumption.set(e.id, km > 0 ? (e.liters / km) * 100 : undefined);
+      });
+
       const sortedEntries = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       for (const e of sortedEntries) {
         const dateStr = new Date(e.date).toLocaleDateString('fr-MA', { day: '2-digit', month: '2-digit' });
         const stationStr = e.station ? e.station.slice(0, 9) : '-';
         doc += padEnd(dateStr, 6) + padEnd(stationStr, 8) + padEnd(e.liters.toFixed(1), 6) + padEnd(e.odometer.toString(), 8) + padEnd(fmt(e.totalCost), 12) + LF;
-        if (e.consumption) {
-          doc += padEnd('', 14) + padStart('>' + e.consumption.toFixed(1) + ' L/100km', 28) + LF;
+        const cons = dynamicConsumption.get(e.id);
+        if (cons !== undefined) {
+          doc += padEnd('', 14) + padStart('>' + cons.toFixed(1) + ' L/100km', 28) + LF;
         }
       }
 
@@ -1596,16 +1606,18 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       doc += LF + LF + LF + ESC_FEED_CUT;
 
       // Fallback HTML for system print
-      const entriesRows = sortedEntries.map(e => `
+      const entriesRows = sortedEntries.map(e => {
+        const cons = dynamicConsumption.get(e.id);
+        return `
         <tr>
           <td>${new Date(e.date).toLocaleDateString('fr-FR')}</td>
           <td>${e.station || '-'}</td>
           <td style="text-align:center">${e.liters.toFixed(1)} L</td>
           <td style="text-align:center">${e.odometer.toLocaleString()} km</td>
           <td style="text-align:right">${fmt(e.totalCost)} MAD</td>
-          <td style="text-align:center">${e.consumption ? e.consumption.toFixed(1) + ' L/100km' : '-'}</td>
-        </tr>
-      `).join('');
+          <td style="text-align:center">${cons !== undefined ? cons.toFixed(1) + ' L/100km' : '-'}</td>
+        </tr>`;
+      }).join('');
 
       const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/>
         <style>
