@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "BizPOS",
+    "name": "Flurryice",
     "slug": "bizpos",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "bizpos",
+    "icon": "./assets/images/logo.png",
+    "scheme": "flurryice",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bizpos.app",
+      "bundleIdentifier": "com.flurryice.app",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
         "NSBluetoothPeripheralUsageDescription": "Cette application utilise Bluetooth pour se connecter à l'imprimante",
@@ -25,12 +25,10 @@
       }
     },
     "android": {
-      "package": "com.bizpos.app",
+      "package": "com.flurryice.app",
       "adaptiveIcon": {
         "backgroundColor": "#1C439C",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/logo.png"
       },
       "permissions": [
         "android.permission.BLUETOOTH",

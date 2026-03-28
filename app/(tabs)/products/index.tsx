@@ -18,6 +18,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import * as ImagePicker from "expo-image-picker";
 import { useApp } from "@/context/AppContext";
 import { Colors } from "@/constants";
 import CustomAlert from "@/components/common/CustomAlert";
@@ -34,7 +35,7 @@ function fmt(n: number | undefined | null) {
 
 export default function ProductsScreen() {
   const insets = useSafeAreaInsets();
-  const { products, addToCart, cart, removeFromCart, syncData, isSyncing, setIsSidebarOpen, setProducts } = useApp();
+  const { products, addToCart, cart, removeFromCart, syncData, isSyncing, setIsSidebarOpen, setProducts, updateProduct } = useApp();
   const { t } = useTranslation();
 
   const [search, setSearch]                           = useState("");
@@ -47,6 +48,9 @@ export default function ProductsScreen() {
   const [scanning, setScanning]                       = useState(false);
   const [permission, requestPermission]               = useCameraPermissions();
   const [showSyncSheet, setShowSyncSheet]             = useState(false);
+  const [editProduct, setEditProduct]                 = useState<{ id: string; name: string; price: string; image: string | undefined } | null>(null);
+  const [editPrice, setEditPrice]                     = useState("");
+  const [editImage, setEditImage]                     = useState<string | undefined>(undefined);
   const [alertConfig, setAlertConfig]                 = useState<{
     visible: boolean; title: string; message: string; type: "success" | "error" | "info";
   }>({ visible: false, title: "", message: "", type: "info" });
@@ -131,6 +135,42 @@ export default function ProductsScreen() {
     });
   }, [products, search, selectedCategory, stockFilter]);
 
+  // ── Edit product ──────────────────────────────────────────────────────────────
+  const openEditModal = (product: any) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setEditProduct({ id: product.id, name: product.name, price: String(product.price), image: product.image });
+    setEditPrice(String(product.price));
+    setEditImage(product.image);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editProduct) return;
+    const newPrice = parseFloat(editPrice);
+    if (isNaN(newPrice) || newPrice < 0) {
+      Toast.show(t("products.invalidPrice") || "Prix invalide", {
+        duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.rose,
+      });
+      return;
+    }
+    await updateProduct(editProduct.id, { price: newPrice, image: editImage });
+    setEditProduct(null);
+    Toast.show(t("products.productUpdated") || "Produit mis à jour", {
+      duration: Toast.durations.SHORT, position: Toast.positions.BOTTOM, backgroundColor: D.emerald,
+    });
+  };
+
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setEditImage(result.assets[0].uri);
+    }
+  };
+
   // ── Grid card ────────────────────────────────────────────────────────────────
   const renderGridItem = ({ item }: { item: any }) => {
     const isSelected = selectedProducts[item.id] !== undefined;
@@ -151,21 +191,30 @@ export default function ProductsScreen() {
         setSelectedProducts(rest);
       }
     };
+    const handleLongPress = () => openEditModal(item);
+    const handleEditPress = () => openEditModal(item);
 
     return (
-      <TouchableOpacity
-        style={[S.gridCard, isSelected && S.gridCardSelected, isOut && S.cardDisabled]}
-        onPress={handlePress}
-        activeOpacity={0.82}
-      >
-        <View style={S.gridImgWrap}>
-          {item.image
-            ? <Image source={{ uri: item.image }} style={S.gridImg} />
-            : <View style={S.imgPlaceholder}><Feather name="image" size={24} color={D.inkGhost} /></View>
-          }
-          {isSelected && <View style={S.checkBadge}><Feather name="check" size={11} color="#fff" /></View>}
-          {isOut && <View style={S.outOverlay}><Text style={S.outOverlayTxt}>Rupture</Text></View>}
-        </View>
+      <View style={[S.gridCard, isSelected && S.gridCardSelected, isOut && S.cardDisabled]}>
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={handlePress}
+          onLongPress={handleLongPress}
+          activeOpacity={0.82}
+          delayLongPress={300}
+        >
+          <View style={S.gridImgWrap}>
+            {item.image
+              ? <Image source={{ uri: item.image }} style={S.gridImg} />
+              : <View style={S.imgPlaceholder}><Feather name="image" size={24} color={D.inkGhost} /></View>
+            }
+            {isSelected && <View style={S.checkBadge}><Feather name="check" size={11} color="#fff" /></View>}
+            {isOut && <View style={S.outOverlay}><Text style={S.outOverlayTxt}>Rupture</Text></View>}
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={S.moreBtn} onPress={handleEditPress}>
+          <Feather name="edit-2" size={14} color="#fff" />
+        </TouchableOpacity>
 
         <View style={S.gridInfo}>
           <Text style={S.gridName} numberOfLines={2}>{item.name}</Text>
@@ -186,7 +235,7 @@ export default function ProductsScreen() {
             <Feather name="minus" size={11} color="#fff" />
           </TouchableOpacity>
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -215,7 +264,9 @@ export default function ProductsScreen() {
       <TouchableOpacity
         style={[S.listItem, isSelected && S.listItemSelected, isOut && S.cardDisabled]}
         onPress={handlePress}
+        onLongPress={() => openEditModal(item)}
         activeOpacity={0.82}
+        delayLongPress={300}
       >
         {isSelected && <View style={S.listAccent} />}
         <View style={[S.listImgWrap, isSelected && { borderColor: D.emerald + "50" }]}>
@@ -235,19 +286,27 @@ export default function ProductsScreen() {
             </Text>
           </View>
         </View>
-        <View style={S.listRight}>
-          {isSelected ? (
-            <View style={S.listQtyRow}>
-              <TouchableOpacity style={S.listMinusBtn} onPress={handleRemove}>
-                <Feather name="minus" size={11} color="#fff" />
-              </TouchableOpacity>
-              <Text style={S.listQtyTxt}>{selectedQty}</Text>
-            </View>
-          ) : (
-            <View style={S.listAddBtn}>
-              <Feather name="plus" size={15} color={D.heroAccent} />
-            </View>
-          )}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TouchableOpacity
+            style={S.listEditBtn}
+            onPress={() => openEditModal(item)}
+          >
+            <Feather name="edit-2" size={13} color={D.heroAccent} />
+          </TouchableOpacity>
+          <View style={S.listRight}>
+            {isSelected ? (
+              <View style={S.listQtyRow}>
+                <TouchableOpacity style={S.listMinusBtn} onPress={handleRemove}>
+                  <Feather name="minus" size={11} color="#fff" />
+                </TouchableOpacity>
+                <Text style={S.listQtyTxt}>{selectedQty}</Text>
+              </View>
+            ) : (
+              <View style={S.listAddBtn}>
+                <Feather name="plus" size={15} color={D.heroAccent} />
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -455,6 +514,57 @@ export default function ProductsScreen() {
         </View>
       </Modal>
 
+      {/* ── Edit Product Modal ── */}
+      <Modal visible={editProduct !== null} transparent animationType="slide" onRequestClose={() => setEditProduct(null)}>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setEditProduct(null)}>
+            <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} />
+          </Pressable>
+          <View style={S.editSheet}>
+            <View style={S.handle} />
+            <View style={S.editHeader}>
+              <Text style={S.sheetTitle}>{t("products.editProduct") || "Modifier le produit"}</Text>
+              <TouchableOpacity onPress={() => setEditProduct(null)}>
+                <Feather name="x" size={20} color={D.ink} />
+              </TouchableOpacity>
+            </View>
+
+            {editProduct && (
+              <>
+                <TouchableOpacity style={S.imagePickerWrap} onPress={pickImage}>
+                  {editImage ? (
+                    <Image source={{ uri: editImage }} style={S.imagePreview} />
+                  ) : (
+                    <View style={S.imagePlaceholder}>
+                      <Feather name="camera" size={32} color={D.inkSoft} />
+                      <Text style={S.imagePlaceholderTxt}>{t("products.changeImage") || "Changer l'image"}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                <Text style={S.inputLabel}>{editProduct.name}</Text>
+
+                <Text style={[S.inputLabel, { marginTop: 16 }]}>{t("products.price") || "Prix"} (MAD)</Text>
+                <View style={S.priceInputWrap}>
+                  <TextInput
+                    style={S.priceInput}
+                    value={editPrice}
+                    onChangeText={setEditPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    placeholderTextColor={D.inkGhost}
+                  />
+                </View>
+
+                <TouchableOpacity style={S.saveBtn} onPress={handleSaveEdit}>
+                  <Text style={S.saveBtnTxt}>{t("common.save") || "Enregistrer"}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Sync sheet ── */}
       <Modal visible={showSyncSheet} transparent animationType="slide" onRequestClose={() => setShowSyncSheet(false)}>
         <View style={{ flex: 1, justifyContent: "flex-end" }}>
@@ -528,12 +638,13 @@ const S = StyleSheet.create({
   gridCard: { flex: 1, margin: 5, backgroundColor: D.card, borderRadius: 18, borderWidth: 1, borderColor: D.border, overflow: "hidden", elevation: 2, shadowColor: D.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 1, shadowRadius: 6 },
   gridCardSelected: { borderColor: D.emerald, borderWidth: 2 },
   cardDisabled: { opacity: 0.45 },
-  gridImgWrap: { width: "100%", aspectRatio: 1, backgroundColor: D.bg, justifyContent: "center", alignItems: "center" },
+  gridImgWrap: { width: "100%", aspectRatio: 1, backgroundColor: D.bg, justifyContent: "center", alignItems: "center", overflow: "visible" },
   gridImg: { width: "100%", height: "100%", resizeMode: "cover" },
   imgPlaceholder: { flex: 1, width: "100%", justifyContent: "center", alignItems: "center", backgroundColor: D.bg },
   checkBadge: { position: "absolute", top: 7, right: 7, width: 20, height: 20, borderRadius: 10, backgroundColor: D.emerald, justifyContent: "center", alignItems: "center" },
   outOverlay: { position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: D.rose + "E0", paddingVertical: 3, alignItems: "center" },
   outOverlayTxt: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold" },
+  moreBtn: { position: "absolute", top: -4, right: -4, width: 32, height: 32, borderRadius: 10, backgroundColor: D.heroAccent, justifyContent: "center", alignItems: "center", zIndex: 10, elevation: 4 },
   gridInfo: { padding: 10, gap: 4 },
   gridName: { color: D.ink, fontSize: 13, fontFamily: "Inter_600SemiBold", lineHeight: 17, marginBottom: 2 },
   gridPrice: { color: D.heroAccent, fontSize: 16, fontFamily: "Inter_700Bold" },
@@ -562,6 +673,7 @@ const S = StyleSheet.create({
   listMinusBtn: { width: 26, height: 26, borderRadius: 13, backgroundColor: D.rose, justifyContent: "center", alignItems: "center" },
   listQtyTxt: { color: D.ink, fontSize: 14, fontFamily: "Inter_700Bold" },
   listAddBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: D.violetBg, borderWidth: 1, borderColor: D.borderFocus, justifyContent: "center", alignItems: "center" },
+  listEditBtn: { width: 32, height: 32, borderRadius: 9, backgroundColor: D.violetBg, borderWidth: 1, borderColor: D.borderFocus, justifyContent: "center", alignItems: "center" },
 
   // Empty
   emptyWrap: { alignItems: "center", paddingTop: 80, gap: 10 },
@@ -610,4 +722,17 @@ const S = StyleSheet.create({
   syncOptIcon: { width: 46, height: 46, borderRadius: 13, justifyContent: "center", alignItems: "center" },
   syncOptLabel: { color: D.ink, fontSize: 14, fontFamily: "Inter_600SemiBold", marginBottom: 2 },
   syncOptDesc: { color: D.inkSoft, fontSize: 12 },
+
+  // Edit Product Modal
+  editSheet: { backgroundColor: D.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 20, paddingBottom: 40 },
+  editHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  imagePickerWrap: { alignSelf: "center", marginBottom: 16 },
+  imagePreview: { width: 120, height: 120, borderRadius: 16 },
+  imagePlaceholder: { width: 120, height: 120, borderRadius: 16, backgroundColor: D.bg, borderWidth: 2, borderColor: D.border, borderStyle: "dashed", justifyContent: "center", alignItems: "center" },
+  imagePlaceholderTxt: { fontSize: 11, color: D.inkSoft, marginTop: 4, textAlign: "center" },
+  inputLabel: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: D.inkSoft, marginBottom: 8 },
+  priceInputWrap: { backgroundColor: D.bg, borderRadius: 12, borderWidth: 1, borderColor: D.border, paddingHorizontal: 16, height: 50, justifyContent: "center" },
+  priceInput: { fontSize: 18, fontFamily: "Inter_600SemiBold", color: D.ink },
+  saveBtn: { backgroundColor: D.heroAccent, borderRadius: 14, height: 50, justifyContent: "center", alignItems: "center", marginTop: 24 },
+  saveBtnTxt: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });

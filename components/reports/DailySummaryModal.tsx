@@ -72,6 +72,7 @@ interface DailySummaryModalProps {
   isSuccess: boolean;
   printerName?: string | null;
   onPrint: () => void;
+  onShare: () => void;
   onClose: () => void;
 }
 
@@ -175,6 +176,7 @@ export function DailySummaryModal({
   isSuccess,
   printerName,
   onPrint,
+  onShare,
   onClose,
 }: DailySummaryModalProps) {
   const insets = useSafeAreaInsets();
@@ -395,6 +397,16 @@ export function DailySummaryModal({
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={S.shareBtn}
+            onPress={onShare}
+            disabled={isBusy}
+            activeOpacity={0.82}
+          >
+            <Feather name="share" size={16} color={D.heroAccent} />
+            <Text style={S.shareTxt}>Partager PDF</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[S.printBtn, isBusy && S.printBtnBusy]}
             onPress={handlePrint}
             disabled={isBusy}
@@ -590,6 +602,23 @@ const S = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: D.inkMid,
+  },
+  shareBtn: {
+    flex: 2,
+    height: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: D.heroAccent,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: D.surface,
+    flexDirection: "row",
+    gap: 8,
+  },
+  shareTxt: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: D.heroAccent,
   },
   printBtn: {
     flex: 2,

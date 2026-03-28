@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  TextInput, Platform,
+  TextInput, Platform, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useApp } from "@/context/AppContext";
@@ -23,18 +23,18 @@ export default function CartScreen() {
   const { cart, updateCartQty, removeFromCart, clearCart } = useApp();
   const { t } = useTranslation();
 
-  const [discountOpen, setDiscountOpen]               = useState(false);
-  const [discountPct, setDiscountPct]                 = useState("0");
-  const [editingItem, setEditingItem]                 = useState<string | null>(null);
-  const [editQty, setEditQty]                         = useState("");
-  const [showClearCartConfirm, setShowClearCartConfirm] = useState(false);
+  const [discountOpen, setDiscountOpen]                   = useState(false);
+  const [discountPct, setDiscountPct]                     = useState("0");
+  const [editingItem, setEditingItem]                     = useState<string | null>(null);
+  const [editQty, setEditQty]                             = useState("");
+  const [showClearCartConfirm, setShowClearCartConfirm]   = useState(false);
   const [showRemoveItemConfirm, setShowRemoveItemConfirm] = useState(false);
-  const [itemToRemove, setItemToRemove]               = useState<string | null>(null);
+  const [itemToRemove, setItemToRemove]                   = useState<string | null>(null);
 
-  const topInset  = Platform.OS === "web" ? 67 : insets.top;
-  const subtotal  = cart.reduce((s, ci) => s + ci.qty * ci.product.price, 0);
+  const topInset    = Platform.OS === "web" ? 67 : insets.top;
+  const subtotal    = cart.reduce((s, ci) => s + ci.qty * ci.product.price, 0);
   const discountAmt = subtotal * (parseFloat(discountPct || "0") / 100);
-  const total     = subtotal - discountAmt;
+  const total       = subtotal - discountAmt;
 
   function handleQtyEdit(productId: string, currentQty: number) {
     setEditingItem(productId);
@@ -64,7 +64,6 @@ export default function CartScreen() {
   if (cart.length === 0) {
     return (
       <View style={[S.screen, { backgroundColor: D.bg }]}>
-        {/* Hero header */}
         <View style={S.hero}>
           <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
           <View style={S.blob1} pointerEvents="none" />
@@ -94,224 +93,276 @@ export default function CartScreen() {
     );
   }
 
+  // ── Hero header ─────────────────────────────────────────────────────────────
+  const ListHeader = (
+    <View style={S.hero}>
+      <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
+      <View style={S.blob1} pointerEvents="none" />
+      <View style={S.blob2} pointerEvents="none" />
+      <View style={[S.headerRow, { paddingTop: topInset + 10 }]}>
+        <TouchableOpacity style={S.hBtn} onPress={() => router.back()}>
+          <Feather name="chevron-left" size={20} color="rgba(255,255,255,0.9)" />
+        </TouchableOpacity>
+        <View style={S.headerCenter}>
+          <Text style={S.headerTitle}>{t("pos.cart")}</Text>
+          <View style={S.itemsBadge}>
+            <Text style={S.itemsBadgeTxt}>{cart.length}</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={[S.hBtn, { backgroundColor: "rgba(240,78,106,0.22)", borderColor: "rgba(240,78,106,0.3)" }]}
+          onPress={() => setShowClearCartConfirm(true)}
+        >
+          <Feather name="trash-2" size={17} color="#FF8FA3" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={S.heroSummary}>
+        <View style={S.heroStat}>
+          <Text style={S.heroStatVal}>{cart.length}</Text>
+          <Text style={S.heroStatLbl}>Articles</Text>
+        </View>
+        <View style={S.heroStatDiv} />
+        <View style={S.heroStat}>
+          <Text style={S.heroStatVal}>{fmt(subtotal)}</Text>
+          <Text style={S.heroStatLbl}>Sous-total MAD</Text>
+        </View>
+        {parseFloat(discountPct) > 0 && (
+          <>
+            <View style={S.heroStatDiv} />
+            <View style={S.heroStat}>
+              <Text style={[S.heroStatVal, { color: D.amber }]}>−{fmt(discountAmt)}</Text>
+              <Text style={S.heroStatLbl}>Remise MAD</Text>
+            </View>
+          </>
+        )}
+      </View>
+    </View>
+  );
+
   // ── Full cart ───────────────────────────────────────────────────────────────
   return (
-    <View style={[S.screen, { backgroundColor: D.bg }]}>
+    <>
+      {/*
+        ✅ Layout:
+          KeyboardAvoidingView (full screen)
+          ├── FlatList (flex: 1, scrollable cart items + hero header)
+          └── Bottom panel (fixed at bottom, rises with keyboard)
+      */}
+      <KeyboardAvoidingView
+        style={[S.screen, { backgroundColor: D.bg }]}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <FlatList
+          data={cart}
+          keyExtractor={(ci) => ci.product.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: 16 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+          ListHeaderComponent={ListHeader}
+          ListHeaderComponentStyle={{ marginHorizontal: -14, marginBottom: 14 }}
+          renderItem={({ item: ci }) => {
+            const remaining = ci.product.stock - ci.qty;
+            const isLow = remaining < 5;
+            return (
+              <View style={S.card}>
+                <View style={[S.cardStrip, { backgroundColor: D.heroAccent }]} />
+                <View style={S.cardInner}>
+                  <Text style={S.cardName} numberOfLines={2}>{ci.product.name}</Text>
 
-      {/* Hero header */}
-      <View style={S.hero}>
-        <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
-        <View style={S.blob1} pointerEvents="none" />
-        <View style={S.blob2} pointerEvents="none" />
-        <View style={[S.headerRow, { paddingTop: topInset + 10 }]}>
-          <TouchableOpacity style={S.hBtn} onPress={() => router.back()}>
-            <Feather name="chevron-left" size={20} color="rgba(255,255,255,0.9)" />
-          </TouchableOpacity>
-          <View style={S.headerCenter}>
-            <Text style={S.headerTitle}>{t("pos.cart")}</Text>
-            <View style={S.itemsBadge}>
-              <Text style={S.itemsBadgeTxt}>{cart.length}</Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[S.hBtn, { backgroundColor: "rgba(240,78,106,0.22)", borderColor: "rgba(240,78,106,0.3)" }]}
-            onPress={() => setShowClearCartConfirm(true)}
-          >
-            <Feather name="trash-2" size={17} color="#FF8FA3" />
-          </TouchableOpacity>
-        </View>
+                  <View style={S.priceRow}>
+                    <View style={S.priceBlock}>
+                      <Text style={S.priceLbl}>{t("pos.unitPrice")}</Text>
+                      <Text style={S.priceVal}>MAD {fmt(ci.product.price)}</Text>
+                    </View>
 
-        {/* Summary strip */}
-        <View style={S.heroSummary}>
-          <View style={S.heroStat}>
-            <Text style={S.heroStatVal}>{cart.length}</Text>
-            <Text style={S.heroStatLbl}>Articles</Text>
-          </View>
-          <View style={S.heroStatDiv} />
-          <View style={S.heroStat}>
-            <Text style={S.heroStatVal}>{fmt(subtotal)}</Text>
-            <Text style={S.heroStatLbl}>Sous-total MAD</Text>
-          </View>
-          {parseFloat(discountPct) > 0 && (
-            <>
-              <View style={S.heroStatDiv} />
-              <View style={S.heroStat}>
-                <Text style={[S.heroStatVal, { color: D.amber }]}>−{fmt(discountAmt)}</Text>
-                <Text style={S.heroStatLbl}>Remise MAD</Text>
-              </View>
-            </>
-          )}
-        </View>
-      </View>
-
-      {/* Cart items */}
-      <FlatList
-        data={cart}
-        keyExtractor={(ci) => ci.product.id}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 14, paddingBottom: discountOpen ? 340 : 240 }}
-        showsVerticalScrollIndicator={false}
-        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-        renderItem={({ item: ci }) => {
-          const remaining = ci.product.stock - ci.qty;
-          const isLow = remaining < 5;
-          return (
-            <View style={S.card}>
-              {/* Left accent */}
-              <View style={[S.cardStrip, { backgroundColor: D.heroAccent }]} />
-
-              <View style={S.cardInner}>
-                {/* Product name */}
-                <Text style={S.cardName} numberOfLines={2}>{ci.product.name}</Text>
-
-                {/* Price row */}
-                <View style={S.priceRow}>
-                  <View style={S.priceBlock}>
-                    <Text style={S.priceLbl}>{t("pos.unitPrice")}</Text>
-                    <Text style={S.priceVal}>MAD {fmt(ci.product.price)}</Text>
-                  </View>
-
-                  {/* Qty controls */}
-                  <View style={S.qtyControls}>
-                    <TouchableOpacity
-                      style={[S.qtyBtn, S.qtyBtnMinus, ci.qty <= 1 && S.qtyBtnDim]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        if (ci.qty > 1) updateCartQty(ci.product.id, ci.qty - 1);
-                        else removeFromCart(ci.product.id);
-                      }}
-                    >
-                      <Feather name="minus" size={14} color="#fff" />
-                    </TouchableOpacity>
-
-                    {editingItem === ci.product.id ? (
-                      <TextInput
-                        style={S.qtyInput}
-                        value={editQty}
-                        onChangeText={setEditQty}
-                        keyboardType="number-pad"
-                        autoFocus
-                        onBlur={() => confirmQtyEdit(ci.product.id)}
-                        onSubmitEditing={() => confirmQtyEdit(ci.product.id)}
-                        selectTextOnFocus
-                      />
-                    ) : (
-                      <TouchableOpacity onPress={() => handleQtyEdit(ci.product.id, ci.qty)}>
-                        <Text style={S.qtyVal}>{ci.qty}</Text>
+                    <View style={S.qtyControls}>
+                      <TouchableOpacity
+                        style={[S.qtyBtn, S.qtyBtnMinus, ci.qty <= 1 && S.qtyBtnDim]}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          if (ci.qty > 1) updateCartQty(ci.product.id, ci.qty - 1);
+                          else removeFromCart(ci.product.id);
+                        }}
+                      >
+                        <Feather name="minus" size={14} color="#fff" />
                       </TouchableOpacity>
-                    )}
 
+                      {editingItem === ci.product.id ? (
+                        <TextInput
+                          style={S.qtyInput}
+                          value={editQty}
+                          onChangeText={setEditQty}
+                          keyboardType="number-pad"
+                          autoFocus
+                          onBlur={() => confirmQtyEdit(ci.product.id)}
+                          onSubmitEditing={() => confirmQtyEdit(ci.product.id)}
+                          selectTextOnFocus
+                        />
+                      ) : (
+                        <TouchableOpacity onPress={() => handleQtyEdit(ci.product.id, ci.qty)}>
+                          <Text style={S.qtyVal}>{ci.qty}</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      <TouchableOpacity
+                        style={[S.qtyBtn, S.qtyBtnPlus, ci.qty >= ci.product.stock && S.qtyBtnDim]}
+                        onPress={() => {
+                          Haptics.selectionAsync();
+                          if (ci.qty < ci.product.stock) updateCartQty(ci.product.id, ci.qty + 1);
+                          else Toast.show(`${t("pos.maxStock")}: ${ci.product.stock}`, { duration: Toast.durations.SHORT });
+                        }}
+                      >
+                        <Feather name="plus" size={14} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={S.priceBlock}>
+                      <Text style={S.priceLbl}>{t("pos.totalPrice")}</Text>
+                      <Text style={[S.priceVal, { color: D.emerald }]}>{fmt(ci.qty * ci.product.price)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={S.cardFooter}>
                     <TouchableOpacity
-                      style={[S.qtyBtn, S.qtyBtnPlus, ci.qty >= ci.product.stock && S.qtyBtnDim]}
+                      style={[S.footerAction, { backgroundColor: D.roseBg }]}
                       onPress={() => {
-                        Haptics.selectionAsync();
-                        if (ci.qty < ci.product.stock) updateCartQty(ci.product.id, ci.qty + 1);
-                        else Toast.show(`${t("pos.maxStock")}: ${ci.product.stock}`, { duration: Toast.durations.SHORT });
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setItemToRemove(ci.product.id);
+                        setShowRemoveItemConfirm(true);
                       }}
                     >
-                      <Feather name="plus" size={14} color="#fff" />
+                      <Feather name="trash-2" size={13} color={D.rose} />
                     </TouchableOpacity>
-                  </View>
-
-                  <View style={S.priceBlock}>
-                    <Text style={S.priceLbl}>{t("pos.totalPrice")}</Text>
-                    <Text style={[S.priceVal, { color: D.emerald }]}>{fmt(ci.qty * ci.product.price)}</Text>
+                    <TouchableOpacity
+                      style={[S.footerAction, { backgroundColor: D.blueBg }]}
+                      onPress={() => handleQtyEdit(ci.product.id, ci.qty)}
+                    >
+                      <Feather name="edit-2" size={13} color={D.blue} />
+                    </TouchableOpacity>
+                    <View style={[S.stockPill, { backgroundColor: isLow ? D.amberBg : D.emeraldBg }]}>
+                      <View style={[S.stockDot, { backgroundColor: isLow ? D.amber : D.emerald }]} />
+                      <Text style={[S.stockTxt, { color: isLow ? D.amber : D.emerald }]}>
+                        {remaining.toLocaleString()} {t("pos.available")}
+                      </Text>
+                    </View>
                   </View>
                 </View>
+              </View>
+            );
+          }}
+        />
 
-                {/* Footer */}
-                <View style={S.cardFooter}>
+        {/* ✅ Bottom panel lives OUTSIDE FlatList so KeyboardAvoidingView pushes it up */}
+        <View style={[S.bottomPanel, { paddingBottom: insets.bottom + 10 }]}>
+          <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
+          <View style={S.blob3} pointerEvents="none" />
+
+          <TouchableOpacity
+            style={S.subtotalRow}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setDiscountOpen((v) => !v);
+            }}
+            activeOpacity={0.9}
+          >
+            <View>
+              <Text style={S.subtotalLbl}>{t("pos.subtotal")}</Text>
+              <Text style={S.subtotalVal}>{fmt(subtotal)} MAD</Text>
+            </View>
+            <View style={S.discountToggle}>
+              <Feather name="tag" size={13} color="rgba(255,255,255,0.7)" />
+              <Text style={S.discountToggleTxt}>
+                {discountOpen ? t("pos.hideDiscount") : t("pos.customizeDiscount")}
+              </Text>
+              <Feather name={discountOpen ? "chevron-down" : "chevron-up"} size={13} color="rgba(255,255,255,0.5)" />
+            </View>
+          </TouchableOpacity>
+
+          {discountOpen && (
+            <View style={S.discountPanel}>
+              <View style={S.quickDiscountRow}>
+                {[0, 5, 10, 15, 20, 25, 30, 40, 50].map((pct) => (
                   <TouchableOpacity
-                    style={[S.footerAction, { backgroundColor: D.roseBg }]}
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setItemToRemove(ci.product.id); setShowRemoveItemConfirm(true); }}
+                    key={pct}
+                    style={[S.quickDiscountBtn, discountPct === String(pct) && S.quickDiscountBtnActive]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setDiscountPct(String(pct));
+                    }}
                   >
-                    <Feather name="trash-2" size={13} color={D.rose} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[S.footerAction, { backgroundColor: D.blueBg }]}
-                    onPress={() => handleQtyEdit(ci.product.id, ci.qty)}
-                  >
-                    <Feather name="edit-2" size={13} color={D.blue} />
-                  </TouchableOpacity>
-                  <View style={[S.stockPill, { backgroundColor: isLow ? D.amberBg : D.emeraldBg }]}>
-                    <View style={[S.stockDot, { backgroundColor: isLow ? D.amber : D.emerald }]} />
-                    <Text style={[S.stockTxt, { color: isLow ? D.amber : D.emerald }]}>
-                      {remaining.toLocaleString()} {t("pos.available")}
+                    <Text style={[S.quickDiscountTxt, discountPct === String(pct) && S.quickDiscountTxtActive]}>
+                      {pct}%
                     </Text>
-                  </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={S.discountInputRow}>
+                <TouchableOpacity
+                  style={S.discountMinus}
+                  onPress={() => {
+                    const current = parseFloat(discountPct) || 0;
+                    if (current > 0) {
+                      Haptics.selectionAsync();
+                      setDiscountPct(String(Math.max(0, current - 5)));
+                    }
+                  }}
+                >
+                  <Feather name="minus" size={16} color="#fff" />
+                </TouchableOpacity>
+                <TextInput
+                  style={S.discountInput}
+                  value={discountPct}
+                  onChangeText={setDiscountPct}
+                  keyboardType="decimal-pad"
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.35)"
+                />
+                <Text style={S.discountPctTxt}>%</Text>
+                <TouchableOpacity
+                  style={S.discountPlus}
+                  onPress={() => {
+                    const current = parseFloat(discountPct) || 0;
+                    if (current < 50) {
+                      Haptics.selectionAsync();
+                      setDiscountPct(String(Math.min(50, current + 5)));
+                    }
+                  }}
+                >
+                  <Feather name="plus" size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              {parseFloat(discountPct) > 0 && (
+                <View style={S.savingRow}>
+                  <Feather name="trending-down" size={12} color={D.amber} />
+                  <Text style={S.savingTxt}>{t("pos.saving")}: {fmt(discountAmt)} MAD</Text>
                 </View>
+              )}
+              <View style={S.totalRow}>
+                <Text style={S.totalLbl}>{t("pos.total")}</Text>
+                <Text style={S.totalVal}>MAD {fmt(total)}</Text>
               </View>
             </View>
-          );
-        }}
-      />
+          )}
 
-      {/* Bottom panel */}
-      <View style={[S.bottomPanel, { paddingBottom: insets.bottom + 10 }]}>
-        <LinearGradient colors={[D.heroA, D.heroB]} style={StyleSheet.absoluteFill} />
-        <View style={S.blob3} pointerEvents="none" />
-
-        {/* Subtotal / toggle */}
-        <TouchableOpacity
-          style={S.subtotalRow}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setDiscountOpen((v) => !v); }}
-          activeOpacity={0.9}
-        >
-          <View>
-            <Text style={S.subtotalLbl}>{t("pos.subtotal")}</Text>
-            <Text style={S.subtotalVal}>{fmt(subtotal)} MAD</Text>
-          </View>
-          <View style={S.discountToggle}>
-            <Feather name="tag" size={13} color="rgba(255,255,255,0.7)" />
-            <Text style={S.discountToggleTxt}>
-              {discountOpen ? t("pos.hideDiscount") : t("pos.customizeDiscount")}
-            </Text>
-            <Feather name={discountOpen ? "chevron-down" : "chevron-up"} size={13} color="rgba(255,255,255,0.5)" />
-          </View>
-        </TouchableOpacity>
-
-        {/* Discount panel */}
-        {discountOpen && (
-          <View style={S.discountPanel}>
-            <View style={S.discountInputRow}>
-              <View style={S.discountIcon}>
-                <Feather name="percent" size={15} color="rgba(255,255,255,0.7)" />
-              </View>
-              <TextInput
-                style={S.discountInput}
-                value={discountPct}
-                onChangeText={setDiscountPct}
-                keyboardType="decimal-pad"
-                placeholder="0.0"
-                placeholderTextColor="rgba(255,255,255,0.35)"
-              />
-              <Text style={S.discountPctTxt}>%</Text>
-            </View>
-            {parseFloat(discountPct) > 0 && (
-              <View style={S.savingRow}>
-                <Feather name="trending-down" size={12} color={D.amber} />
-                <Text style={S.savingTxt}>{t("pos.saving")}: {fmt(discountAmt)} MAD</Text>
-              </View>
-            )}
-            <View style={S.totalRow}>
-              <Text style={S.totalLbl}>{t("pos.total")}</Text>
-              <Text style={S.totalVal}>MAD {fmt(total)}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Customer / checkout */}
-        <TouchableOpacity
-          style={S.checkoutBtn}
-          onPress={() => router.push({
-            pathname: "/pos/customer",
-            params: { discount: discountPct, subtotal: fmt(subtotal), total: fmt(total) },
-          })}
-          activeOpacity={0.85}
-        >
-          <Text style={S.checkoutBtnTxt}>{t("pos.selectCustomer")}</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={S.checkoutBtn}
+            onPress={() =>
+              router.push({
+                pathname: "/pos/customer",
+                params: { discount: discountPct, subtotal: fmt(subtotal), total: fmt(total) },
+              })
+            }
+            activeOpacity={0.85}
+          >
+            <Text style={S.checkoutBtnTxt}>{t("pos.selectCustomer")}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
       {/* Modals */}
       <ConfirmModal
@@ -345,9 +396,12 @@ export default function CartScreen() {
           setShowRemoveItemConfirm(false);
           setItemToRemove(null);
         }}
-        onCancel={() => { setShowRemoveItemConfirm(false); setItemToRemove(null); }}
+        onCancel={() => {
+          setShowRemoveItemConfirm(false);
+          setItemToRemove(null);
+        }}
       />
-    </View>
+    </>
   );
 }
 
@@ -356,14 +410,14 @@ const S = StyleSheet.create({
   screen: { flex: 1 },
 
   // Hero
-  hero: { overflow: "hidden" },
+  hero:  { overflow: "hidden" },
   blob1: { position: "absolute", width: 200, height: 200, borderRadius: 100, backgroundColor: D.heroAccent, opacity: 0.1, top: -50, right: -50 },
   blob2: { position: "absolute", width: 100, height: 100, borderRadius: 50,  backgroundColor: D.heroGlow,   opacity: 0.07, bottom: 0, left: -20 },
 
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12 },
-  headerCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
-  headerTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#fff", letterSpacing: -0.3 },
-  itemsBadge: { backgroundColor: D.heroAccent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  headerRow:     { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 12 },
+  headerCenter:  { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerTitle:   { fontSize: 17, fontFamily: "Inter_600SemiBold", color: "#fff", letterSpacing: -0.3 },
+  itemsBadge:    { backgroundColor: D.heroAccent, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
   itemsBadgeTxt: { color: "#fff", fontSize: 11, fontFamily: "Inter_700Bold" },
 
   hBtn: {
@@ -417,38 +471,44 @@ const S = StyleSheet.create({
   stockTxt:    { fontSize: 10, fontFamily: "Inter_600SemiBold" },
 
   // Empty
-  emptyWrap:  { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  emptyIcon:  { width: 72, height: 72, borderRadius: 22, backgroundColor: D.surface, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: D.border },
-  emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: D.inkMid },
-  emptyDesc:  { fontSize: 13, fontFamily: "Inter_400Regular", color: D.inkSoft },
-  emptyBtn:   { borderRadius: 14, overflow: "hidden", marginTop: 8 },
+  emptyWrap:     { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+  emptyIcon:     { width: 72, height: 72, borderRadius: 22, backgroundColor: D.surface, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: D.border },
+  emptyTitle:    { fontSize: 16, fontFamily: "Inter_600SemiBold", color: D.inkMid },
+  emptyDesc:     { fontSize: 13, fontFamily: "Inter_400Regular", color: D.inkSoft },
+  emptyBtn:      { borderRadius: 14, overflow: "hidden", marginTop: 8 },
   emptyBtnInner: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 13, paddingHorizontal: 22 },
   emptyBtnTxt:   { color: "#fff", fontSize: 14, fontFamily: "Inter_600SemiBold" },
 
   // Bottom panel
   bottomPanel: {
-    position: "absolute", bottom: 0, left: 0, right: 0,
     borderTopLeftRadius: 22, borderTopRightRadius: 22, overflow: "hidden",
-    paddingHorizontal: 20, paddingTop: 6,
+    paddingHorizontal: 20, paddingTop: 14,
   },
   blob3: { position: "absolute", width: 160, height: 160, borderRadius: 80, backgroundColor: D.heroAccent, opacity: 0.08, top: -40, right: -40 },
 
-  subtotalRow:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14 },
-  subtotalLbl:    { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.55)", marginBottom: 2 },
-  subtotalVal:    { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff" },
-  discountToggle: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  subtotalRow:       { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14 },
+  subtotalLbl:       { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.55)", marginBottom: 2 },
+  subtotalVal:       { fontSize: 22, fontFamily: "Inter_700Bold", color: "#fff" },
+  discountToggle:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(255,255,255,0.1)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   discountToggleTxt: { fontSize: 11, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.7)" },
 
-  discountPanel:   { paddingBottom: 10, gap: 10 },
-  discountInputRow:{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 12, overflow: "hidden" },
-  discountIcon:    { width: 44, height: 48, justifyContent: "center", alignItems: "center" },
-  discountInput:   { flex: 1, color: "#fff", fontFamily: "Inter_700Bold", fontSize: 20, textAlign: "center", height: 48 },
-  discountPctTxt:  { width: 40, textAlign: "center", fontSize: 18, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.7)" },
-  savingRow:       { flexDirection: "row", alignItems: "center", gap: 6 },
-  savingTxt:       { fontSize: 12, fontFamily: "Inter_400Regular", color: D.amber },
-  totalRow:        { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)" },
-  totalLbl:        { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.8)" },
-  totalVal:        { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
+  discountPanel:          { paddingBottom: 10, gap: 12 },
+  quickDiscountRow:       { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "center" },
+  quickDiscountBtn:       { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  quickDiscountBtnActive: { backgroundColor: D.heroAccent, borderColor: D.heroAccent },
+  quickDiscountTxt:       { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.7)" },
+  quickDiscountTxtActive: { color: "#fff" },
+
+  discountMinus:    { width: 50, height: 50, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center" },
+  discountPlus:     { width: 50, height: 50, borderRadius: 20, backgroundColor: D.heroAccent, justifyContent: "center", alignItems: "center" },
+  discountInputRow: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 12, overflow: "hidden" },
+  discountInput:    { flex: 1, color: "#fff", fontFamily: "Inter_700Bold", fontSize: 24, textAlign: "center", height: 55 },
+  discountPctTxt:   { width: 40, textAlign: "center", fontSize: 18, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.7)" },
+  savingRow:        { flexDirection: "row", alignItems: "center", gap: 6 },
+  savingTxt:        { fontSize: 12, fontFamily: "Inter_400Regular", color: D.amber },
+  totalRow:         { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: 10, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.15)" },
+  totalLbl:         { fontSize: 14, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.8)" },
+  totalVal:         { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
 
   checkoutBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,

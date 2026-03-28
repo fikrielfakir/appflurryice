@@ -15,6 +15,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useTranslation } from "react-i18next";
 import Toast from "react-native-root-toast";
 import { D } from "@/constants/theme";
+import { usePrintInvoice } from "@/hooks/usePrintInvoice";
 
 function fmt(n: number | null | undefined) {
   if (n === null || n === undefined) return "0.00";
@@ -184,6 +185,7 @@ export default function SalesScreen() {
   const insets = useSafeAreaInsets();
   const { sales, deleteSale, setIsSidebarOpen } = useApp();
   const { t } = useTranslation();
+  const { exportPdf } = usePrintInvoice();
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const [filter, setFilter]                       = useState<"all" | "paid" | "partial" | "due">("all");
@@ -210,16 +212,21 @@ export default function SalesScreen() {
 
   async function handleShare(sale: Sale) {
     try {
-      const text = [
-        `Facture #${sale.invoiceNumber}`,
-        `Client: ${sale.customerName}`,
-        `Total: MAD ${fmt(sale.amount)}`,
-        `Payé: MAD ${fmt(sale.paid)}`,
-        `Statut: ${sale.status.toUpperCase()}`,
-        ...sale.items.map((i) => `  ${i.name} x${i.qty} = MAD ${fmt(i.qty * i.price)}`),
-      ].join("\n");
-      await Share.share({ message: text });
-    } catch {}
+      const uri = await exportPdf(sale);
+      if (!uri) {
+        const text = [
+          `Facture #${sale.invoiceNumber}`,
+          `Client: ${sale.customerName}`,
+          `Total: MAD ${fmt(sale.amount)}`,
+          `Payé: MAD ${fmt(sale.paid)}`,
+          `Statut: ${sale.status.toUpperCase()}`,
+          ...sale.items.map((i) => `  ${i.name} x${i.qty} = MAD ${fmt(i.qty * i.price)}`),
+        ].join("\n");
+        await Share.share({ message: text });
+      }
+    } catch {
+      Toast.show("Erreur lors de l'export", { duration: 2000, backgroundColor: D.rose });
+    }
   }
 
   const FILTERS: { key: "all" | "paid" | "partial" | "due"; label: string; color: string }[] = [

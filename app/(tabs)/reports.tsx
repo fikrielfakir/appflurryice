@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import Toast from "react-native-root-toast";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
@@ -99,13 +100,22 @@ function SaleRow({ sale, isLast }: { sale: Sale; isLast: boolean }) {
   const dateStr = new Date(sale.date).toLocaleDateString("fr-MA", {
     day: "2-digit", month: "2-digit", year: "2-digit",
   });
+  const timeStr = new Date(sale.date).toLocaleTimeString("fr-MA", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <View style={[SR.row, !isLast && SR.rowBorder]}>
       <View style={SR.leftCol}>
         <Text style={SR.invoiceNum}>#{sale.invoiceNumber}</Text>
         <Text style={SR.clientName} numberOfLines={1}>{sale.customerName}</Text>
-        <Text style={SR.date}>{dateStr}</Text>
+        <View style={SR.dateTimeRow}>
+          <Text style={SR.date}>{dateStr}</Text>
+          <View style={SR.timeBadge}>
+            <Text style={SR.time}>{timeStr}</Text>
+          </View>
+        </View>
       </View>
       <View style={SR.rightCol}>
         <Text style={SR.amount}>MAD {fmt(sale.amount)}</Text>
@@ -148,6 +158,23 @@ const SR = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: D.inkGhost,
     marginTop: 2,
+  },
+  dateTimeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+    gap: 6,
+  },
+  timeBadge: {
+    backgroundColor: D.heroAccent + "20",
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  time: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: D.heroAccent,
   },
   amount: {
     fontSize: 14,
@@ -233,6 +260,7 @@ export default function ReportsScreen() {
 
   const {
     printDailySummary,
+    exportDailySummaryPdf,
     isConnecting,
     isPrinting,
     isSuccess,
@@ -356,6 +384,13 @@ export default function ReportsScreen() {
   const handlePrint = useCallback(async () => {
     await printDailySummary(summaryData);
   }, [printDailySummary, summaryData]);
+
+  const handleShareSummary = useCallback(async () => {
+    const uri = await exportDailySummaryPdf(summaryData);
+    if (!uri) {
+      Toast.show("Erreur lors de l'export PDF", { duration: 2000, backgroundColor: D.rose });
+    }
+  }, [exportDailySummaryPdf, summaryData]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -715,6 +750,7 @@ export default function ReportsScreen() {
         isSuccess={isSuccess}
         printerName={currentPrinter?.name}
         onPrint={handlePrint}
+        onShare={handleShareSummary}
         onClose={handleClosePrint}
       />
     </View>

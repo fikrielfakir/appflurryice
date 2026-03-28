@@ -7,6 +7,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { AppProvider, useApp } from "@/context/AppContext";
+import { FuelProvider } from "@/context/FuelContext";
 import {
   Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts,
 } from "@expo-google-fonts/inter";
@@ -72,7 +73,9 @@ export default function RootLayout() {
           <GestureHandlerRootView style={{ flex: 1 }}>
             <KeyboardProvider>
               <AppProvider>
-                <RootLayoutNav />
+                <FuelProvider>
+                  <RootLayoutNav />
+                </FuelProvider>
               </AppProvider>
             </KeyboardProvider>
           </GestureHandlerRootView>

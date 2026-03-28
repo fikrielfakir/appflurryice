@@ -32,6 +32,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "arrow.left.arrow.right", selected: "arrow.left.arrow.right" }} />
         <Label>{t('tabs.transfers')}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="fuel/index">
+        <Icon sf={{ default: "fuelpump", selected: "fuelpump.fill" }} />
+        <Label>{t('tabs.fuel')}</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -111,6 +115,18 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
             Platform.OS === "ios"
               ? <SymbolView name="arrow.left.arrow.right" tintColor={color} size={size} />
               : <Feather name="repeat" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="fuel/index"
+        options={{
+          title: t('tabs.fuel'),
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            Platform.OS === "ios"
+              ? <SymbolView name="fuelpump.fill" tintColor={color} size={size} />
+              : <Feather name="droplet" size={size} color={color} />
           ),
         }}
       />

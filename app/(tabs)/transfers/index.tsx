@@ -67,7 +67,9 @@ function TransferCard({
             <Text style={S.routeTxt} numberOfLines={1}>{item.to}</Text>
           </View>
           <View style={{ flex: 1 }} />
-          <Text style={[S.totalAmt, { color: accentColor }]}>MAD {item.total}</Text>
+          <Text style={[S.totalAmt, { color: accentColor }]}>
+            MAD {item.total || item.items.reduce((sum: number, i: any) => sum + ((i.qty || 0) * (i.price || 0)), 0).toFixed(2)}
+          </Text>
         </View>
 
         {/* Actions */}
@@ -102,7 +104,7 @@ export default function TransfersScreen() {
   const [showPrintOverlay, setShowPrintOverlay]       = useState(false);
   const [showTransferOutModal, setShowTransferOutModal] = useState(false);
   const [transferOutSelection, setTransferOutSelection] = useState<{ [key: string]: number }>({});
-  const { printTransfer, isConnecting, isPrinting, isSuccess, error: printError, currentPrinter } = usePrintInvoice();
+  const { printTransfer, exportTransferPdf, isConnecting, isPrinting, isSuccess, error: printError, currentPrinter } = usePrintInvoice();
 
   useEffect(() => {
     if (isConnecting || isPrinting) {
@@ -142,7 +144,7 @@ export default function TransfersScreen() {
       if (transferData.ref && transferData.items) {
         const items = transferData.items.map((item: any) => {
           const product = products.find((p) => p.sku === item.sku);
-          return { ...item, name: product?.name || `SKU: ${item.sku}`, unit: product?.unit || t("transfers.unit") };
+          return { ...item, name: product?.name || `SKU: ${item.sku}`, price: product?.price || item.price || 0 };
         });
         const newTransfer: Transfer = {
           ...transferData,
@@ -205,9 +207,13 @@ export default function TransfersScreen() {
     }
     const items = Object.entries(transferOutSelection).map(([productId, qty]) => {
       const product = products.find((p) => p.id === productId);
-      return { productId, sku: product?.sku || "", name: product?.name || `Product ${productId}`, qty, unit: product?.unit || "0" };
+      const itemPrice = product?.price ?? 0;
+      return { productId, sku: product?.sku || "", name: product?.name || `Product ${productId}`, qty: Number(qty), price: itemPrice };
     });
-    const total = items.reduce((sum, item) => sum + (item.qty * parseFloat(item.unit)), 0);
+    const total = items.reduce((sum, item) => {
+      const itemTotal = (item.qty || 0) * (item.price || 0);
+      return sum + itemTotal;
+    }, 0);
     const ref = `TR-OUT-${Date.now()}`;
     const newTransfer: Transfer = {
       id: ref, ref, items, date: new Date().toISOString(),
@@ -223,11 +229,12 @@ export default function TransfersScreen() {
 
   const handleShare = async (item: Transfer) => {
     try {
+      const calculatedTotal = item.total || item.items.reduce((sum: number, i: any) => sum + ((i.qty || 0) * (i.price || 0)), 0);
       const message = [
         `Transfert #${item.ref}`,
         `De: ${item.from}  →  À: ${item.to}`,
         `Articles: ${item.items.length}`,
-        `Total: MAD ${item.total}`,
+        `Total: MAD ${calculatedTotal.toFixed(2)}`,
         `Date: ${new Date(item.date).toLocaleDateString("fr-FR")}`,
       ].join("\n");
       await Share.share({ message });
@@ -387,9 +394,9 @@ export default function TransfersScreen() {
                         <Text style={S.itemName}>{item.name || `Article ${i + 1}`}</Text>
                         <Text style={S.itemQtyTxt}>×{item.qty}</Text>
                       </View>
-                      <Text style={S.itemPrice}>
-                        MAD {(item.qty * (item.unit ? parseFloat(item.unit) : 0)).toFixed(2)}
-                      </Text>
+                        <Text style={S.itemPrice}>
+                          MAD {(item.qty * (item.price || 0)).toFixed(2)}
+                        </Text>
                     </View>
                   ))}
                 </View>
@@ -397,17 +404,15 @@ export default function TransfersScreen() {
                 {/* Total */}
                 <View style={S.totalRow}>
                   <Text style={S.totalLbl}>{t("transfers.total") || "Total"}</Text>
-                  <Text style={S.totalVal}>MAD {selectedTransfer.total}</Text>
+                  <Text style={S.totalVal}>
+                    MAD {selectedTransfer.total || selectedTransfer.items.reduce((sum, item) => sum + (item.qty * (item.price || 0)), 0).toFixed(2)}
+                  </Text>
                 </View>
 
                 {/* Print button */}
                 <TouchableOpacity
                   style={[S.printBtn, (isConnecting || isPrinting) && { opacity: 0.6 }]}
                   onPress={async () => {
-                    if (!currentPrinter) {
-                      Toast.show(t("printer.notConnected"), { duration: 2000, backgroundColor: D.rose });
-                      return;
-                    }
                     await printTransfer(selectedTransfer);
                   }}
                   disabled={isConnecting || isPrinting}
@@ -418,6 +423,22 @@ export default function TransfersScreen() {
                       : <><Feather name="printer" size={17} color="#fff" /><Text style={S.printBtnTxt}>{t("common.print") || "Imprimer"}</Text></>
                     }
                   </LinearGradient>
+                </TouchableOpacity>
+
+                {/* Share PDF button */}
+                <TouchableOpacity
+                  style={[S.shareBtn]}
+                  onPress={async () => {
+                    const uri = await exportTransferPdf(selectedTransfer);
+                    if (!uri) {
+                      Toast.show("Erreur lors de l'export PDF", { duration: 2000, backgroundColor: D.rose });
+                    }
+                  }}
+                >
+                  <View style={S.shareBtnInner}>
+                    <Feather name="share" size={17} color={D.heroAccent} />
+                    <Text style={S.shareBtnTxt}>Partager PDF</Text>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Close */}
@@ -624,6 +645,10 @@ const S = StyleSheet.create({
   printBtn:      { borderRadius: 14, overflow: "hidden", marginBottom: 10 },
   printBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50 },
   printBtnTxt:   { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+
+  shareBtn: { borderRadius: 14, overflow: "hidden", marginBottom: 10, borderWidth: 1.5, borderColor: D.heroAccent },
+  shareBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 50, backgroundColor: D.surface },
+  shareBtnTxt: { color: D.heroAccent, fontSize: 15, fontFamily: "Inter_600SemiBold" },
 
   closeBtn:    { backgroundColor: D.bg, borderRadius: 14, height: 48, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: D.border },
   closeBtnTxt: { color: D.inkSoft, fontSize: 14, fontFamily: "Inter_600SemiBold" },

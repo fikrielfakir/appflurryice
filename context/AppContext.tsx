@@ -37,7 +37,7 @@ export interface TransferItem {
   sku: string;
   name: string;
   qty: number;
-  unit: string;
+  price: number;
   productId?: string;
 }
 
@@ -50,6 +50,25 @@ export interface Transfer {
   items: TransferItem[];
   total: number;
   sig: string;
+}
+
+export interface FuelEntry {
+  id: string;
+  truckId: string;
+  date: string;
+  liters: number;
+  pricePerLiter: number;
+  totalCost: number;
+  odometer: number;
+  consumption?: number;
+  station?: string;
+  vendorId: string;
+}
+
+export interface FuelBudget {
+  truckId: string;
+  monthlyLimit: number;
+  alertThreshold: number;
 }
 
 export interface CartItem {
@@ -167,6 +186,7 @@ interface AppContextValue {
   deleteSale: (id: string) => void;
   updateSalePayment: (saleId: string, additionalPaid: number) => void;
   addDebtSettlement: (settlement: Omit<DebtSettlement, "id" | "settlementDate">) => void;
+  updateProduct: (productId: string, updates: Partial<Pick<Product, "price" | "image">>) => void;
   addContact: (contact: Omit<Contact, "id" | "date">) => void;
   deleteContact: (id: string) => void;
   updateContact: (id: string, updates: Partial<Omit<Contact, "id" | "date">>) => void;
@@ -583,6 +603,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.contacts, JSON.stringify(updated));
   }
 
+  async function updateProduct(productId: string, updates: Partial<Pick<Product, "price" | "image">>) {
+    const updated = products.map(p => 
+      p.id === productId ? { ...p, ...updates } : p
+    );
+    setProducts(updated);
+    await AsyncStorage.setItem(KEYS.products, JSON.stringify(updated));
+  }
+
   async function addExpense(expense: Omit<Expense, "id" | "date">) {
     const newExpense: Expense = { ...expense, id: genId(), date: new Date().toISOString() };
     const updated = [newExpense, ...expenses];
@@ -766,7 +794,7 @@ async function addTransfer(transfer: Transfer) {
     completeSetup,
     login, logout,
     addSale, deleteSale, updateSalePayment,
-    addDebtSettlement,
+    addDebtSettlement, updateProduct,
     addContact, deleteContact, updateContact,
     addExpense, deleteExpense,
     addTransfer,

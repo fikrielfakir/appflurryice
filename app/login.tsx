@@ -46,7 +46,7 @@ export default function LoginScreen() {
   const { login } = useApp();
   const { t } = useTranslation();
 
-  const [username, setUsername]         = useState("basiri");
+  const [username, setUsername]         = useState("");
   const [password, setPassword]         = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
