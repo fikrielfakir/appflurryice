@@ -24,15 +24,26 @@ interface MonthSection {
   avgConsumption: number;
 }
 
-export function FuelHistory() {
+interface FuelHistoryProps {
+  filteredEntries?: FuelEntry[];
+}
+
+export function FuelHistory({ filteredEntries }: FuelHistoryProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { entries, deleteEntry, refreshEntries } = useFuel();
   const [refreshing, setRefreshing] = React.useState(false);
 
-  const entriesWithConsumption = useMemo(
+  const sourceEntries = filteredEntries ?? entries;
+
+  const allEntriesWithConsumption = useMemo(
     () => deriveEntriesWithConsumption(entries),
     [entries],
+  );
+
+  const entriesWithConsumption = useMemo(
+    () => deriveEntriesWithConsumption(sourceEntries),
+    [sourceEntries],
   );
 
   const sections = useMemo((): MonthSection[] => {
@@ -48,7 +59,7 @@ export function FuelHistory() {
     const monthKeys = Object.keys(grouped).sort((a, b) => {
       const [ay, am] = a.split("-").map(Number);
       const [by, bm] = b.split("-").map(Number);
-      return new Date(ay, am).getTime() - new Date(by, bm).getTime();
+      return new Date(by, bm).getTime() - new Date(ay, am).getTime();
     });
 
     return monthKeys.map(key => {
@@ -60,13 +71,13 @@ export function FuelHistory() {
       const totalLiters = data.reduce((sum, e) => sum + e.liters, 0);
       const totalCost = data.reduce((sum, e) => sum + e.totalCost, 0);
 
-      const prevEntries = entriesWithConsumption.filter(e => new Date(e.date) < monthStart);
+      const prevEntries = allEntriesWithConsumption.filter(e => new Date(e.date) < monthStart);
       const prevLast = prevEntries.length > 0 ? prevEntries[prevEntries.length - 1] : undefined;
       const avgConsumption = calcMonthConsumption(data, prevLast);
 
       return { title, data, totalLiters, totalCost, avgConsumption };
     });
-  }, [entriesWithConsumption]);
+  }, [entriesWithConsumption, allEntriesWithConsumption]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -145,7 +156,7 @@ export function FuelHistory() {
 
   return (
     <View style={S.container}>
-      {entries.length === 0 ? (
+      {sourceEntries.length === 0 ? (
         <View style={S.emptyState}>
           <MaterialCommunityIcons name="gas-station-outline" size={64} color={D.inkGhost} />
           <Text style={S.emptyTitle}>{t("fuel.noHistory")}</Text>

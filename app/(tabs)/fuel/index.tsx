@@ -112,7 +112,7 @@ export default function FuelScreen() {
         setShowDatePicker(false);
       }
     }
-  }, [datePickerMode]);
+  }, [datePickerMode, tempStartDate]);
 
   const handleConfirmDateRange = useCallback(() => {
     setDateRange({ from: tempStartDate, to: tempEndDate });
@@ -199,8 +199,8 @@ export default function FuelScreen() {
       {/* Content */}
       <View style={S.content}>
         {activeTab === "dashboard" && <FuelDashboard filteredEntries={filteredEntries} activeDateRange={activeDateRange} />}
-        {activeTab === "history" && <FuelHistory />}
-        {activeTab === "stats" && <FuelStats />}
+        {activeTab === "history" && <FuelHistory filteredEntries={filteredEntries} />}
+        {activeTab === "stats" && <FuelStats filteredEntries={filteredEntries} />}
       </View>
 
       {/* Summary Modal */}

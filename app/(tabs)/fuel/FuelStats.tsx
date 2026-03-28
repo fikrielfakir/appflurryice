@@ -8,7 +8,7 @@ import * as Sharing from "expo-sharing";
 import * as Print from "expo-print";
 import Toast from "react-native-root-toast";
 import { useFuel } from "@/context/FuelContext";
-import { useApp } from "@/context/AppContext";
+import { useApp, FuelEntry } from "@/context/AppContext";
 import { D } from "@/constants/theme";
 import { calcMonthConsumption } from "@/utils/fuel";
 
@@ -30,13 +30,18 @@ interface MonthData {
   consumption: number;
 }
 
-export function FuelStats() {
+interface FuelStatsProps {
+  filteredEntries?: FuelEntry[];
+}
+
+export function FuelStats({ filteredEntries }: FuelStatsProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { entries, budget } = useFuel();
   const { userProfile } = useApp();
 
-  const now = new Date();
+  const now = useMemo(() => new Date(), []);
+  const sourceEntries = filteredEntries ?? entries;
 
   const last6Months = useMemo((): MonthData[] => {
     const months: MonthData[] = [];
@@ -46,7 +51,7 @@ export function FuelStats() {
     
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEntries = entries.filter(e => {
+      const monthEntries = sourceEntries.filter(e => {
         const ed = new Date(e.date);
         return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth();
       });
@@ -68,7 +73,7 @@ export function FuelStats() {
     }
 
     return months;
-  }, [entries, now]);
+  }, [entries, sourceEntries, now]);
 
   const currentMonthData = last6Months[5];
   const prevMonthData = last6Months[4];
@@ -228,7 +233,7 @@ export function FuelStats() {
       <View style={S.section}>
         <Text style={S.sectionTitle}>{t("fuel.priceTrend")}</Text>
         <View style={S.priceList}>
-          {[...entries]
+          {[...sourceEntries]
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             .slice(0, 5)
             .map((entry) => (
@@ -239,7 +244,7 @@ export function FuelStats() {
               <Text style={S.priceValue}>{entry.pricePerLiter.toFixed(2)} MAD/L</Text>
             </View>
           ))}
-          {entries.length === 0 && (
+          {sourceEntries.length === 0 && (
             <Text style={S.emptyText}>{t("fuel.noData")}</Text>
           )}
         </View>
