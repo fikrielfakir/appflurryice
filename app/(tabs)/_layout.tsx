@@ -130,18 +130,14 @@ function ClassicTabLayout({ theme: C }: { theme: any }) {
           ),
         }}
       />
-      <Tabs.Screen
-        name="contacts"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="debts"
-        options={{ href: null }}
-      />
+      <Tabs.Screen name="contacts" options={{ href: null }} />
+      <Tabs.Screen name="reports" options={{ href: null }} />
+      <Tabs.Screen name="debts" options={{ href: null }} />
+      <Tabs.Screen name="BudgetSettingsModal" options={{ href: null }} />
+      <Tabs.Screen name="FuelHistory" options={{ href: null }} />
+      <Tabs.Screen name="FuelStats" options={{ href: null }} />
+      <Tabs.Screen name="FuelSummaryModal" options={{ href: null }} />
+      <Tabs.Screen name="FuelDashboard" options={{ href: null }} />
       <Tabs.Screen name="transfers/index" options={{ href: null }} />
       <Tabs.Screen name="products/index" options={{ href: null }} />
       <Tabs.Screen name="fuel/index" options={{ href: null }} />
