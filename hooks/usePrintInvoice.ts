@@ -1533,13 +1533,12 @@ export function usePrintInvoice(): UsePrintInvoiceReturn {
       const now = new Date();
       const totalLiters = entries.reduce((sum, e) => sum + e.liters, 0);
       const totalCost = entries.reduce((sum, e) => sum + e.totalCost, 0);
-      const consumptions = entries.filter(e => e.consumption).map(e => e.consumption!);
-      const avgConsumption = consumptions.length > 0
-        ? consumptions.reduce((sum, c) => sum + c, 0) / consumptions.length
-        : 0;
       const totalKm = entries.length > 1
         ? Math.max(...entries.map(e => e.odometer)) - Math.min(...entries.map(e => e.odometer))
         : 0;
+      const sortedForConsumption = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      const litersForConsumption = sortedForConsumption.slice(1).reduce((sum, e) => sum + e.liters, 0);
+      const avgConsumption = totalKm > 0 ? (litersForConsumption / totalKm) * 100 : 0;
       const avgPrice = totalLiters > 0
         ? entries.reduce((sum, e) => sum + e.pricePerLiter * e.liters, 0) / totalLiters
         : 0;
